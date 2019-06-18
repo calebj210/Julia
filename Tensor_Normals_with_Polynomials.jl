@@ -5,6 +5,7 @@ using LinearAlgebra
 using SparseArrays
 using NearestNeighbors
 using Plots
+using LaTeXStrings
 using BenchmarkTools
 gr()
 
@@ -533,7 +534,7 @@ function comp(N=100, n=10, m1=3, o=n-1)
 end
 
 function errs(m,o=-10)
-    neighbors = [7,9,11,13];
+    neighbors = [11];
     nodes = 1000:10000:100000;
     
     tmp = 0
@@ -541,17 +542,18 @@ function errs(m,o=-10)
 
     a = plot()
     a = plot(nodes,10^(-15.75)*nodes,
-             title = "(a)",
              label = "Rounding Error",
+             linestyle = :dash,
              xaxis = :log,
              yaxis = :log,
              xlabel = "# Nodes",
              ylabel = "Inf-Norm Error",
              dpi = 300)
-    # a = plot!(nodes, ((10^3)./nodes).^3,
-    #           label = "Convergence Rate (L11.25)",
-    #           xaxis = :log,
-    #           yaxis = :log)
+    a = plot!(nodes, ((9.7^3)./nodes).^11,
+              label = latexstring("O(h^{11})"),
+              linestyle = :dot,
+              xaxis = :log,
+              yaxis = :log)
     for n ∈ neighbors
         if o == -10
             oo = n-1;
@@ -612,37 +614,48 @@ function lapComp(N=100, n=10, m1=3, o=n-1)
     return a[1]
 end
 
-function lapErrs(m,o)
-    neighbors = [11];
+function lapErrs(m,o=-10)
+    neighbors = [5,7,9,11,13];
     nodes = 1000:1000:20000;
     a = plot()
     a = plot(nodes,10^(-13.75)*nodes.^2,
              title = "RBF-Tensor Laplace-Beltrami(F)",
              label = "Rounding Error",
+             linestyle = :dash,
              xaxis = :log,
-             yaxis = :log)
-    a = plot!(nodes, ((10^3)./nodes).^11.25,
-              label = "Convergence Rate (L11.25)",
-              xaxis = :log,
-              yaxis = :log)
+             yaxis = :log,
+             xlabel = "# Nodes",
+             ylabel = "Inf-Norm Error",
+             dpi = 300)
+    # a = plot!(nodes, ((10^3)./nodes).^11.25,
+    #           label = "Convergence Rate (L11.25)",
+    #           xaxis = :log,
+    #           yaxis = :log)
     for n ∈ neighbors
+        if o == -10
+            oo = n-1;
+        else
+            oo = o;
+        end
+        
         err = [];
         for N ∈ nodes
-            comps = lapComp(N, n, m, n-1)
+            comps = lapComp(N, n, m, oo)
             push!(err,comps);
         end
         
         a = plot!(nodes,err,
-                  label = n,
+                  label = string(n, " Neighbors"),
                   legend = :topright,
                   xaxis = :log,
                   yaxis = :log);
         display(a)
     end
+    png(a, "fig_lap.png")
 end
 
 # Error plot
-errs(7)
+# errs(7)
 
 # Single parameters
 # comp(5000,6,3,2)
@@ -650,4 +663,4 @@ errs(7)
 # Laplace-Beltrami
 # lapComp(10000, 11, 5, 20)
 
-# lapErrs(7,7)
+lapErrs(7)

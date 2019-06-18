@@ -427,7 +427,7 @@ function comp(N=100, n=10, m1=3, o=n-1)
 end
 
 function errs(m,o=-10)
-    neighbors = [7,9,11,13];
+    neighbors = [5,7,9,11,13];
     nodes = 1000:10000:100000;
     
     tmp = 0
@@ -437,6 +437,7 @@ function errs(m,o=-10)
     a = plot(nodes,10^(-15.75)*nodes,
              title = "(b)",
              label = "Rounding Error",
+             linestyle = :dash,
              xaxis = :log,
              yaxis = :log,
              xlabel = "# Nodes",
