@@ -4,7 +4,6 @@
 using LinearAlgebra
 using SparseArrays
 using NearestNeighbors
-using DoubleFloats
 using Plots
 using LaTeXStrings
 using BenchmarkTools
@@ -164,13 +163,11 @@ end
 ϕ_x(x1,x2,m) = m*sign(x1-x2)*abs(x1-x2)^(m-1);
 ϕ_xx(x1,x2,m) = m*(m-1)*abs(x1-x2)^(m-2);
 
-# Interpolation weights for 1D with helping terms
-function interpolate(nodes, m, o)
-    n = size(nodes, 2);
+# Construct collocation matrix
+function collocM(x, m, o)
+    n = size(x, 1);
     A0 = zeros(n,n);
     A1 = zeros(o+1,n);
-    x = nodes[1,:];
-    f = [nodes[2,:]; zeros(o+1)];
 
     # Define A without helping terms
     for i ∈ 1:n, j ∈ 1:n
@@ -186,29 +183,9 @@ function interpolate(nodes, m, o)
     # Create full A
     A = [A0 A1';
          A1 zeros(o+1,o+1)];
-    
-    # Solve for weights
-    λ = A\f;
 
-   return λ
+    return A
 end
-
-# Interpolation function
-function S(t, x, λ, m)
-    n = size(x,1);
-    nn = size(λ,1) - n;
-    nt = size(t,1);
-    
-    s = zeros(nt);
-    for i ∈ 1:n, j ∈ 1:nt
-        s[j] += λ[i]*ϕ(t[j], x[i], m);
-    end
-    for i ∈ 0:nn-1, j ∈ 1:nt
-        s[j] += λ[n+i+1]*t[j]^i;
-    end
-    
-    return s
-end 
 
 # RBF interpolant derivative at s=0
 function S_x(x, λ, m)
@@ -244,8 +221,8 @@ function S_xx(x, λ, m)
     return s
 end
 
-# Laplace-Beltromi Operator
-function ∇∇(nodes, F, n, m, o)
+# Populate Laplace-Beltrami discretization matrix
+function constructLBD(nodes, n, m, o)
     # Find number of nodes
     N = size(nodes, 2);
     
@@ -257,9 +234,7 @@ function ∇∇(nodes, F, n, m, o)
     
     cent = zeros(2,n);
     rot = cent;
-    vals = zeros(N);
-    λs = zeros(n);
-    λf = zeros(n);
+    D = spzeros(N,N);
     for i ∈ 1:N
         # Find angle
         θ = findAngle(appNorms[:,i]);
@@ -270,71 +245,37 @@ function ∇∇(nodes, F, n, m, o)
         # Rotate nodes
         rot = rotate(cent, θ);
 
+        # Create collocation matrix
+        A = collocM(rot[1,:], m, o);
+        
+        # Create local height vector with helping terms
+        f = [rot[2,:]; zeros(o+1)];
+        
         # Compute RBF weights of local surface
-        λs = interpolate(rot, m, o);
+        λs = A\f;
 
-        # Compute RBF weights of local function
-        λf = interpolate([rot[1,:]'; F[idx[i]]'], m, o);
-
-        # Compute derivatives at S1 = 0
+        # Compute derivatives at each local node S = 0
         S_s = S_x(rot[1,:], λs, m);
         S_ss = S_xx(rot[1,:], λs, m);
-        S_f = S_x(rot[1,:], λf, m);
-        S_ff = S_xx(rot[1,:], λf, m);
         
         # Compute length element
         s = 1 + S_s^2;
         
-        # Compute ∇∇F
-        vals[i] = s^(-1)*S_ff - s^(-2)*S_s*S_ss*S_f;
+        # Create linear operator vector
+        Lϕ = zeros(n+o+1);
+        for i ∈ 1:n
+            xi = rot[1,i];
+            Lϕ[i] = s^(-1)*ϕ_xx(0, xi, m) - s^(-2)*S_s*S_ss*ϕ_x(0, xi, m);
+        end
+
+        # Compute local weights
+        w = A\Lϕ;
+
+        # Populate D with local weights
+        D[i,idx[i]] = w[1:n];
     end
     
-    return vals
-end
-
-# Function for tensor normals
-function findNormals(nodes, n, m, o)
-    # Find number of nodes
-    N = size(nodes, 2);
-    
-    # Compute approximate normals
-    appNorms = approxNormals(nodes);
-
-    # Find nearest neighbors
-    idx = knnFullOrd(nodes, n);
-    
-    cent = zeros(2,n);
-    rot = cent;
-    normals = zeros(2,N);
-    λ = zeros(n);
-    for i ∈ 1:N
-        # Find angle
-        θ = findAngle(appNorms[:,i]);
-
-        # Center nodes
-        cent = center(nodes[:,idx[i]]);
-
-        # Rotate nodes
-        rot = rotate(cent, θ);
-
-        # Compute RBF weights
-        λ = interpolate(rot, m, o);
-
-        # Compute derivative at S1 = 0
-        f_s = S_x(rot[1,:], λ, m);
-        
-        # Compute length element
-        s = 1 + f_s^2;
-        L = sqrt(s);
-        
-        # Compute normal at S1 = 0
-        tmp = [-f_s/L, 1/L];
-        
-        # Rotate local normal to proper angle
-        normals[:,i] = rotate(tmp, -θ);
-    end
-    
-    return normals
+    return D
 end
 
 ## Analysis functions
@@ -440,157 +381,8 @@ function interPlot(nodes, λ, m)
     return a
 end
 
-
-# Animated process plot
-function aniPlot(nodes, n = 10, m = 3, o = 3, delay = 0.001)
-    # Find number of nodes
-    N = size(nodes, 2);
-    
-    # Compute approximate normals
-    nmls = approxNormals(nodes);
-
-    # Find nearest neighbors
-    idx = knnFullOrd(nodes, n);
-    
-    cent = zeros(2,n);
-    rot = cent;
-    λ = zeros(n);
-    for i ∈ 1:N
-        # Find angle
-        θ = findAngle(nmls[:,i]);
-
-        # Center nodes
-        cent = center(nodes[:,idx[i]]);
-
-        # Rotate nodes
-        rot = rotate(cent, θ);
-
-        # Compute RBF weights
-        λ = interpolate(rot, m, o);
-
-        # Plot data
-        l = @layout [a b c; d e]
-        a = plot(nodePlot(nodes),
-                 title = "Initial Node Set",
-                 xlims = (-1.1,1.1),
-                 ylims = (-1.1,1.1))
-        b = plot(nodePlot(nodes[:,idx[i]]),
-                 title = "Nearest Neighbors",
-                 xlims = (-1.1,1.1),
-                 ylims = (-1.1,1.1))
-        c = plot(nodePlot(cent),
-                 title = "Centered",
-                 xlims = (-.25,.25),
-                 ylims = (-.25,.25))
-        d = plot(nodePlot(rot),
-                 title = "Rotated",
-                 xlims = (-.25,.25),
-                 ylims = (-.25,.25))
-        e = plot(interPlot(rot, λ, m),
-                 title = "Interpolated",
-                 xlims = (-.1,.1),
-                 ylims = (-.1,.1))
-
-        f = plot(a,b,c,d,e,
-                 layout = l)
-        
-        display(f)
-        sleep(delay)
-    end
-end
-
-## Main function for finding normals
-function comp(N=100, n=10, m1=3, o=n-1)
-    # Parameterizing our curve
-    t = range(0,2*π-2*π/N, length = N);
-    
-    # Compute true normals
-    truNorms = [piNormsX.(t)'; piNormsY.(t)'];
-    for i ∈ 1:N
-        truNorms[:,i] = truNorms[:,i]/norm(truNorms[:,i]);
-    end
-    
-    # Generate nodes
-    nodes = dist(piX.(t), piY.(t))
-    appnorms = approxNormals(nodes)
-    for i ∈ 1:N
-        appnorms[:,i] = appnorms[:,i]/norm(appnorms[:,i]);
-    end
-    
-    normals = findNormals(nodes, n, m1, o);
-
-    # aniPlot(nodes, n, m1, o, 0.01)
-    
-    # a = vectorPlot(nodes, normals);
-    # b = vectorPlot(nodes, appnorms);
-    #display(a)
-    
-    a = vecError(truNorms, normals)[1]
-    b = vecError(truNorms, appnorms)[1]
-
-    # c = errPlot(nodes, vecError(truNorms, normals)[2]);
-    # display(c)
-    
-    return [a,b]
-end
-
-function errs(m,o=-10)
-    neighbors = [11];
-    nodes = 1000:10000:100000;
-    
-    tmp = 0
-    errapp = [];
-
-    a = plot()
-    a = plot(nodes,10^(-15.75)*nodes,
-             label = "Rounding Error",
-             linestyle = :dash,
-             xaxis = :log,
-             yaxis = :log,
-             xlabel = "# Nodes",
-             ylabel = "Inf-Norm Error",
-             dpi = 300)
-    a = plot!(nodes, ((9.7^3)./nodes).^11,
-              label = latexstring("O(h^{11})"),
-              linestyle = :dot,
-              xaxis = :log,
-              yaxis = :log)
-    for n ∈ neighbors
-        if o == -10
-            oo = n-1;
-        else
-            oo = o;
-        end
-        
-        err = [];
-        for N ∈ nodes
-            comps = comp(N, n, m, oo)
-            push!(err,comps[1]);
-            if tmp == 0
-                push!(errapp,comps[2]);
-            end
-        end
-        
-        # if tmp == 0
-        #     a = plot!(nodes,errapp,
-        #               label = "Geometric",
-        #               xaxis = :log,
-        #               yaxis = :log)
-        # end
-        
-        tmp = 1;
-        
-        a = plot!(nodes,err,
-                  label = string(n," Neighbors"),
-                  legend = :topright,
-                  xaxis = :log,
-                  yaxis = :log);
-        display(a)
-    end
-end
-
-# Laplace-Beltrami Stuff
-function lapComp(N=100, n=10, m1=3, o=n-1)
+## Main function discretizing and using Laplace-Beltrami discretization
+function comp(N=100, n=10, m=3, o=n-1)
     # Parameterizing our curve
     t = range(0,2*π-2*π/N, length = N);
 
@@ -598,11 +390,19 @@ function lapComp(N=100, n=10, m1=3, o=n-1)
     nodes = dist(piX.(t), piY.(t));
     F = piF.(t);
 
+    display(F)
+
     # Compute true Laplace-Beltrami of F
     true∇∇F = truePi∇∇F.(t);
 
-    laps = ∇∇(nodes, F, n, m1, o);
+    D = constructLBD(nodes, n, m , o);
+    
+    # laps = ∇∇(nodes, F, n, m1, o);
 
+    # Compute ∇∇F
+    laps = D*F;
+
+    # Compute ∞-norm of error
     a = scalError(true∇∇F, laps);
 
     # b = errPlot(nodes, a[2])
@@ -612,7 +412,7 @@ function lapComp(N=100, n=10, m1=3, o=n-1)
     # c = plot3d!(nodes[1,:],nodes[2,:],laps);
     # display(c)
     
-    return a[1]
+    return laps
 end
 
 function lapErrs(m,o=-10)
@@ -655,13 +455,7 @@ function lapErrs(m,o=-10)
     # png(a, "fig_lap.png")
 end
 
-# Error plot
-# errs(7)
-
-# Single parameters
-# comp(5000,6,3,2)
-
 # Laplace-Beltrami
-# lapComp(10000, 11, 5, 20)
+comp(100, 11, 5)
 
-lapErrs(7)
+# lapErrs(7)
