@@ -268,6 +268,13 @@ function constructLBD(nodes, n, m, o)
             Lϕ[i] = s^(-1)*ϕ_xx(0, xi, m) - s^(-2)*S_s*S_ss*ϕ_x(0, xi, m);
         end
 
+        if o > 0
+            Lϕ[n+2] = -s^(-2)*S_s*S_ss;
+            if o > 1
+                Lϕ[n+3] = 2*s^(-1);
+            end
+        end
+        
         # Compute local weights
         w = A\Lϕ;
 
@@ -299,6 +306,11 @@ function scalError(trues, calcs)
     for j ∈ 1:N
         magDiff = norm(trues[j]-calcs[j]);
         mag = norm(trues[j]);
+        # if mag <= 10^(-13)
+        #     normErrs[j] = 0.0;
+        # else
+        #     normErrs[j] = magDiff/mag;
+        # end
         normErrs[j] = magDiff/mag;
     end
     err = maximum(normErrs);
@@ -390,14 +402,11 @@ function comp(N=100, n=10, m=3, o=n-1)
     nodes = dist(piX.(t), piY.(t));
     F = piF.(t);
 
-    display(F)
-
     # Compute true Laplace-Beltrami of F
     true∇∇F = truePi∇∇F.(t);
 
+    # Discratize Laplace-Beltrami Operator
     D = constructLBD(nodes, n, m , o);
-    
-    # laps = ∇∇(nodes, F, n, m1, o);
 
     # Compute ∇∇F
     laps = D*F;
@@ -412,7 +421,7 @@ function comp(N=100, n=10, m=3, o=n-1)
     # c = plot3d!(nodes[1,:],nodes[2,:],laps);
     # display(c)
     
-    return laps
+    return a[1]
 end
 
 function lapErrs(m,o=-10)
@@ -441,7 +450,7 @@ function lapErrs(m,o=-10)
         
         err = [];
         for N ∈ nodes
-            comps = lapComp(N, n, m, oo)
+            comps = comp(N, n, m, oo)
             push!(err,comps);
         end
         
@@ -456,6 +465,6 @@ function lapErrs(m,o=-10)
 end
 
 # Laplace-Beltrami
-comp(100, 11, 5)
+# comp(10000, 11, 5)
 
-# lapErrs(7)
+lapErrs(7)
