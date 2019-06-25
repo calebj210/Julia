@@ -244,7 +244,7 @@ function S_xx(x, λ, m)
     return s
 end
 
-# Laplace-Beltromi Operator
+# Laplace-Beltrami Operator
 function ∇∇(nodes, F, n, m, o)
     # Find number of nodes
     N = size(nodes, 2);
@@ -254,12 +254,9 @@ function ∇∇(nodes, F, n, m, o)
 
     # Find nearest neighbors
     idx = knnFullOrd(nodes, n);
-    
-    cent = zeros(2,n);
-    rot = cent;
+
+    # Allocate space for Laplace-Beltrami values
     vals = zeros(N);
-    λs = zeros(n);
-    λf = zeros(n);
     for i ∈ 1:N
         # Find angle
         θ = findAngle(appNorms[:,i]);
@@ -358,12 +355,12 @@ function scalError(trues, calcs)
     for j ∈ 1:N
         magDiff = norm(trues[j]-calcs[j]);
         mag = norm(trues[j]);
-        # if mag <= 10^(-13)
-        #     normErrs[j] = 0.0;
-        # else
-        #     normErrs[j] = magDiff/mag;
-        # end
-        normErrs[j] = magDiff/mag;
+        # A routine to handle mag ≈ 0
+        if mag <= 10^(-13)
+            normErrs[j] = 1magDiff;
+        else
+            normErrs[j] = magDiff/mag;
+        end
     end
     err = maximum(normErrs);
     
@@ -600,22 +597,22 @@ function lapComp(N=100, n=10, m1=3, o=n-1)
     t = range(0,2*π-2*π/N, length = N);
 
     # Generate nodes and function values
-    nodes = dist(piX.(t), piY.(t));
-    F = piF.(t);
+    nodes = dist(circX.(t), circY.(t));
+    F = circF.(t);
 
     # Compute true Laplace-Beltrami of F
-    true∇∇F = truePi∇∇F.(t);
+    true∇∇F = trueCirc∇∇F.(t);
 
     laps = ∇∇(nodes, F, n, m1, o);
 
     a = scalError(true∇∇F, laps);
 
-    # b = errPlot(nodes, a[2])
-    # display(b)
+    b = errPlot(nodes, a[2])
+    display(b)
 
-    c = plot3d(nodes[1,:],nodes[2,:],true∇∇F);
-    c = plot3d!(nodes[1,:],nodes[2,:],laps);
-    display(c)
+    # c = plot3d(nodes[1,:],nodes[2,:],true∇∇F);
+    # c = plot3d!(nodes[1,:],nodes[2,:],laps);
+    # display(c)
     
     return a[1]
 end
@@ -667,6 +664,6 @@ end
 # comp(5000,6,3,2)
 
 # Laplace-Beltrami
-lapComp(10000, 11, 5)
+lapComp(1000, 11, 5)
 
 # lapErrs(7)
