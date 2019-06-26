@@ -3,6 +3,7 @@
 ## Including used packages
 using LinearAlgebra
 using SparseArrays
+using Arpack
 using NearestNeighbors
 using Plots
 using LaTeXStrings
@@ -306,12 +307,13 @@ function scalError(trues, calcs)
     for j ∈ 1:N
         magDiff = norm(trues[j]-calcs[j]);
         mag = norm(trues[j]);
-        # if mag <= 10^(-13)
-        #     normErrs[j] = 0.0;
-        # else
-        #     normErrs[j] = magDiff/mag;
-        # end
-        normErrs[j] = magDiff/mag;
+        
+        # A routine to handle mag ≈ 0
+        if mag <= 10^(-13)
+            normErrs[j] = 1magDiff;
+        else
+            normErrs[j] = magDiff/mag;
+        end
     end
     err = maximum(normErrs);
     
@@ -393,6 +395,16 @@ function interPlot(nodes, λ, m)
     return a
 end
 
+# Spectrum plot
+function spectrum(A)
+    # Find eigenvalues of A
+    λ = eigs(A, maxiter = 1000, nev = 3000)[1];
+
+    a = scatter(real(λ), imag(λ));
+
+    return a
+end
+
 ## Main function discretizing and using Laplace-Beltrami discretization
 function comp(N=100, n=10, m=3, o=n-1)
     # Parameterizing our curve
@@ -413,20 +425,22 @@ function comp(N=100, n=10, m=3, o=n-1)
 
     # Compute ∞-norm of error
     a = scalError(true∇∇F, laps);
-
+    
     # b = errPlot(nodes, a[2])
     # display(b)
 
     # c = plot3d(nodes[1,:],nodes[2,:],true∇∇F);
     # c = plot3d!(nodes[1,:],nodes[2,:],laps);
     # display(c)
-    
+
+    d = spectrum(D);
+    display(d)
     return a[1]
 end
 
 function lapErrs(m,o=-10)
     neighbors = [5,7,9,11,13];
-    nodes = 1000:1000:20000;
+    nodes = 100:1000:10000;
     a = plot()
     a = plot(nodes,10^(-13.75)*nodes.^2,
              title = "RBF-Tensor Laplace-Beltrami(F)",
@@ -465,6 +479,6 @@ function lapErrs(m,o=-10)
 end
 
 # Laplace-Beltrami
-# comp(10000, 11, 5)
+comp(3000, 11, 5)
 
-lapErrs(7)
+# lapErrs(7)

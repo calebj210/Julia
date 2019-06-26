@@ -8,7 +8,7 @@ using DoubleFloats
 using Plots
 using LaTeXStrings
 using BenchmarkTools
-pyplot()
+gr()
 
 
 ## Function definitions
@@ -355,6 +355,7 @@ function scalError(trues, calcs)
     for j ∈ 1:N
         magDiff = norm(trues[j]-calcs[j]);
         mag = norm(trues[j]);
+        
         # A routine to handle mag ≈ 0
         if mag <= 10^(-13)
             normErrs[j] = 1magDiff;
@@ -597,18 +598,18 @@ function lapComp(N=100, n=10, m1=3, o=n-1)
     t = range(0,2*π-2*π/N, length = N);
 
     # Generate nodes and function values
-    nodes = dist(circX.(t), circY.(t));
-    F = circF.(t);
+    nodes = dist(piX.(t), piY.(t));
+    F = piF.(t);
 
     # Compute true Laplace-Beltrami of F
-    true∇∇F = trueCirc∇∇F.(t);
+    true∇∇F = truePi∇∇F.(t);
 
     laps = ∇∇(nodes, F, n, m1, o);
 
     a = scalError(true∇∇F, laps);
 
-    b = errPlot(nodes, a[2])
-    display(b)
+    # b = errPlot(nodes, a[2])
+    # display(b)
 
     # c = plot3d(nodes[1,:],nodes[2,:],true∇∇F);
     # c = plot3d!(nodes[1,:],nodes[2,:],laps);
@@ -664,6 +665,6 @@ end
 # comp(5000,6,3,2)
 
 # Laplace-Beltrami
-lapComp(1000, 11, 5)
+# lapComp(1000, 11, 3, 5)
 
-# lapErrs(7)
+lapErrs(7)
