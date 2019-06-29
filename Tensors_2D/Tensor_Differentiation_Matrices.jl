@@ -34,7 +34,10 @@ piNormsY(t) = (abs((2240/37)*cos((65/32)+(-32)*t)+(341/12)*cos((98/41)+(-31)*t)+
 circF(t) = sin(2*π*sin(t));
 
 # True Laplace-Beltrami of Circle with f(t) = sin(2π sin(t))
-trueCirc∇∇F(s) = ((-2*π*cos(2*π*sin(s))*sin(s))/sqrt(cos(s)^2 + sin(s)^2) - (4*π^2*cos(s)^2*sin(2*π*sin(s)))/sqrt(cos(s)^2 + sin(s)^2))/sqrt(cos(s)^2 + sin(s)^2);
+trueCirc∇∇F(s) = -2*π*(cos(2*π*sin(s))*sin(s) +
+                       2*π*cos(s)^2*sin(2*π*sin(s)));
+trueCircBHF(s) = 2*π*((1+24*π^2*cos(s)^2)*cos(2*π*sin(s))*sin(s)+2*π*(4*cos(s)^2+4*π^2*cos(s)^4-3*sin(s)^2)*sin(2*π*sin(s)));
+
 
 # π function
 piF(t) = sin(2*π*sin(t));
@@ -163,6 +166,8 @@ end
 ϕ(x1,x2,m) = abs(x1-x2)^m;
 ϕ_x(x1,x2,m) = m*sign(x1-x2)*abs(x1-x2)^(m-1);
 ϕ_xx(x1,x2,m) = m*(m-1)*abs(x1-x2)^(m-2);
+ϕ_xxx(x1,x2,m) = m*(m-1)*(m-2)*sign(x1-x2)*abs(x1-x2)^(m-3);
+ϕ_xxxx(x1,x2,m) = m*(m-1)*(m-2)*(m-3)*abs(x1-x2)^(m-4);
 
 # Construct collocation matrix
 function collocM(x, m, o)
@@ -222,8 +227,42 @@ function S_xx(x, λ, m)
     return s
 end
 
+# RBF interpolant third derivative at s=0
+function S_xxx(x, λ, m)
+    n = size(x,1);
+    
+    s = 0;
+    for i ∈ 1:n
+        s += λ[i]*ϕ_xxx(0, x[i], m);
+    end
+
+    # Add polynomial contribution if there is one
+    if size(λ,1) > n+3
+        s += 6*λ[n+4];
+    end
+    
+    return s
+end
+
+# RBF interpolant third derivative at s=0
+function S_xxxx(x, λ, m)
+    n = size(x,1);
+    
+    s = 0;
+    for i ∈ 1:n
+        s += λ[i]*ϕ_xxxx(0, x[i], m);
+    end
+
+    # Add polynomial contribution if there is one
+    if size(λ,1) > n+4
+        s += 24*λ[n+5];
+    end
+    
+    return s
+end
+
 # Populate Laplace-Beltrami discretization matrix
-function constructLBD(nodes, n, m, o)
+function constructLBD(nodes, n, m, typ, o)
     # Find number of nodes
     N = size(nodes, 2);
     
@@ -258,6 +297,10 @@ function constructLBD(nodes, n, m, o)
         # Compute derivatives at each local node S = 0
         S_s = S_x(rot[1,:], λs, m);
         S_ss = S_xx(rot[1,:], λs, m);
+        if typ == 2
+            S_sss = S_xxx(rot[1,:], λs, m);
+            S_ssss = S_xxxx(rot[1,:], λs, m);
+        end
         
         # Compute length element
         s = 1 + S_s^2;
@@ -266,13 +309,54 @@ function constructLBD(nodes, n, m, o)
         Lϕ = zeros(n+o+1);
         for i ∈ 1:n
             xi = rot[1,i];
-            Lϕ[i] = s^(-1)*ϕ_xx(0, xi, m) - s^(-2)*S_s*S_ss*ϕ_x(0, xi, m);
+
+            if typ == 1
+                # Laplace-Beltrami operator
+                Lϕ[i] = s^(-1)*ϕ_xx(0, xi, m) - s^(-2)*S_s*S_ss*ϕ_x(0, xi, m);
+            else
+                # Biharmonic operator
+                Lϕ[i] =
+                    (13*s^(-4)*S_s*S_ss^3 - 28*s^(-5)*S_s^3*S_ss^3 -
+                     3*s^(-3)*S_ss*S_sss + 13*s^(-4)*S_s^2*S_ss*S_sss -
+                     s^(-3)*S_s*S_ssss)*
+                ϕ_x(0, xi, m) + 
+                    (19*s^(-4)*S_s^2*S_ss^2 - 4*s^(-3)*S_ss^2 -
+                     4*s^(-3)*S_s*S_sss)*
+                ϕ_xx(0, xi, m) +
+                    (-6*s^(-3)*S_s*S_ss)*
+                ϕ_xxx(0, xi, m) +
+                    (s^(-2))*
+                ϕ_xxxx(0, xi, m);
+            end
         end
 
-        if o > 0
-            Lϕ[n+2] = -s^(-2)*S_s*S_ss;
-            if o > 1
-                Lϕ[n+3] = 2*s^(-1);
+        if typ == 1
+            if o > 0
+                Lϕ[n+2] = -s^(-2)*S_s*S_ss;
+                if o > 1
+                    Lϕ[n+3] = 2*s^(-1);
+                end
+            else
+                if o > 0
+                    Lϕ[n+2] =
+                        (13*s^(-4)*S_s*S_ss^3 - 28*s^(-5)*S_s^3*S_ss^3 -
+                         3*s^(-3)*S_ss*S_sss + 13*s^(-4)*S_s^2*S_ss*S_sss -
+                         s^(-3)*S_s*S_ssss);
+                    if o > 1
+                        Lϕ[n+3] =
+                            2*(19*s^(-4)*S_s^2*S_ss^2 -
+                               4*s^(-3)*S_ss^2 -
+                               4*s^(-3)*S_s*S_sss);
+                        if o > 2
+                            Lϕ[n+4] =
+                                6*(-6*s^(-3)*S_s*S_ss);
+                            if o > 3
+                                Lϕ[n+5] =
+                                    24*s^(-2);
+                            end
+                        end
+                    end
+                end
             end
         end
         
@@ -415,32 +499,76 @@ function comp(N=100, n=10, m=3, o=n-1)
     F = piF.(t);
 
     # Compute true Laplace-Beltrami of F
-    true∇∇F = truePi∇∇F.(t);
+    true∇∇F = trueCirc∇∇F.(t);
 
-    # Discratize Laplace-Beltrami Operator
-    D = constructLBD(nodes, n, m , o);
+    # Compute true biharmonic of F
+    trueBHF = trueCircBHF.(t);
 
+    # Discretize Laplace-Beltrami operator
+    D = constructLBD(nodes, n, m, 2, o);
+
+    # Create biharmonic operator form Lap-Bel operator
+    D1 = D*D;
+    
+    # Discretize biharmonic operator
+    D2 = constructLBD(nodes, n, m, 2, o);
+        
     # Compute ∇∇F
-    laps = D*F;
+    # laps = D*F;
 
     # Compute ∞-norm of error
-    a = scalError(true∇∇F, laps);
+    a = scalError(D1*F, D2*F);
     
-    # b = errPlot(nodes, a[2])
-    # display(b)
+    b = errPlot(nodes, a[2])
+    display(b)
 
-    # c = plot3d(nodes[1,:],nodes[2,:],true∇∇F);
+    # c = plot3d(nodes[1,:],nodes[2,:],D2*F);
     # c = plot3d!(nodes[1,:],nodes[2,:],laps);
     # display(c)
 
-    d = spectrum(D);
-    display(d)
+    # d = spectrum(D);
+    # display(d)
+
+    # Heat propogation
+    # f = zeros(N);
+    # f[2000:3400] .= 100;
+    # D = I - 10000*D;
+    # e = scatter(nodes[1,:], nodes[2,:],
+    #             marker_z = f,
+    #             c = :plasma,
+    #             cbarlims = (0,100),
+    #             colorbar = :right,
+    #             aspectratio = :equal,
+    #             legend = false,
+    #             markersize = 2,
+    #             markerstrokealpha = 0,
+    #             markeralpha = .75,
+    #             title = "Temperature")
+    # display(e)
+    # sleep(0.01)
+    # for it ∈ 1:500
+    #    e =  scatter(nodes[1,:], nodes[2,:],
+    #                 marker_z = f,
+    #                 c = :plasma,
+    #                 cbarlims = (0,100),
+    #                 colorbar = :right,
+    #                 aspectratio = :equal,
+    #                 legend = false,
+    #                 markersize = 2,
+    #                 markerstrokealpha = 0,
+    #                 markeralpha = .75,
+    #                 title = "Temperature")
+    #     f = D\f;
+    #     display(e)
+    #     sleep(0.01)
+    # end
+    
     return a[1]
 end
 
 function lapErrs(m,o=-10)
     neighbors = [5,7,9,11,13];
-    nodes = 100:1000:10000;
+    nodes = 100:1000:20000;
     a = plot()
     a = plot(nodes,10^(-13.75)*nodes.^2,
              title = "RBF-Tensor Laplace-Beltrami(F)",
@@ -479,6 +607,6 @@ function lapErrs(m,o=-10)
 end
 
 # Laplace-Beltrami
-comp(3000, 11, 5)
+comp(10000, 11, 7)
 
 # lapErrs(7)
