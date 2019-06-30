@@ -8,7 +8,7 @@ using NearestNeighbors
 using Plots
 using LaTeXStrings
 using BenchmarkTools
-gr()
+pyplot()
 
 
 ## Function definitions
@@ -495,8 +495,8 @@ function comp(N=100, n=10, m=3, o=n-1)
     t = range(0,2*π-2*π/N, length = N);
 
     # Generate nodes and function values
-    nodes = dist(piX.(t), piY.(t));
-    F = piF.(t);
+    nodes = dist(circX.(t), circY.(t));
+    F = circF.(t);
 
     # Compute true Laplace-Beltrami of F
     true∇∇F = trueCirc∇∇F.(t);
@@ -505,7 +505,7 @@ function comp(N=100, n=10, m=3, o=n-1)
     trueBHF = trueCircBHF.(t);
 
     # Discretize Laplace-Beltrami operator
-    D = constructLBD(nodes, n, m, 2, o);
+    D = constructLBD(nodes, n, m, 1, o);
 
     # Create biharmonic operator form Lap-Bel operator
     D1 = D*D;
@@ -517,14 +517,14 @@ function comp(N=100, n=10, m=3, o=n-1)
     # laps = D*F;
 
     # Compute ∞-norm of error
-    a = scalError(D1*F, D2*F);
+    a = scalError(trueBHF, D1*F);
     
-    b = errPlot(nodes, a[2])
-    display(b)
+    # b = errPlot(nodes, a[2])
+    # display(b)
 
-    # c = plot3d(nodes[1,:],nodes[2,:],D2*F);
-    # c = plot3d!(nodes[1,:],nodes[2,:],laps);
-    # display(c)
+    c = plot3d(nodes[1,:],nodes[2,:],trueBHF);
+    c = plot3d!(nodes[1,:],nodes[2,:], D1*F);
+    display(c)
 
     # d = spectrum(D);
     # display(d)
@@ -562,7 +562,7 @@ function comp(N=100, n=10, m=3, o=n-1)
     #     display(e)
     #     sleep(0.01)
     # end
-    
+    display(a)
     return a[1]
 end
 
@@ -607,6 +607,6 @@ function lapErrs(m,o=-10)
 end
 
 # Laplace-Beltrami
-comp(10000, 11, 7)
+comp(100, 11, 7)
 
 # lapErrs(7)
