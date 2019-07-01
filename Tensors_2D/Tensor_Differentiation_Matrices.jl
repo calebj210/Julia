@@ -329,40 +329,39 @@ function constructLBD(nodes, n, m, typ, o)
                 ϕ_xxxx(0, xi, m);
             end
         end
-
+        
         if typ == 1
             if o > 0
                 Lϕ[n+2] = -s^(-2)*S_s*S_ss;
                 if o > 1
                     Lϕ[n+3] = 2*s^(-1);
                 end
-            else
-                if o > 0
-                    Lϕ[n+2] =
-                        (13*s^(-4)*S_s*S_ss^3 - 28*s^(-5)*S_s^3*S_ss^3 -
-                         3*s^(-3)*S_ss*S_sss + 13*s^(-4)*S_s^2*S_ss*S_sss -
-                         s^(-3)*S_s*S_ssss);
-                    if o > 1
-                        Lϕ[n+3] =
-                            2*(19*s^(-4)*S_s^2*S_ss^2 -
-                               4*s^(-3)*S_ss^2 -
-                               4*s^(-3)*S_s*S_sss);
-                        if o > 2
-                            Lϕ[n+4] =
-                                6*(-6*s^(-3)*S_s*S_ss);
-                            if o > 3
-                                Lϕ[n+5] =
-                                    24*s^(-2);
-                            end
+            end
+        else
+            if o > 0
+                Lϕ[n+2] =
+                    (13*s^(-4)*S_s*S_ss^3 - 28*s^(-5)*S_s^3*S_ss^3 -
+                     3*s^(-3)*S_ss*S_sss + 13*s^(-4)*S_s^2*S_ss*S_sss -
+                     s^(-3)*S_s*S_ssss);
+                if o > 1
+                    Lϕ[n+3] =
+                        2*(19*s^(-4)*S_s^2*S_ss^2 -
+                           4*s^(-3)*S_ss^2 -
+                           4*s^(-3)*S_s*S_sss);
+                    if o > 2
+                        Lϕ[n+4] =
+                            6*(-6*s^(-3)*S_s*S_ss);
+                        if o > 3
+                            Lϕ[n+5] =
+                                24*s^(-2);
                         end
                     end
                 end
             end
         end
-        
         # Compute local weights
         w = A\Lϕ;
-
+        
         # Populate D with local weights
         D[i,idx[i]] = w[1:n];
     end
@@ -393,11 +392,12 @@ function scalError(trues, calcs)
         mag = norm(trues[j]);
         
         # A routine to handle mag ≈ 0
-        if mag <= 10^(-13)
-            normErrs[j] = 1magDiff;
+        if mag <= 10^(-10)
+            normErrs[j] = magDiff;
         else
             normErrs[j] = magDiff/mag;
         end
+        # normErrs[j] = magDiff;
     end
     err = maximum(normErrs);
     
@@ -495,8 +495,8 @@ function comp(N=100, n=10, m=3, o=n-1)
     t = range(0,2*π-2*π/N, length = N);
 
     # Generate nodes and function values
-    nodes = dist(circX.(t), circY.(t));
-    F = circF.(t);
+    nodes = dist(piX.(t), piY.(t));
+    F = piF.(t);
 
     # Compute true Laplace-Beltrami of F
     true∇∇F = trueCirc∇∇F.(t);
@@ -522,8 +522,8 @@ function comp(N=100, n=10, m=3, o=n-1)
     # b = errPlot(nodes, a[2])
     # display(b)
 
-    c = plot3d(nodes[1,:],nodes[2,:],trueBHF);
-    c = plot3d!(nodes[1,:],nodes[2,:], D1*F);
+    # c = plot3d(nodes[1,:],nodes[2,:],trueBHF);
+    c = plot3d(nodes[1,:],nodes[2,:], D2*F);
     display(c)
 
     # d = spectrum(D);
@@ -562,7 +562,7 @@ function comp(N=100, n=10, m=3, o=n-1)
     #     display(e)
     #     sleep(0.01)
     # end
-    display(a)
+    
     return a[1]
 end
 
@@ -607,6 +607,6 @@ function lapErrs(m,o=-10)
 end
 
 # Laplace-Beltrami
-comp(100, 11, 7)
+comp(10000, 11, 7)
 
 # lapErrs(7)
