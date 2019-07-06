@@ -1,5 +1,5 @@
 # My Personal Repo for all of my Git Needs
-## RFBT-FD
+## RBFT-FD
 ### Process
 1. Center and rotate local nodes as to have approximate normal pointing up
 2. Construct RBF interpolant of local nodes
@@ -10,4 +10,4 @@
 ### Using this repo
 ```sh
 $ git clone https://github.com/cajacobs/personal.git
-```
+``'
