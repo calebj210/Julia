@@ -1,0 +1,660 @@
+### Finding Normals Using RBFs and Tensors
+
+## Including used packages
+using LinearAlgebra
+using SparseArrays
+using Arpack
+using NearestNeighbors
+using Plots
+using LaTeXStrings
+using BenchmarkTools
+gr()
+
+
+## Function definitions
+# Circle
+circX(t) = cos.(t);
+circY(t) = sin.(t);
+
+# True circle normals
+circNormsX(t) = cos.(t);
+circNormsY(t) = sin.(t);
+
+# Pi curve
+piX(t) = (17/31)*sin((235/57)+(-32)*t)+(19/17)*sin((192/55)+(-30)*t)+(47/32)*sin((69/25)+(-29)*t)+(35/26)*sin((75/34)+(-27)*t)+(6/31)*sin((23/10)+(-26)*t)+(35/43)*sin((10/33)+(-25)*t)+(126/43)*sin((421/158)+(-24)*t)+(143/57)*sin((35/22)+(-22)*t)+(106/27)*sin((84/29)+(-21)*t)+(88/25)*sin((23/27)+(-20)*t)+(74/27)*sin((53/22)+(-19)*t)+(44/53)*sin((117/25)+(-18)*t)+(126/25)*sin((88/49)+(-17)*t)+(79/11)*sin((43/26)+(-16)*t)+(43/12)*sin((41/17)+(-15)*t)+(47/27)*sin((244/81)+(-14)*t)+(8/5)*sin((79/19)+(-13)*t)+(373/46)*sin((109/38)+(-12)*t)+(1200/31)*sin((133/74)+(-11)*t)+(67/24)*sin((157/61)+(-10)*t)+(583/28)*sin((13/8)+(-8)*t)+(772/35)*sin((59/16)+(-7)*t)+(3705/46)*sin((117/50)+(-6)*t)+(862/13)*sin((19/8)+(-5)*t)+(6555/34)*sin((157/78)+(-3)*t)+(6949/13)*sin((83/27)+(-1)*t)+(-6805/54)*sin((1/145)+2*t)+(-5207/37)*sin((49/74)+4*t)+(-1811/58)*sin((55/43)+9*t)+(-63/20)*sin((2/23)+23*t)+(-266/177)*sin((13/18)+28*t)+(-2/21)*sin((7/16)+31*t);
+
+piY(t) = (70/37)*sin((65/32)+(-32)*t)+(11/12)*sin((98/41)+(-31)*t)+(26/29)*sin((35/12)+(-30)*t)+(54/41)*sin((18/7)+(-29)*t)+(177/71)*sin((51/19)+(-27)*t)+(59/34)*sin((125/33)+(-26)*t)+(49/29)*sin((18/11)+(-25)*t)+(151/75)*sin((59/22)+(-24)*t)+(52/9)*sin((118/45)+(-22)*t)+(52/33)*sin((133/52)+(-21)*t)+(37/45)*sin((61/14)+(-20)*t)+(143/46)*sin((144/41)+(-19)*t)+(254/47)*sin((19/52)+(-18)*t)+(246/35)*sin((92/25)+(-17)*t)+(722/111)*sin((176/67)+(-16)*t)+(136/23)*sin((3/19)+(-15)*t)+(273/25)*sin((32/21)+(-13)*t)+(229/33)*sin((117/28)+(-12)*t)+(19/4)*sin((43/11)+(-11)*t)+(135/8)*sin((23/10)+(-10)*t)+(205/6)*sin((33/23)+(-8)*t)+(679/45)*sin((55/12)+(-7)*t)+(101/8)*sin((11/12)+(-6)*t)+(2760/59)*sin((40/11)+(-5)*t)+(1207/18)*sin((21/23)+(-4)*t)+(8566/27)*sin((39/28)+(-3)*t)+(12334/29)*sin((47/37)+(-2)*t)+(15410/39)*sin((185/41)+(-1)*t)+(-596/17)*sin((3/26)+9*t)+(-247/28)*sin((25/21)+14*t)+(-458/131)*sin((21/37)+23*t)+(-41/36)*sin((7/8)+28*t);
+
+# True pi normals
+piNormsX(t) = (abs((2240/37)*cos((65/32)+(-32)*t)+(341/12)*cos((98/41)+(-31)*t)+(780/29)*cos((35/12)+(-30)*t)+(1566/41)*cos((18/7)+(-29)*t)+(4779/71)*cos((51/19)+(-27)*t)+(767/17)*cos((125/33)+(-26)*t)+(1225/29)*cos((18/11)+(-25)*t)+(1208/25)*cos((59/22)+(-24)*t)+(1144/9)*cos((118/45)+(-22)*t)+(364/11)*cos((133/52)+(-21)*t)+(148/9)*cos((61/14)+(-20)*t)+(2717/46)*cos((144/41)+(-19)*t)+(4572/47)*cos((19/52)+(-18)*t)+(4182/35)*cos((92/25)+(-17)*t)+(11552/111)*cos((176/67)+(-16)*t)+(2040/23)*cos((3/19)+(-15)*t)+(3549/25)*cos((32/21)+(-13)*t)+(916/11)*cos((117/28)+(-12)*t)+(209/4)*cos((43/11)+(-11)*t)+(675/4)*cos((23/10)+(-10)*t)+(820/3)*cos((33/23)+(-8)*t)+(4753/45)*cos((55/12)+(-7)*t)+(303/4)*cos((11/12)+(-6)*t)+(13800/59)*cos((40/11)+(-5)*t)+(2414/9)*cos((21/23)+(-4)*t)+(8566/9)*cos((39/28)+(-3)*t)+(24668/29)*cos((47/37)+(-2)*t)+(15410/39)*cos((185/41)+(-1)*t)+(5364/17)*cos((3/26)+9*t)+(247/2)*cos((25/21)+14*t)+(10534/131)*cos((21/37)+23*t)+(287/9)*cos((7/8)+28*t))^2+abs((544/31)*cos((235/57)+(-32)*t)+(570/17)*cos((192/55)+(-30)*t)+(1363/32)*cos((69/25)+(-29)*t)+(945/26)*cos((75/34)+(-27)*t)+(156/31)*cos((23/10)+(-26)*t)+(875/43)*cos((10/33)+(-25)*t)+(3024/43)*cos((421/158)+(-24)*t)+(3146/57)*cos((35/22)+(-22)*t)+(742/9)*cos((84/29)+(-21)*t)+(352/5)*cos((23/27)+(-20)*t)+(1406/27)*cos((53/22)+(-19)*t)+(792/53)*cos((117/25)+(-18)*t)+(2142/25)*cos((88/49)+(-17)*t)+(1264/11)*cos((43/26)+(-16)*t)+(215/4)*cos((41/17)+(-15)*t)+(658/27)*cos((244/81)+(-14)*t)+(104/5)*cos((79/19)+(-13)*t)+(2238/23)*cos((109/38)+(-12)*t)+(13200/31)*cos((133/74)+(-11)*t)+(335/12)*cos((157/61)+(-10)*t)+(1166/7)*cos((13/8)+(-8)*t)+(772/5)*cos((59/16)+(-7)*t)+(11115/23)*cos((117/50)+(-6)*t)+(4310/13)*cos((19/8)+(-5)*t)+(19665/34)*cos((157/78)+(-3)*t)+(6949/13)*cos((83/27)+(-1)*t)+(6805/27)*cos((1/145)+2*t)+(20828/37)*cos((49/74)+4*t)+(16299/58)*cos((55/43)+9*t)+(1449/20)*cos((2/23)+23*t)+(7448/177)*cos((13/18)+28*t)+(62/21)*cos((7/16)+31*t))^2)^(-1/2)*((-2240/37)*cos((65/32)+(-32)*t)+(-341/12)*cos((98/41)+(-31)*t)+(-780/29)*cos((35/12)+(-30)*t)+(-1566/41)*cos((18/7)+(-29)*t)+(-4779/71)*cos((51/19)+(-27)*t)+(-767/17)*cos((125/33)+(-26)*t)+(-1225/29)*cos((18/11)+(-25)*t)+(-1208/25)*cos((59/22)+(-24)*t)+(-1144/9)*cos((118/45)+(-22)*t)+(-364/11)*cos((133/52)+(-21)*t)+(-148/9)*cos((61/14)+(-20)*t)+(-2717/46)*cos((144/41)+(-19)*t)+(-4572/47)*cos((19/52)+(-18)*t)+(-4182/35)*cos((92/25)+(-17)*t)+(-11552/111)*cos((176/67)+(-16)*t)+(-2040/23)*cos((3/19)+(-15)*t)+(-3549/25)*cos((32/21)+(-13)*t)+(-916/11)*cos((117/28)+(-12)*t)+(-209/4)*cos((43/11)+(-11)*t)+(-675/4)*cos((23/10)+(-10)*t)+(-820/3)*cos((33/23)+(-8)*t)+(-4753/45)*cos((55/12)+(-7)*t)+(-303/4)*cos((11/12)+(-6)*t)+(-13800/59)*cos((40/11)+(-5)*t)+(-2414/9)*cos((21/23)+(-4)*t)+(-8566/9)*cos((39/28)+(-3)*t)+(-24668/29)*cos((47/37)+(-2)*t)+(-15410/39)*cos((185/41)+(-1)*t)+(-5364/17)*cos((3/26)+9*t)+(-247/2)*cos((25/21)+14*t)+(-10534/131)*cos((21/37)+23*t)+(-287/9)*cos((7/8)+28*t));
+
+piNormsY(t) = (abs((2240/37)*cos((65/32)+(-32)*t)+(341/12)*cos((98/41)+(-31)*t)+(780/29)*cos((35/12)+(-30)*t)+(1566/41)*cos((18/7)+(-29)*t)+(4779/71)*cos((51/19)+(-27)*t)+(767/17)*cos((125/33)+(-26)*t)+(1225/29)*cos((18/11)+(-25)*t)+(1208/25)*cos((59/22)+(-24)*t)+(1144/9)*cos((118/45)+(-22)*t)+(364/11)*cos((133/52)+(-21)*t)+(148/9)*cos((61/14)+(-20)*t)+(2717/46)*cos((144/41)+(-19)*t)+(4572/47)*cos((19/52)+(-18)*t)+(4182/35)*cos((92/25)+(-17)*t)+(11552/111)*cos((176/67)+(-16)*t)+(2040/23)*cos((3/19)+(-15)*t)+(3549/25)*cos((32/21)+(-13)*t)+(916/11)*cos((117/28)+(-12)*t)+(209/4)*cos((43/11)+(-11)*t)+(675/4)*cos((23/10)+(-10)*t)+(820/3)*cos((33/23)+(-8)*t)+(4753/45)*cos((55/12)+(-7)*t)+(303/4)*cos((11/12)+(-6)*t)+(13800/59)*cos((40/11)+(-5)*t)+(2414/9)*cos((21/23)+(-4)*t)+(8566/9)*cos((39/28)+(-3)*t)+(24668/29)*cos((47/37)+(-2)*t)+(15410/39)*cos((185/41)+(-1)*t)+(5364/17)*cos((3/26)+9*t)+(247/2)*cos((25/21)+14*t)+(10534/131)*cos((21/37)+23*t)+(287/9)*cos((7/8)+28*t))^2+abs((544/31)*cos((235/57)+(-32)*t)+(570/17)*cos((192/55)+(-30)*t)+(1363/32)*cos((69/25)+(-29)*t)+(945/26)*cos((75/34)+(-27)*t)+(156/31)*cos((23/10)+(-26)*t)+(875/43)*cos((10/33)+(-25)*t)+(3024/43)*cos((421/158)+(-24)*t)+(3146/57)*cos((35/22)+(-22)*t)+(742/9)*cos((84/29)+(-21)*t)+(352/5)*cos((23/27)+(-20)*t)+(1406/27)*cos((53/22)+(-19)*t)+(792/53)*cos((117/25)+(-18)*t)+(2142/25)*cos((88/49)+(-17)*t)+(1264/11)*cos((43/26)+(-16)*t)+(215/4)*cos((41/17)+(-15)*t)+(658/27)*cos((244/81)+(-14)*t)+(104/5)*cos((79/19)+(-13)*t)+(2238/23)*cos((109/38)+(-12)*t)+(13200/31)*cos((133/74)+(-11)*t)+(335/12)*cos((157/61)+(-10)*t)+(1166/7)*cos((13/8)+(-8)*t)+(772/5)*cos((59/16)+(-7)*t)+(11115/23)*cos((117/50)+(-6)*t)+(4310/13)*cos((19/8)+(-5)*t)+(19665/34)*cos((157/78)+(-3)*t)+(6949/13)*cos((83/27)+(-1)*t)+(6805/27)*cos((1/145)+2*t)+(20828/37)*cos((49/74)+4*t)+(16299/58)*cos((55/43)+9*t)+(1449/20)*cos((2/23)+23*t)+(7448/177)*cos((13/18)+28*t)+(62/21)*cos((7/16)+31*t))^2)^(-1/2)*((544/31)*cos((235/57)+(-32)*t)+(570/17)*cos((192/55)+(-30)*t)+(1363/32)*cos((69/25)+(-29)*t)+(945/26)*cos((75/34)+(-27)*t)+(156/31)*cos((23/10)+(-26)*t)+(875/43)*cos((10/33)+(-25)*t)+(3024/43)*cos((421/158)+(-24)*t)+(3146/57)*cos((35/22)+(-22)*t)+(742/9)*cos((84/29)+(-21)*t)+(352/5)*cos((23/27)+(-20)*t)+(1406/27)*cos((53/22)+(-19)*t)+(792/53)*cos((117/25)+(-18)*t)+(2142/25)*cos((88/49)+(-17)*t)+(1264/11)*cos((43/26)+(-16)*t)+(215/4)*cos((41/17)+(-15)*t)+(658/27)*cos((244/81)+(-14)*t)+(104/5)*cos((79/19)+(-13)*t)+(2238/23)*cos((109/38)+(-12)*t)+(13200/31)*cos((133/74)+(-11)*t)+(335/12)*cos((157/61)+(-10)*t)+(1166/7)*cos((13/8)+(-8)*t)+(772/5)*cos((59/16)+(-7)*t)+(11115/23)*cos((117/50)+(-6)*t)+(4310/13)*cos((19/8)+(-5)*t)+(19665/34)*cos((157/78)+(-3)*t)+(6949/13)*cos((83/27)+(-1)*t)+(6805/27)*cos((1/145)+2*t)+(20828/37)*cos((49/74)+4*t)+(16299/58)*cos((55/43)+9*t)+(1449/20)*cos((2/23)+23*t)+(7448/177)*cos((13/18)+28*t)+(62/21)*cos((7/16)+31*t));
+
+# Circle function
+circF(t) = sin(2*π*sin(t));
+
+# True Laplace-Beltrami of Circle with f(t) = sin(2π sin(t))
+trueCirc∇∇F(s) = -2*π*(cos(2*π*sin(s))*sin(s) +
+                       2*π*cos(s)^2*sin(2*π*sin(s)));
+trueCircBHF(s) = 2*π*((1+24*π^2*cos(s)^2)*cos(2*π*sin(s))*sin(s)+2*π*(4*cos(s)^2+4*π^2*cos(s)^4-3*sin(s)^2)*sin(2*π*sin(s)));
+
+
+# π function
+piF(t) = sin(2*π*sin(t));
+
+# True Laplace-Beltrami of π with f(t) = sin(2π sin(t))
+truePi∇∇F(s) = (((-2240/37)*cos((65/32)+(-32)*s)+(-341/12)*cos((98/41)+(-31)*s)+(-780/29)*cos((35/12)+(-30)*s)+(-1566/41)*cos((18/7)+(-29)*s)+(-4779/71)*cos((51/19)+(-27)*s)+(-767/17)*cos((125/33)+(-26)*s)+(-1225/29)*cos((18/11)+(-25)*s)+(-1208/25)*cos((59/22)+(-24)*s)+(-1144/9)*cos((118/45)+(-22)*s)+(-364/11)*cos((133/52)+(-21)*s)+(-148/9)*cos((61/14)+(-20)*s)+(-2717/46)*cos((144/41)+(-19)*s)+(-4572/47)*cos((19/52)+(-18)*s)+(-4182/35)*cos((92/25)+(-17)*s)+(-11552/111)*cos((176/67)+(-16)*s)+(-2040/23)*cos((3/19)+(-15)*s)+(-3549/25)*cos((32/21)+(-13)*s)+(-916/11)*cos((117/28)+(-12)*s)+(-209/4)*cos((43/11)+(-11)*s)+(-675/4)*cos((23/10)+(-10)*s)+(-820/3)*cos((33/23)+(-8)*s)+(-4753/45)*cos((55/12)+(-7)*s)+(-303/4)*cos((11/12)+(-6)*s)+(-13800/59)*cos((40/11)+(-5)*s)+(-2414/9)*cos((21/23)+(-4)*s)+(-8566/9)*cos((39/28)+(-3)*s)+(-24668/29)*cos((47/37)+(-2)*s)+(-15410/39)*cos((185/41)+(-1)*s)+(-5364/17)*cos((3/26)+9*s)+(-247/2)*cos((25/21)+14*s)+(-10534/131)*cos((21/37)+23*s)+(-287/9)*cos((7/8)+28*s))^2+((-544/31)*cos((235/57)+(-32)*s)+(-570/17)*cos((192/55)+(-30)*s)+(-1363/32)*cos((69/25)+(-29)*s)+(-945/26)*cos((75/34)+(-27)*s)+(-156/31)*cos((23/10)+(-26)*s)+(-875/43)*cos((10/33)+(-25)*s)+(-3024/43)*cos((421/158)+(-24)*s)+(-3146/57)*cos((35/22)+(-22)*s)+(-742/9)*cos((84/29)+(-21)*s)+(-352/5)*cos((23/27)+(-20)*s)+(-1406/27)*cos((53/22)+(-19)*s)+(-792/53)*cos((117/25)+(-18)*s)+(-2142/25)*cos((88/49)+(-17)*s)+(-1264/11)*cos((43/26)+(-16)*s)+(-215/4)*cos((41/17)+(-15)*s)+(-658/27)*cos((244/81)+(-14)*s)+(-104/5)*cos((79/19)+(-13)*s)+(-2238/23)*cos((109/38)+(-12)*s)+(-13200/31)*cos((133/74)+(-11)*s)+(-335/12)*cos((157/61)+(-10)*s)+(-1166/7)*cos((13/8)+(-8)*s)+(-772/5)*cos((59/16)+(-7)*s)+(-11115/23)*cos((117/50)+(-6)*s)+(-4310/13)*cos((19/8)+(-5)*s)+(-19665/34)*cos((157/78)+(-3)*s)+(-6949/13)*cos((83/27)+(-1)*s)+(-6805/27)*cos((1/145)+2*s)+(-20828/37)*cos((49/74)+4*s)+(-16299/58)*cos((55/43)+9*s)+(-1449/20)*cos((2/23)+23*s)+(-7448/177)*cos((13/18)+28*s)+(-62/21)*cos((7/16)+31*s))^2)^(-1/2)*((-2)*pi*(((-2240/37)*cos((65/32)+(-32)*s)+(-341/12)*cos((98/41)+(-31)*s)+(-780/29)*cos((35/12)+(-30)*s)+(-1566/41)*cos((18/7)+(-29)*s)+(-4779/71)*cos((51/19)+(-27)*s)+(-767/17)*cos((125/33)+(-26)*s)+(-1225/29)*cos((18/11)+(-25)*s)+(-1208/25)*cos((59/22)+(-24)*s)+(-1144/9)*cos((118/45)+(-22)*s)+(-364/11)*cos((133/52)+(-21)*s)+(-148/9)*cos((61/14)+(-20)*s)+(-2717/46)*cos((144/41)+(-19)*s)+(-4572/47)*cos((19/52)+(-18)*s)+(-4182/35)*cos((92/25)+(-17)*s)+(-11552/111)*cos((176/67)+(-16)*s)+(-2040/23)*cos((3/19)+(-15)*s)+(-3549/25)*cos((32/21)+(-13)*s)+(-916/11)*cos((117/28)+(-12)*s)+(-209/4)*cos((43/11)+(-11)*s)+(-675/4)*cos((23/10)+(-10)*s)+(-820/3)*cos((33/23)+(-8)*s)+(-4753/45)*cos((55/12)+(-7)*s)+(-303/4)*cos((11/12)+(-6)*s)+(-13800/59)*cos((40/11)+(-5)*s)+(-2414/9)*cos((21/23)+(-4)*s)+(-8566/9)*cos((39/28)+(-3)*s)+(-24668/29)*cos((47/37)+(-2)*s)+(-15410/39)*cos((185/41)+(-1)*s)+(-5364/17)*cos((3/26)+9*s)+(-247/2)*cos((25/21)+14*s)+(-10534/131)*cos((21/37)+23*s)+(-287/9)*cos((7/8)+28*s))^2+((-544/31)*cos((235/57)+(-32)*s)+(-570/17)*cos((192/55)+(-30)*s)+(-1363/32)*cos((69/25)+(-29)*s)+(-945/26)*cos((75/34)+(-27)*s)+(-156/31)*cos((23/10)+(-26)*s)+(-875/43)*cos((10/33)+(-25)*s)+(-3024/43)*cos((421/158)+(-24)*s)+(-3146/57)*cos((35/22)+(-22)*s)+(-742/9)*cos((84/29)+(-21)*s)+(-352/5)*cos((23/27)+(-20)*s)+(-1406/27)*cos((53/22)+(-19)*s)+(-792/53)*cos((117/25)+(-18)*s)+(-2142/25)*cos((88/49)+(-17)*s)+(-1264/11)*cos((43/26)+(-16)*s)+(-215/4)*cos((41/17)+(-15)*s)+(-658/27)*cos((244/81)+(-14)*s)+(-104/5)*cos((79/19)+(-13)*s)+(-2238/23)*cos((109/38)+(-12)*s)+(-13200/31)*cos((133/74)+(-11)*s)+(-335/12)*cos((157/61)+(-10)*s)+(-1166/7)*cos((13/8)+(-8)*s)+(-772/5)*cos((59/16)+(-7)*s)+(-11115/23)*cos((117/50)+(-6)*s)+(-4310/13)*cos((19/8)+(-5)*s)+(-19665/34)*cos((157/78)+(-3)*s)+(-6949/13)*cos((83/27)+(-1)*s)+(-6805/27)*cos((1/145)+2*s)+(-20828/37)*cos((49/74)+4*s)+(-16299/58)*cos((55/43)+9*s)+(-1449/20)*cos((2/23)+23*s)+(-7448/177)*cos((13/18)+28*s)+(-62/21)*cos((7/16)+31*s))^2)^(-1/2)*cos(2*pi*sin(s))*sin(s)+(-1)*pi*cos(s)*(((-2240/37)*cos((65/32)+(-32)*s)+(-341/12)*cos((98/41)+(-31)*s)+(-780/29)*cos((35/12)+(-30)*s)+(-1566/41)*cos((18/7)+(-29)*s)+(-4779/71)*cos((51/19)+(-27)*s)+(-767/17)*cos((125/33)+(-26)*s)+(-1225/29)*cos((18/11)+(-25)*s)+(-1208/25)*cos((59/22)+(-24)*s)+(-1144/9)*cos((118/45)+(-22)*s)+(-364/11)*cos((133/52)+(-21)*s)+(-148/9)*cos((61/14)+(-20)*s)+(-2717/46)*cos((144/41)+(-19)*s)+(-4572/47)*cos((19/52)+(-18)*s)+(-4182/35)*cos((92/25)+(-17)*s)+(-11552/111)*cos((176/67)+(-16)*s)+(-2040/23)*cos((3/19)+(-15)*s)+(-3549/25)*cos((32/21)+(-13)*s)+(-916/11)*cos((117/28)+(-12)*s)+(-209/4)*cos((43/11)+(-11)*s)+(-675/4)*cos((23/10)+(-10)*s)+(-820/3)*cos((33/23)+(-8)*s)+(-4753/45)*cos((55/12)+(-7)*s)+(-303/4)*cos((11/12)+(-6)*s)+(-13800/59)*cos((40/11)+(-5)*s)+(-2414/9)*cos((21/23)+(-4)*s)+(-8566/9)*cos((39/28)+(-3)*s)+(-24668/29)*cos((47/37)+(-2)*s)+(-15410/39)*cos((185/41)+(-1)*s)+(-5364/17)*cos((3/26)+9*s)+(-247/2)*cos((25/21)+14*s)+(-10534/131)*cos((21/37)+23*s)+(-287/9)*cos((7/8)+28*s))^2+((-544/31)*cos((235/57)+(-32)*s)+(-570/17)*cos((192/55)+(-30)*s)+(-1363/32)*cos((69/25)+(-29)*s)+(-945/26)*cos((75/34)+(-27)*s)+(-156/31)*cos((23/10)+(-26)*s)+(-875/43)*cos((10/33)+(-25)*s)+(-3024/43)*cos((421/158)+(-24)*s)+(-3146/57)*cos((35/22)+(-22)*s)+(-742/9)*cos((84/29)+(-21)*s)+(-352/5)*cos((23/27)+(-20)*s)+(-1406/27)*cos((53/22)+(-19)*s)+(-792/53)*cos((117/25)+(-18)*s)+(-2142/25)*cos((88/49)+(-17)*s)+(-1264/11)*cos((43/26)+(-16)*s)+(-215/4)*cos((41/17)+(-15)*s)+(-658/27)*cos((244/81)+(-14)*s)+(-104/5)*cos((79/19)+(-13)*s)+(-2238/23)*cos((109/38)+(-12)*s)+(-13200/31)*cos((133/74)+(-11)*s)+(-335/12)*cos((157/61)+(-10)*s)+(-1166/7)*cos((13/8)+(-8)*s)+(-772/5)*cos((59/16)+(-7)*s)+(-11115/23)*cos((117/50)+(-6)*s)+(-4310/13)*cos((19/8)+(-5)*s)+(-19665/34)*cos((157/78)+(-3)*s)+(-6949/13)*cos((83/27)+(-1)*s)+(-6805/27)*cos((1/145)+2*s)+(-20828/37)*cos((49/74)+4*s)+(-16299/58)*cos((55/43)+9*s)+(-1449/20)*cos((2/23)+23*s)+(-7448/177)*cos((13/18)+28*s)+(-62/21)*cos((7/16)+31*s))^2)^(-3/2)*cos(2*pi*sin(s))*(2*((-2240/37)*cos((65/32)+(-32)*s)+(-341/12)*cos((98/41)+(-31)*s)+(-780/29)*cos((35/12)+(-30)*s)+(-1566/41)*cos((18/7)+(-29)*s)+(-4779/71)*cos((51/19)+(-27)*s)+(-767/17)*cos((125/33)+(-26)*s)+(-1225/29)*cos((18/11)+(-25)*s)+(-1208/25)*cos((59/22)+(-24)*s)+(-1144/9)*cos((118/45)+(-22)*s)+(-364/11)*cos((133/52)+(-21)*s)+(-148/9)*cos((61/14)+(-20)*s)+(-2717/46)*cos((144/41)+(-19)*s)+(-4572/47)*cos((19/52)+(-18)*s)+(-4182/35)*cos((92/25)+(-17)*s)+(-11552/111)*cos((176/67)+(-16)*s)+(-2040/23)*cos((3/19)+(-15)*s)+(-3549/25)*cos((32/21)+(-13)*s)+(-916/11)*cos((117/28)+(-12)*s)+(-209/4)*cos((43/11)+(-11)*s)+(-675/4)*cos((23/10)+(-10)*s)+(-820/3)*cos((33/23)+(-8)*s)+(-4753/45)*cos((55/12)+(-7)*s)+(-303/4)*cos((11/12)+(-6)*s)+(-13800/59)*cos((40/11)+(-5)*s)+(-2414/9)*cos((21/23)+(-4)*s)+(-8566/9)*cos((39/28)+(-3)*s)+(-24668/29)*cos((47/37)+(-2)*s)+(-15410/39)*cos((185/41)+(-1)*s)+(-5364/17)*cos((3/26)+9*s)+(-247/2)*cos((25/21)+14*s)+(-10534/131)*cos((21/37)+23*s)+(-287/9)*cos((7/8)+28*s))*((-71680/37)*sin((65/32)+(-32)*s)+(-10571/12)*sin((98/41)+(-31)*s)+(-23400/29)*sin((35/12)+(-30)*s)+(-45414/41)*sin((18/7)+(-29)*s)+(-129033/71)*sin((51/19)+(-27)*s)+(-19942/17)*sin((125/33)+(-26)*s)+(-30625/29)*sin((18/11)+(-25)*s)+(-28992/25)*sin((59/22)+(-24)*s)+(-25168/9)*sin((118/45)+(-22)*s)+(-7644/11)*sin((133/52)+(-21)*s)+(-2960/9)*sin((61/14)+(-20)*s)+(-51623/46)*sin((144/41)+(-19)*s)+(-82296/47)*sin((19/52)+(-18)*s)+(-71094/35)*sin((92/25)+(-17)*s)+(-184832/111)*sin((176/67)+(-16)*s)+(-30600/23)*sin((3/19)+(-15)*s)+(-46137/25)*sin((32/21)+(-13)*s)+(-10992/11)*sin((117/28)+(-12)*s)+(-2299/4)*sin((43/11)+(-11)*s)+(-3375/2)*sin((23/10)+(-10)*s)+(-6560/3)*sin((33/23)+(-8)*s)+(-33271/45)*sin((55/12)+(-7)*s)+(-909/2)*sin((11/12)+(-6)*s)+(-69000/59)*sin((40/11)+(-5)*s)+(-9656/9)*sin((21/23)+(-4)*s)+(-8566/3)*sin((39/28)+(-3)*s)+(-49336/29)*sin((47/37)+(-2)*s)+(-15410/39)*sin((185/41)+(-1)*s)+(48276/17)*sin((3/26)+9*s)+1729*sin((25/21)+14*s)+(242282/131)*sin((21/37)+23*s)+(8036/9)*sin((7/8)+28*s))+2*((-544/31)*cos((235/57)+(-32)*s)+(-570/17)*cos((192/55)+(-30)*s)+(-1363/32)*cos((69/25)+(-29)*s)+(-945/26)*cos((75/34)+(-27)*s)+(-156/31)*cos((23/10)+(-26)*s)+(-875/43)*cos((10/33)+(-25)*s)+(-3024/43)*cos((421/158)+(-24)*s)+(-3146/57)*cos((35/22)+(-22)*s)+(-742/9)*cos((84/29)+(-21)*s)+(-352/5)*cos((23/27)+(-20)*s)+(-1406/27)*cos((53/22)+(-19)*s)+(-792/53)*cos((117/25)+(-18)*s)+(-2142/25)*cos((88/49)+(-17)*s)+(-1264/11)*cos((43/26)+(-16)*s)+(-215/4)*cos((41/17)+(-15)*s)+(-658/27)*cos((244/81)+(-14)*s)+(-104/5)*cos((79/19)+(-13)*s)+(-2238/23)*cos((109/38)+(-12)*s)+(-13200/31)*cos((133/74)+(-11)*s)+(-335/12)*cos((157/61)+(-10)*s)+(-1166/7)*cos((13/8)+(-8)*s)+(-772/5)*cos((59/16)+(-7)*s)+(-11115/23)*cos((117/50)+(-6)*s)+(-4310/13)*cos((19/8)+(-5)*s)+(-19665/34)*cos((157/78)+(-3)*s)+(-6949/13)*cos((83/27)+(-1)*s)+(-6805/27)*cos((1/145)+2*s)+(-20828/37)*cos((49/74)+4*s)+(-16299/58)*cos((55/43)+9*s)+(-1449/20)*cos((2/23)+23*s)+(-7448/177)*cos((13/18)+28*s)+(-62/21)*cos((7/16)+31*s))*((-17408/31)*sin((235/57)+(-32)*s)+(-17100/17)*sin((192/55)+(-30)*s)+(-39527/32)*sin((69/25)+(-29)*s)+(-25515/26)*sin((75/34)+(-27)*s)+(-4056/31)*sin((23/10)+(-26)*s)+(-21875/43)*sin((10/33)+(-25)*s)+(-72576/43)*sin((421/158)+(-24)*s)+(-69212/57)*sin((35/22)+(-22)*s)+(-5194/3)*sin((84/29)+(-21)*s)+(-1408)*sin((23/27)+(-20)*s)+(-26714/27)*sin((53/22)+(-19)*s)+(-14256/53)*sin((117/25)+(-18)*s)+(-36414/25)*sin((88/49)+(-17)*s)+(-20224/11)*sin((43/26)+(-16)*s)+(-3225/4)*sin((41/17)+(-15)*s)+(-9212/27)*sin((244/81)+(-14)*s)+(-1352/5)*sin((79/19)+(-13)*s)+(-26856/23)*sin((109/38)+(-12)*s)+(-145200/31)*sin((133/74)+(-11)*s)+(-1675/6)*sin((157/61)+(-10)*s)+(-9328/7)*sin((13/8)+(-8)*s)+(-5404/5)*sin((59/16)+(-7)*s)+(-66690/23)*sin((117/50)+(-6)*s)+(-21550/13)*sin((19/8)+(-5)*s)+(-58995/34)*sin((157/78)+(-3)*s)+(-6949/13)*sin((83/27)+(-1)*s)+(13610/27)*sin((1/145)+2*s)+(83312/37)*sin((49/74)+4*s)+(146691/58)*sin((55/43)+9*s)+(33327/20)*sin((2/23)+23*s)+(208544/177)*sin((13/18)+28*s)+(1922/21)*sin((7/16)+31*s)))+(-4)*pi^2*cos(s)^2*(((-2240/37)*cos((65/32)+(-32)*s)+(-341/12)*cos((98/41)+(-31)*s)+(-780/29)*cos((35/12)+(-30)*s)+(-1566/41)*cos((18/7)+(-29)*s)+(-4779/71)*cos((51/19)+(-27)*s)+(-767/17)*cos((125/33)+(-26)*s)+(-1225/29)*cos((18/11)+(-25)*s)+(-1208/25)*cos((59/22)+(-24)*s)+(-1144/9)*cos((118/45)+(-22)*s)+(-364/11)*cos((133/52)+(-21)*s)+(-148/9)*cos((61/14)+(-20)*s)+(-2717/46)*cos((144/41)+(-19)*s)+(-4572/47)*cos((19/52)+(-18)*s)+(-4182/35)*cos((92/25)+(-17)*s)+(-11552/111)*cos((176/67)+(-16)*s)+(-2040/23)*cos((3/19)+(-15)*s)+(-3549/25)*cos((32/21)+(-13)*s)+(-916/11)*cos((117/28)+(-12)*s)+(-209/4)*cos((43/11)+(-11)*s)+(-675/4)*cos((23/10)+(-10)*s)+(-820/3)*cos((33/23)+(-8)*s)+(-4753/45)*cos((55/12)+(-7)*s)+(-303/4)*cos((11/12)+(-6)*s)+(-13800/59)*cos((40/11)+(-5)*s)+(-2414/9)*cos((21/23)+(-4)*s)+(-8566/9)*cos((39/28)+(-3)*s)+(-24668/29)*cos((47/37)+(-2)*s)+(-15410/39)*cos((185/41)+(-1)*s)+(-5364/17)*cos((3/26)+9*s)+(-247/2)*cos((25/21)+14*s)+(-10534/131)*cos((21/37)+23*s)+(-287/9)*cos((7/8)+28*s))^2+((-544/31)*cos((235/57)+(-32)*s)+(-570/17)*cos((192/55)+(-30)*s)+(-1363/32)*cos((69/25)+(-29)*s)+(-945/26)*cos((75/34)+(-27)*s)+(-156/31)*cos((23/10)+(-26)*s)+(-875/43)*cos((10/33)+(-25)*s)+(-3024/43)*cos((421/158)+(-24)*s)+(-3146/57)*cos((35/22)+(-22)*s)+(-742/9)*cos((84/29)+(-21)*s)+(-352/5)*cos((23/27)+(-20)*s)+(-1406/27)*cos((53/22)+(-19)*s)+(-792/53)*cos((117/25)+(-18)*s)+(-2142/25)*cos((88/49)+(-17)*s)+(-1264/11)*cos((43/26)+(-16)*s)+(-215/4)*cos((41/17)+(-15)*s)+(-658/27)*cos((244/81)+(-14)*s)+(-104/5)*cos((79/19)+(-13)*s)+(-2238/23)*cos((109/38)+(-12)*s)+(-13200/31)*cos((133/74)+(-11)*s)+(-335/12)*cos((157/61)+(-10)*s)+(-1166/7)*cos((13/8)+(-8)*s)+(-772/5)*cos((59/16)+(-7)*s)+(-11115/23)*cos((117/50)+(-6)*s)+(-4310/13)*cos((19/8)+(-5)*s)+(-19665/34)*cos((157/78)+(-3)*s)+(-6949/13)*cos((83/27)+(-1)*s)+(-6805/27)*cos((1/145)+2*s)+(-20828/37)*cos((49/74)+4*s)+(-16299/58)*cos((55/43)+9*s)+(-1449/20)*cos((2/23)+23*s)+(-7448/177)*cos((13/18)+28*s)+(-62/21)*cos((7/16)+31*s))^2)^(-1/2)*sin(2*pi*sin(s)));
+
+## Generate node set given x and y coordinate sets
+function dist(x, y)
+    return [x'; y']
+end
+
+## Functions for generating approximate normals using a sorted node1
+## distribution
+# function for finding approximate normals
+function approxNormals(nodes)
+    # Number of nodes
+    N = size(nodes,2);
+    nmls = zeros(2,N);
+    
+    # First Node
+    tmp = nodes[:,2] - nodes[:,N];
+    tmp = rot90(tmp);
+    nmls[:,1] = tmp;
+
+    # Middle Nodes
+    for i ∈ 2:N-1
+        tmp = nodes[:,i+1] - nodes[:, i-1];
+        tmp = rot90(tmp);
+        nmls[:,i] = tmp;
+    end
+
+    # Last Node
+    tmp = nodes[:,1] - nodes[:,N-1];
+    tmp = rot90(tmp);
+    nmls[:,N] = tmp;
+
+    return nmls
+end
+
+# Function that rotates vectors -π/2
+function rot90(vec)
+    tmp = zeros(2);
+    tmp[1] = vec[2];
+    tmp[2] = -vec[1];
+    
+    return tmp
+end
+
+## Find indices for k nearest neighbors
+# KNN for an unordered data set
+function knnFull(nodes, n)
+    kdtree = KDTree(nodes);
+    idx, tmp = knn(kdtree, nodes, n, true);
+    
+    return idx
+end
+
+# KNN for ordered data set
+function knnFullOrd(nodes, n)::Array{Array{Int,1},1}
+    N = size(nodes,2);
+    idx = [];
+    for i ∈ 1:N
+        push!(idx,zeros(n))
+    end
+    
+    # Put nth node as nth first index
+    for i ∈ 1:N
+        idx[i][1] = i;
+    end
+
+    # Populate rest of indices
+    for i ∈ 1:N, j ∈ 2:n
+        if j%2 == 0
+            k = i + floor(j/2);
+            idx[i][j] = k>N ? k - N : k;
+        else
+            k = i - floor(j/2);
+            idx[i][j] = k<=0 ? N+k : k;
+        end 
+    end
+    
+    return idx
+end
+
+
+## Functions for setting up RBF envrionment
+# Center main node
+function center(nodes)
+    nodes = nodes .- nodes[:,1];
+
+    return nodes
+end
+
+# Finds angle between center vector and ĵ
+sgn(x) = x >= 0 ? 1 : -1;
+function findAngle(node)
+    b = node[2]/norm(node);
+    θ = sgn(node[1])acos(b);
+    
+    return θ
+end
+
+# Rotate nodes about origin
+function rotate(nodes, θ)
+    # Compute rotation matrix
+    rotor = [cos(θ) -sin(θ);
+             sin(θ) cos(θ)];
+    
+    # Rotate all vectors
+    nodes = rotor*nodes;
+    
+    return nodes
+end
+
+
+## RBF related functions
+
+# RBF definitons
+# 1D
+# Gaussian
+# ϕ(x1,x2,m) = exp(-abs2(m*(x1-x2)));
+# ϕ_x(x1,x2,m) = 2*(m^2)*(x2-x1)*exp(-abs2(m*(x1-x2)));
+
+# PHS
+ϕ(x1,x2,m) = abs(x1-x2)^m;
+ϕ_x(x1,x2,m) = m*sign(x1-x2)*abs(x1-x2)^(m-1);
+ϕ_xx(x1,x2,m) = m*(m-1)*abs(x1-x2)^(m-2);
+ϕ_xxx(x1,x2,m) = m*(m-1)*(m-2)*sign(x1-x2)*abs(x1-x2)^(m-3);
+ϕ_xxxx(x1,x2,m) = m*(m-1)*(m-2)*(m-3)*abs(x1-x2)^(m-4);
+
+# Construct collocation matrix
+function collocM(x, m, o)
+    n = size(x, 1);
+    A0 = zeros(n,n);
+    A1 = zeros(o+1,n);
+
+    # Define A without helping terms
+    for i ∈ 1:n, j ∈ 1:n
+        A0[i,j] = ϕ(x[i], x[j], m);
+    end
+    
+    # Create helping terms
+    A1[1,:] .= 1;
+    for i ∈ 1:o, j ∈ 1:n
+        A1[i+1,j] = x[j]^i;
+    end
+
+    # Create full A
+    A = [A0 A1';
+         A1 zeros(o+1,o+1)];
+
+    return A
+end
+
+# RBF interpolant derivative at s=0
+function S_x(x, λ, m)
+    n = size(x,1);
+    
+    s = 0;
+    for i ∈ 1:n
+        s += λ[i]*ϕ_x(0, x[i], m);
+    end
+
+    # Add polynomial contribution if there is one
+    if size(λ,1) > n+1
+        s += λ[n+2];
+    end
+    
+    return s
+end
+
+# RBF interpolant second derivative at s=0
+function S_xx(x, λ, m)
+    n = size(x,1);
+    
+    s = 0;
+    for i ∈ 1:n
+        s += λ[i]*ϕ_xx(0, x[i], m);
+    end
+
+    # Add polynomial contribution if there is one
+    if size(λ,1) > n+2
+        s += 2*λ[n+3];
+    end
+    
+    return s
+end
+
+# RBF interpolant third derivative at s=0
+function S_xxx(x, λ, m)
+    n = size(x,1);
+    
+    s = 0;
+    for i ∈ 1:n
+        s += λ[i]*ϕ_xxx(0, x[i], m);
+    end
+
+    # Add polynomial contribution if there is one
+    if size(λ,1) > n+3
+        s += 6*λ[n+4];
+    end
+    
+    return s
+end
+
+# RBF interpolant third derivative at s=0
+function S_xxxx(x, λ, m)
+    n = size(x,1);
+    
+    s = 0;
+    for i ∈ 1:n
+        s += λ[i]*ϕ_xxxx(0, x[i], m);
+    end
+
+    # Add polynomial contribution if there is one
+    if size(λ,1) > n+4
+        s += 24*λ[n+5];
+    end
+    
+    return s
+end
+
+# Populate Laplace-Beltrami discretization matrix
+function constructLBD(nodes, n, m, typ, o)
+    # Find number of nodes
+    N = size(nodes, 2);
+    
+    # Compute approximate normals
+    appNorms = approxNormals(nodes);
+
+    # Find nearest neighbors
+    idx = knnFullOrd(nodes, n);
+    
+    cent = zeros(2,n);
+    rot = cent;
+    D = spzeros(N,N);
+    for i ∈ 1:N
+        # Find angle
+        θ = findAngle(appNorms[:,i]);
+
+        # Center nodes
+        cent = center(nodes[:,idx[i]]);
+
+        # Rotate nodes
+        rot = rotate(cent, θ);
+
+        # Create collocation matrix
+        A = collocM(rot[1,:], m, o);
+        
+        # Create local height vector with helping terms
+        f = [rot[2,:]; zeros(o+1)];
+        
+        # Compute RBF weights of local surface
+        λs = A\f;
+
+        # Compute derivatives at each local node S = 0
+        S_s = S_x(rot[1,:], λs, m);
+        S_ss = S_xx(rot[1,:], λs, m);
+        if typ == 2
+            S_sss = S_xxx(rot[1,:], λs, m);
+            S_ssss = S_xxxx(rot[1,:], λs, m);
+        end
+        
+        # Compute length element
+        s = 1 + S_s^2;
+        
+        # Create linear operator vector
+        Lϕ = zeros(n+o+1);
+        for i ∈ 1:n
+            xi = rot[1,i];
+
+            if typ == 1
+                # Laplace-Beltrami operator
+                Lϕ[i] = s^(-1)*ϕ_xx(0, xi, m) - s^(-2)*S_s*S_ss*ϕ_x(0, xi, m);
+            else
+                # Biharmonic operator
+                Lϕ[i] =
+                    (13*s^(-4)*S_s*S_ss^3 - 28*s^(-5)*S_s^3*S_ss^3 -
+                     3*s^(-3)*S_ss*S_sss + 13*s^(-4)*S_s^2*S_ss*S_sss -
+                     s^(-3)*S_s*S_ssss)*
+                ϕ_x(0, xi, m) + 
+                    (19*s^(-4)*S_s^2*S_ss^2 - 4*s^(-3)*S_ss^2 -
+                     4*s^(-3)*S_s*S_sss)*
+                ϕ_xx(0, xi, m) +
+                    (-6*s^(-3)*S_s*S_ss)*
+                ϕ_xxx(0, xi, m) +
+                    (s^(-2))*
+                ϕ_xxxx(0, xi, m);
+            end
+        end
+        
+        if typ == 1
+            if o > 0
+                Lϕ[n+2] = -s^(-2)*S_s*S_ss;
+                if o > 1
+                    Lϕ[n+3] = 2*s^(-1);
+                end
+            end
+        else
+            if o > 0
+                Lϕ[n+2] =
+                    (13*s^(-4)*S_s*S_ss^3 - 28*s^(-5)*S_s^3*S_ss^3 -
+                     3*s^(-3)*S_ss*S_sss + 13*s^(-4)*S_s^2*S_ss*S_sss -
+                     s^(-3)*S_s*S_ssss);
+                if o > 1
+                    Lϕ[n+3] =
+                        2*(19*s^(-4)*S_s^2*S_ss^2 -
+                           4*s^(-3)*S_ss^2 -
+                           4*s^(-3)*S_s*S_sss);
+                    if o > 2
+                        Lϕ[n+4] =
+                            6*(-6*s^(-3)*S_s*S_ss);
+                        if o > 3
+                            Lϕ[n+5] =
+                                24*s^(-2);
+                        end
+                    end
+                end
+            end
+        end
+        # Compute local weights
+        w = A\Lϕ;
+        
+        # Populate D with local weights
+        D[i,idx[i]] = w[1:n];
+    end
+    
+    return D
+end
+
+## Analysis functions
+# Vector error
+function vecError(trues, calcs)
+    N = size(trues,2);
+    normErrs = zeros(N);
+    for j ∈ 1:N
+        magDiff = norm(trues[:,j]-calcs[:,j]);
+        mag = norm(trues[:,j]);
+        normErrs[j] = magDiff/mag;
+    end
+    err = maximum(normErrs);
+    return (err,normErrs)
+end
+
+# Scalar error
+function scalError(trues, calcs)
+    N = size(trues, 1);
+    normErrs = zeros(N);
+    for j ∈ 1:N
+        magDiff = norm(trues[j]-calcs[j]);
+        mag = norm(trues[j]);
+        
+        # A routine to handle mag ≈ 0
+        if mag <= 10^(-10)
+            normErrs[j] = magDiff;
+        else
+            normErrs[j] = magDiff/mag;
+        end
+        # normErrs[j] = magDiff;
+    end
+    err = maximum(normErrs);
+    
+    return (err,normErrs)
+end
+
+## Plot functions
+# Plot of nodes and vectors
+function vectorPlot(points, direction)
+    N = size(points, 2);
+    vecs = points + 0.1*direction;
+    a = scatter(points[1,:],points[2,:],
+                aspectratio = :equal,
+                legend = false,
+                show = false,
+                markersize = 2,
+                markerstrokealpha = 0,
+                markeralpha = .9);
+    for i ∈ 1:N
+        plot!([points[1,i], vecs[1,i]],
+              [points[2,i], vecs[2,i]],
+              color = :red,
+              legend = false,
+              show = false,
+              lw = 1)
+    end
+    return a
+end
+
+# Nodes plot
+function nodePlot(set1)
+    a = scatter(set1[1,:],set1[2,:],
+                color = :blue,
+                show = false,
+                legend = false,
+                aspectratio = :equal,
+                markersize = 1,
+                markerstrokealpha = 0)
+    return a
+end
+
+# Error plot
+function errPlot(nodes, errs)
+    N = size(errs,1);
+
+    # Scale errors logarithmically
+    errs = log10.(errs);
+
+    a = scatter(nodes[1,:], nodes[2,:],
+                marker_z = errs,
+                c = :viridis,
+                cbarlims = :auto,
+                colorbar = :right,
+                aspectratio = :equal,
+                legend = false,
+                markersize = 2,
+                markerstrokealpha = 0,
+                markeralpha = .75,
+                title = "Normal Error")
+    return a
+end
+
+# RBF interpolation plot
+function interPlot(nodes, λ, m)
+    x = nodes[1,:];
+    y = nodes[2,:];
+    t = range(minimum(x), maximum(x), length = 100);
+    s = S(t, x, λ, m);
+    
+    a = scatter(x,y,
+                color = :blue,
+                aspectratio = :equal,
+                show = false,
+                legend = false,
+                markersize = 1.5,
+                markerstrokealpha = 0)
+    plot!(t,s,lw=1)
+
+    return a
+end
+
+# Spectrum plot
+function spectrum(A)
+    # Find eigenvalues of A
+    λ = eigs(A, maxiter = 1000, nev = 3000)[1];
+
+    a = scatter(real(λ), imag(λ));
+
+    return a
+end
+
+## Main function discretizing and using Laplace-Beltrami discretization
+function comp(N=100, n=10, m=3, o=n-1)
+    # Parameterizing our curve
+    t = range(0,2*π-2*π/N, length = N);
+
+    # Generate nodes and function values
+    nodes = dist(circX.(t), circY.(t));
+    F = circF.(t);
+
+    # Compute true Laplace-Beltrami of F
+    true∇∇F = trueCirc∇∇F.(t);
+
+    # Compute true biharmonic of F
+    trueBHF = trueCircBHF.(t);
+
+    # Discretize Laplace-Beltrami operator
+    D = constructLBD(nodes, n, m, 1, o);
+
+    # Create biharmonic operator form Lap-Bel operator
+    D1 = D*D;
+    
+    # Discretize biharmonic operator
+    D2 = constructLBD(nodes, n, m, 2, o);
+        
+    # Compute ∇∇F
+    # laps = D*F;
+
+    # Compute ∞-norm of error
+    a = scalError(trueBHF, D1*F);
+    b = scalError(trueBHF, D2*F);
+    
+    # b = errPlot(nodes, a[2])
+    # display(b)
+
+    # c = plot3d(nodes[1,:],nodes[2,:],trueBHF);
+    # c = plot3d(nodes[1,:],nodes[2,:], D2*F);
+    # display(c)
+
+    # d = spectrum(D);
+    # display(d)
+
+    # Heat propogation
+    # f = zeros(N);
+    # f[2000:3400] .= 100;
+    # D = I - 10000*D;
+    # e = scatter(nodes[1,:], nodes[2,:],
+    #             marker_z = f,
+    #             c = :plasma,
+    #             cbarlims = (0,100),
+    #             colorbar = :right,
+    #             aspectratio = :equal,
+    #             legend = false,
+    #             markersize = 2,
+    #             markerstrokealpha = 0,
+    #             markeralpha = .75,
+    #             title = "Temperature")
+    # display(e)
+    # sleep(0.01)
+    # for it ∈ 1:500
+    #    e =  scatter(nodes[1,:], nodes[2,:],
+    #                 marker_z = f,
+    #                 c = :plasma,
+    #                 cbarlims = (0,100),
+    #                 colorbar = :right,
+    #                 aspectratio = :equal,
+    #                 legend = false,
+    #                 markersize = 2,
+    #                 markerstrokealpha = 0,
+    #                 markeralpha = .75,
+    #                 title = "Temperature")
+    #     f = D\f;
+    #     display(e)
+    #     sleep(0.01)
+    # end
+    
+    return [a[1],b[1]]
+end
+
+# function lapErrs(m,o=-10)
+#     neighbors = [5,7,9,11,13];
+#     nodes = 100:1000:20000;
+#     a = plot()
+#     a = plot(nodes,10^(-13.75)*nodes.^2,
+#              title = "RBF-Tensor Laplace-Beltrami(F)",
+#              label = "Rounding Error",
+#              linestyle = :dash,
+#              xaxis = :log,
+#              yaxis = :log,
+#              xlabel = "# Nodes",
+#              ylabel = "Inf-Norm Error",
+#              dpi = 300)
+#     # a = plot!(nodes, ((10^3)./nodes).^11.25,
+#     #           label = "Convergence Rate (L11.25)",
+#     #           xaxis = :log,
+#     #           yaxis = :log)
+#     for n ∈ neighbors
+#         if o == -10
+#             oo = n-1;
+#         else
+#             oo = o;
+#         end
+        
+#         err = [];
+#         for N ∈ nodes
+#             comps = comp(N, n, m, oo)
+#             push!(err,comps);
+#         end
+        
+#         a = plot!(nodes,err,
+#                   label = string(n, " Neighbors"),
+#                   legend = :topright,
+#                   xaxis = :log,
+#                   yaxis = :log);
+#         display(a)
+#     end
+#     # png(a, "fig_lap.png")
+# end
+
+function lapErrs(m,o=-10)
+    neighbors = [5,9,13];
+    nodes = 30:100:2000;
+    a = plot()
+    for n ∈ neighbors
+        if o == -10
+            oo = n-1;
+        else
+            oo = o;
+        end
+        
+        err1 = [];
+        err2 = [];
+        for N ∈ nodes
+            comps = comp(N, n, m, oo)
+            push!(err1,comps[1]);
+            push!(err2, comps[2]);
+        end
+        
+        a = plot!(nodes,err1,
+                  label = string(n, " D_LBO^2"),
+                  legend = :bottomleft,
+                  title = "RBFT-FD BHO on Unit Circle",
+                  linestyle = :dash,
+                  xaxis = :log,
+                  yaxis = :log,
+                  xlabel = "# Nodes",
+                  ylabel = "Inf-Norm Error",
+                  dpi = 300);
+        a = plot!(nodes,err2,
+                  label = string(n, " D_BHO"),
+                  legend = :bottomleft,
+                  xaxis = :log,
+                  yaxis = :log,
+                  dpi = 300);
+        display(a)
+    end
+    a = plot!(nodes,10^(-18)*nodes.^4,
+             label = "Rounding error",
+             linestyle = :dot,
+             xaxis = :log,
+             yaxis = :log,
+             dpi = 300)
+    png(a, "fig_BHO.png")
+    display(a)
+end
+
+# Laplace-Beltrami
+# comp(10000, 11, 7)
+
+lapErrs(7)
