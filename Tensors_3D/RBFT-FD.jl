@@ -16,10 +16,10 @@ function covar(nodes)
     x̄ = x̄ / N;
 
     # Compute covariance
-    A = zeros(N,N)
+    A = zeros(size(nodes,1),size(nodes,1))
     for i ∈ 1:N
         diff = nodes[:,i] - x̄;
-
+        
         A += diff*diff';
     end
     
@@ -47,3 +47,16 @@ function appNorms(nodes; n::Int = 3)
         nmls[:,i] = eigvecs(c, eigmin(c));
     end
 end
+
+# Node centering function given where offset is the first node in the array
+function center(nodes)
+    cents = nodes .- nodes[:,1];
+
+    return nodes
+end
+
+# Angle offset finder
+function findθ(nodes)
+
+# Rotate function
+
