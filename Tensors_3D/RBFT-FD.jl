@@ -60,7 +60,7 @@ function knnFull(nodes, n)
 end
 
 # Approximate normals using associated covariance
-function appNorms(nodes, idx; n::Int = 3)
+function appNorms(nodes, idx)
     # Number of nodes
     N = size(nodes,2);
 
@@ -83,24 +83,56 @@ end
 function center(nodes)
     cents = nodes .- nodes[:,1];
 
-    return nodes
+    return cents
 end
 
 # Positive Nth-D rotation function based on Givens rotations
-function rotUp(nodes, nml, n::Int = 3)
+function rotUp(nodes, normal)
     # Dimension of space
     D= size(nodes,1);
+    cluster = copy(nodes);
+    nml = copy(normal);
     
     # Begin rotations (under construction)
-    sc = zeros(2,N-1)
+    sc = zeros(2,D-1)
     for i ∈ 1:D-1
-        sc[:,i] = [nml]
-    end
+        x = nml[i];
+        y = nml[D];
+        mag = norm([x,y])
 
-    return nodes
+        # Compute sine and cosine values
+        s = x/mag;
+        c = y/mag;
+        
+        # Store sine and cosine values for later
+        sc[:,i] = [s,c];
+        
+        # Construct rotation matrix
+        rot = [c -s;
+               s c];
+        
+        nml[[i,D]] = [0,mag]
+        cluster[[i,D],:] = rot*cluster[[i,D],:];
+    end
+    
+    return (cluster,sc)
 end
 
 # Reverse rotation function given sine and cosines of previous rotations
-function rotBack(nodes, sc)
+function rotBack(vector, sc)
+    D = size(vector,1);
+    vec = copy(vector);
     
+    for i ∈ D-1:-1:1
+        s = sc[1,i];
+        c = sc[2,i];
+        
+        # Construct rotation matrix
+        rot = [c s;
+               -s c];
+        
+        vec[[i,end]] = rot*vec[[i,end]];
+    end
+
+    return vec
 end
