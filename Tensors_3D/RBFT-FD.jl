@@ -136,3 +136,33 @@ function rotBack(vector, sc)
 
     return vec
 end
+
+## Polynomial functions
+# Degree array generator
+function polMat(vars, deg)
+    if deg < 0
+        return []
+    else
+        tmp::Array{Int64,1} = zeros(vars);
+        array::Array{Array{Int64,1},1} = [copy(tmp)];
+        idx = 1;
+        i = 1;
+        while true
+            if tmp[1] == deg
+                break
+            end
+            if sum(tmp) == deg
+                tmp[idx] = 0;
+                tmp[idx-1] += 1;
+                idx -= 1;
+                push!(array,copy(tmp));
+            elseif idx != vars
+                idx += 1;
+            else
+                tmp[idx] += 1;
+                push!(array,copy(tmp));
+            end
+        end
+        return reduce(hcat, array)
+    end
+end
