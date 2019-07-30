@@ -3,6 +3,7 @@
 ## Including used packages
 using NearestNeighbors
 using LinearAlgebra
+include("PHS.jl")
 
 ### Approximate normal functions definitions
 # Inverse iteration routine to find eigenvector assoiciated with smallest λ
@@ -139,7 +140,7 @@ end
 
 ## Polynomial functions
 # Degree array generator
-function polMat(vars, deg)
+function polyMat(vars, deg)
     if deg < 0
         return []
     else
@@ -165,4 +166,38 @@ function polMat(vars, deg)
         end
         return reduce(hcat, array)
     end
+end
+
+## Finite difference functions
+# Collocation matrix generator
+function colloc(nodes, poly, m)
+    # Number of nodes in cluster
+    N = size(nodes,2);
+    # Number of dimensions
+    D = size(nodes,1);
+    # Number of polynomial terms
+    P = size(poly,2);
+    
+    # Preallocating space
+    A11 = zeros(N,N);
+    A12 = zeros(N,P);
+    
+    for j ∈ 1:N, i ∈ 1:N
+        A11[i,j] = ϕ(nodes[:,j],nodes[:,i],m);
+    end
+    
+    for j ∈ 1:P, i ∈ 1:N
+        tmp = 1;
+        for k ∈ 1:D
+            tmp *= nodes[k,i]^poly[k,j];
+        end
+        
+        A12[i,j] = tmp;
+    end
+
+    # Construst A
+    A = [A11 A12;
+         A12' zeros(P,P)];
+    
+    return A 
 end
