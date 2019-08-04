@@ -87,6 +87,11 @@ function center(nodes)
     return cents
 end
 
+# Alternative center function that replaces given nodes
+function center!(nodes)
+    nodes = nodes .- nodes[:,1];
+end
+
 # Positive Nth-D rotation function based on Givens rotations
 function rotUp(nodes, normal)
     # Dimension of space
@@ -94,7 +99,7 @@ function rotUp(nodes, normal)
     cluster = copy(nodes);
     nml = copy(normal);
     
-    # Begin rotations (under construction)
+    # Begin rotations
     sc = zeros(2,D-1)
     for i ∈ 1:D-1
         x = nml[i];
@@ -119,6 +124,37 @@ function rotUp(nodes, normal)
     return (cluster,sc)
 end
 
+# Alternative rotUp function that replaces given node sets
+function rotUp!(nodes, normal)
+    # Dimension of space
+    D= size(nodes,1);
+    nml = copy(normal);
+    
+    # Begin rotations
+    sc = zeros(2,D-1)
+    for i ∈ 1:D-1
+        x = nml[i];
+        y = nml[D];
+        mag = norm([x,y])
+
+        # Compute sine and cosine values
+        s = x/mag;
+        c = y/mag;
+        
+        # Store sine and cosine values for later
+        sc[:,i] = [s,c];
+        
+        # Construct rotation matrix
+        rot = [c -s;
+               s c];
+        
+        nml[[i,D]] = [0,mag]
+        nodes[[i,D],:] = rot*nodes[[i,D],:];
+    end
+    
+    return sc
+end
+
 # Reverse rotation function given sine and cosines of previous rotations
 function rotBack(vector, sc)
     D = size(vector,1);
@@ -136,6 +172,22 @@ function rotBack(vector, sc)
     end
 
     return vec
+end
+
+# Alternative rotBack function that replaces vector
+function rotBack!(vector, sc)
+    D = size(vector,1);
+    
+    for i ∈ D-1:-1:1
+        s = sc[1,i];
+        c = sc[2,i];
+        
+        # Construct rotation matrix
+        rot = [c s;
+               -s c];
+        
+        vector[[i,end]] = rot*vector[[i,end]];
+    end
 end
 
 ## Polynomial functions
