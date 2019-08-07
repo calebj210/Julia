@@ -3,10 +3,22 @@
 ## Including used packages
 using NearestNeighbors
 using LinearAlgebra
+using SparseArrays
 include("PHS.jl")
 
 ### Approximate normal functions definitions
-# Inverse iteration routine to find eigenvector assoiciated with smallest λ
+# Inverse iteration routine to find the eigenvector associated with the
+# smallest eigenvalue 
+"""
+    invIt(A; ϵ = 10^(-5), maxIts = 10)
+
+Inverse iteration routine to find the eigenvector associated with the
+smallest eigenvalue of the matrix `A` to a tolerance defined by `ϵ`.
+
+`maxIts` (default = `10`) determines the max number of iterations used to find λ.
+
+If A is singular, `invIt` returns a single vector from the nullspace of `A`.
+"""
 function invIt(A; ϵ = 10^(-5), maxIts = 10)
     # If A is singular bypass inverse iteration and return the nullspace instead
     if det(A) != 0
@@ -29,7 +41,12 @@ function invIt(A; ϵ = 10^(-5), maxIts = 10)
     return x
 end
 
-# Generate covariance given a cluster xⱼ
+# Function for computing the covariance of a cluster xⱼ
+"""
+    covar(nodes)
+
+Compute the covariance matrix given a cluster xⱼ defined by `nodes`
+"""
 function covar(nodes)
     # Number of nodes
     N = size(nodes,2);
@@ -52,7 +69,13 @@ function covar(nodes)
     return A
 end
 
-# KNN search for unordered data set
+# KNN search for unordered data sets
+"""
+    knnFull(nodes, n)
+
+KNN search for an unordered data set defined by `nodes` where there are `n`
+neighbors
+"""
 function knnFull(nodes, n)
     kdtree = KDTree(nodes);
     idx, tmp = knn(kdtree, nodes, n, true);
@@ -60,7 +83,48 @@ function knnFull(nodes, n)
     return idx
 end
 
+# Vector orientation algorithm
+"""
+    orVecs(nodes, vecs, idx)
+
+Vector orientation algorithm that will flip all vectors defined by
+`vecs` on a surface defined by `nodes` as to have the vectors all
+oriented on the same side of the surface.
+"""
+function orVecs(nodes, vecs, idx)
+    # Number of dimensions and nodes
+    D,N = size(nodes);
+    # Number of nodes in cluster
+    n = size(idx[1]);
+
+    an = repeat(1:N, inner = n);
+    bn = repeat(something, something, something);
+    D_n = spzeros(Float64, size(an,1), size(bn,1));
+
+    for j ∈ bn, i ∈ an
+        for k ∈ 1:D
+            D_n[i,j] += vecs[i,k]*vecs[j,k];
+        end
+    end
+
+    D_n = D_n'*D_n;
+    tmp, maxEig = eigs(D_n, nev = 1, which = :LM);
+    maxEig = sign.(maxEig);
+    newVecs = maxEig'*vecs;
+
+    return newVecs
+end
+
 # Approximate normals using associated covariance
+"""
+    appNorms(nodes, idx)
+
+Computes approximate normals given `nodes` and the nearest neighbor
+indices given by `idx`.
+
+The normals are computed using the associated covariance method. The
+normal vectors are stored as column vectors in a matrix.
+"""
 function appNorms(nodes, idx)
     # Number of nodes
     N = size(nodes,2);
@@ -70,34 +134,58 @@ function appNorms(nodes, idx)
     nmls = zeros(size(nodes,1), N);
     for i ∈ 1:N
         c = covar(nodes[:,idx[i]])
-        nmls[:,i] = invIt(c);
+        nmls[:,i] = invIt(c, ϵ = 0, maxIts = 1000);
     end
 
-    # Orientation (under construction)
-
+    # Orientating the normals (orVecs under construction)
+    # nmls = orVecs(nodes, nmls, idx);
+    
     return nmls
 end
 
 
 ## Node orienting functions
-# Node centering function given where offset is the first node in the array
-function center(nodes)
+# Node centering function given where offset is the first node in the
+# array
+"""
+    cent(nodes)
+
+Centers all the `nodes` so that the first node in `nodes` is at the origin.
+"""
+function cent(nodes)
     cents = nodes .- nodes[:,1];
 
     return cents
 end
 
 # Alternative center function that replaces given nodes
-function center!(nodes)
+""" 
+    cent!(nodes)
+
+same as `cent` but stores the centered nodes in `nodes`.
+"""
+function cent!(nodes)
     nodes = nodes .- nodes[:,1];
 end
 
 # Positive Nth-D rotation function based on Givens rotations
-function rotUp(nodes, normal)
+"""
+    rotUp(nodes, vec)
+
+rotate all the `nodes` so that `vec` is pointing in the posive
+last coordinate.
+
+The algorithm uses givens rotation and as such also produces a matrix of
+sines and cosines so that the rotation can be reversed using `rotBack`.
+
+`rotUp` returns a tuple of the form `(rotNodes, sc)` where sc is the
+sine and cosine matrix.
+"""
+function rotUp(nodes, vec)
     # Dimension of space
     D= size(nodes,1);
     cluster = copy(nodes);
-    nml = copy(normal);
+    nml = copy(vec);
     
     # Begin rotations
     sc = zeros(2,D-1)
@@ -125,6 +213,12 @@ function rotUp(nodes, normal)
 end
 
 # Alternative rotUp function that replaces given node sets
+"""
+    rotUp!(nodes, normal)
+
+Same as `rotUp` but now stores the rotated nodes in `nodes` and only
+returns the sine and cosine matrix.
+"""
 function rotUp!(nodes, normal)
     # Dimension of space
     D= size(nodes,1);
@@ -156,6 +250,12 @@ function rotUp!(nodes, normal)
 end
 
 # Reverse rotation function given sine and cosines of previous rotations
+"""
+    rotBack(vector, sc)
+
+Undo the rotations of `rotUp` on single vector given a sine and cosine
+matrix, `sc`
+"""
 function rotBack(vector, sc)
     D = size(vector,1);
     vec = copy(vector);
@@ -175,6 +275,11 @@ function rotBack(vector, sc)
 end
 
 # Alternative rotBack function that replaces vector
+"""
+    rotBack!(vector, sc)
+
+Same as `rotBack` but now stores the rotated vector in `vector`
+"""
 function rotBack!(vector, sc)
     D = size(vector,1);
     
@@ -192,6 +297,26 @@ end
 
 ## Polynomial functions
 # Degree array generator
+"""
+    polyMat(vars, deg)
+
+Given the number of dimensions or variables, `vars`, and the highest
+degree of the polynomial specified by `deg`, polyMat produces a
+polynomial power matrix.
+
+Each column of the matrix corresponds to each term in the polynomial
+and each row corresponds to the variable.
+
+# Example
+```jldoctest
+julia> polyMat(2,2)
+2×6 Array{Int64,2}:
+ 0  0  0  1  1  2
+ 0  1  2  0  1  0
+```
+This matrix will equate to the polynomial:
+1 + y + y^2 + x + xy + x^2
+"""
 function polyMat(vars, deg)
     if deg < 0
         return Array{Int64}(undef,vars,0)
@@ -222,6 +347,13 @@ end
 
 ## Finite difference functions
 # Collocation matrix generator
+"""
+    colloc(nodes, poly = Array{Int64}(undef,0,0); m = 3)
+
+`colloc` takes the local nodes, `nodes`, and polynomial terms, `poly`, to
+produce a collocation matrix for RBF interpolation or RBF-FD operator
+discretization. The order of the PHS can specified by `m`.
+"""
 function colloc(nodes, poly = Array{Int64}(undef,0,0); m = 3)
     # Number of nodes in cluster
     N = size(nodes,2);
@@ -259,6 +391,14 @@ function colloc(nodes, poly = Array{Int64}(undef,0,0); m = 3)
 end
 
 # Routine for computing RBF-PHS interpolant weights
+"""
+    findλ(nodes, f, poly = Array{Int64}(undef,0,0); m = 3)
+
+`findλ` computes the RBF-PHS + polynomial term interpolation weights
+given the local coordinate `nodes` and the function values, `f`. `findλ`
+also if no polynomial power matrix, `poly`, is given, no polynomial
+terms are used. The order of the PHS, `m`, can also be specified.
+"""
 function findλ(nodes, f, poly = Array{Int64}(undef,0,0); m = 3)
     # Number of nodes
     N = size(f,1);
@@ -280,6 +420,13 @@ function findλ(nodes, f, poly = Array{Int64}(undef,0,0); m = 3)
 end
 
 # Compute interpolant at X_c with respect to xi
+"""
+    S(nodes, Xc, λ, poly = Array{Int64}(undef,size(nodes,1),0); m = 3)
+
+Compute the RBF interpolation at `Xc` given the interpolation weights `λ`.
+
+`λ` can be found using `findλ`.
+"""
 function S(nodes, Xc, λ, poly = Array{Int64}(undef,size(nodes,1),0); m = 3)
     # Number of nodes
     N = size(nodes,2);
@@ -307,6 +454,14 @@ function S(nodes, Xc, λ, poly = Array{Int64}(undef,size(nodes,1),0); m = 3)
 end
 
 # Compute derivative of interpolant at X_c with respect to xi
+"""
+    S_xi(nodes, Xc, λ, ii, poly = Array{Int64}(undef,size(nodes,1),0); m = 3)
+
+Compute the derivative of the RBF interpolation at `Xc` with respect to the
+`ii`th coordinate given the weights `λ`.
+
+See `S` or `findλ`.
+"""
 function S_xi(nodes, Xc, λ, ii, poly = Array{Int64}(undef,size(nodes,1),0); m = 3)
     # Number of nodes
     N = size(nodes,2);
@@ -346,6 +501,14 @@ function S_xi(nodes, Xc, λ, ii, poly = Array{Int64}(undef,size(nodes,1),0); m =
 end
 
 # Compute derivative of interpolant at X_c with respect to xi
+"""
+    S_xii(nodes, Xc, λ, ii, poly = Array{Int64}(undef,size(nodes,1),0); m = 3)
+
+Compute the second derivative of the RBF interpolation at `Xc` with respect to the
+`ii`th coordinate given the weights `λ`.
+
+See `S`, `S_xi`, or `findλ`.
+"""
 function S_xii(nodes, Xc, λ, ii, poly = Array{Int64}(undef,size(nodes,1),0); m = 3)
     # Number of nodes
     N = size(nodes,2);
@@ -388,6 +551,14 @@ function S_xii(nodes, Xc, λ, ii, poly = Array{Int64}(undef,size(nodes,1),0); m 
 end
 
 # Compute derivative of interpolant at X_c with respect to xi
+"""
+    S_xii(nodes, Xc, λ, ii, poly = Array{Int64}(undef,size(nodes,1),0); m = 3)
+
+Compute the mixed partial derivative of the RBF interpolation at `Xc` with respect to the
+`ii`th and `jj`th coordinates given the weights `λ`.
+
+See `S`, `S_xi`, `S_xij`, or `findλ`.
+"""
 function S_xij(nodes, Xc, λ, ii, jj, poly = Array{Int64}(undef,size(nodes,1),0); m = 3)
     # Number of nodes
     N = size(nodes,2);
@@ -439,4 +610,15 @@ function S_xij(nodes, Xc, λ, ii, jj, poly = Array{Int64}(undef,size(nodes,1),0)
     end
 
     return tmp
+end
+
+# Function for discretizing the Laplace-Beltrami operator on a 2-D
+# surface embedded in 3-D ambient space
+function lapDisc3D(nodes, n, deg, m)
+    # Number of dimensions and nodes
+    (D,N) = size(nodes);
+
+    idx = knnFull(nodes,n);
+
+    appnms = appNorms(nodes, idx);
 end

@@ -51,20 +51,59 @@ end
 
 ## Test for find3DNormals
 function comp()
-    nodes = randDist(1000);
+    # N = 23;
+    # M = 12;
+    # θ = range(0, 2*π*(1-1/N), length = N);
+    # ϕ = range(π/4, 3*π/4, length = M);
+    # nodes = dist(θ,ϕ);
+    nodes = randDist(15000);
 
-    nmls = find3DNormals(nodes, 5, 3, 1);
-
-    a = scatter(nodes[1,:], nodes[2,:], nodes[3,:]);
-    for i ∈ 1:size(nodes,2)
-        a = plot!([nodes[1,i],nodes[1,i]+.5*nmls[1,i]],
-                  [nodes[2,i],nodes[2,i]+.5*nmls[2,i]],
-                  [nodes[3,i],nodes[3,i]+.5*nmls[3,i]],
-                  linecolor = :red,
-                  legend = false);
-    end
+    deg = 2;
     
-    display(a)
+    tmp = size(polyMat(2,deg),2);
+    nmls = find3DNormals(nodes,  2*tmp, 3, deg);
+    appnorms = appNorms(nodes, knnFull(nodes,2*tmp));
+    for i ∈ 1:size(nodes,2)
+        appnorms[:,i] /= norm(appnorms[:,i]);
+    end
+    for i ∈ 1:size(nodes,2)
+        if nmls[:,i] ⋅ nodes[:,i] < 0
+            nmls[:,i] *= -1;
+        end
+        if appnorms[:,i] ⋅ nodes[:,i] < 0
+            appnorms[:,i] *= -1;
+        end
+    end
+
+    appnorms -= nodes;
+    nmls -= nodes;
+    nms1 = zeros(size(nodes,2));
+    nms2 = zeros(size(nodes,2));
+    for i ∈ 1:size(nodes,2);
+        nms1[i] = norm(nmls[:,i]);
+        nms2[i] = norm(appnorms[:,i]);
+    end
+
+    display(maximum(nms1))
+    display(maximum(nms2))
+    
+    # a = scatter(nodes[1,:], nodes[2,:], nodes[3,:]);
+    # for i ∈ 1:size(nodes,2)
+    #     a = plot!([nodes[1,i],nodes[1,i]+nmls[1,i]],
+    #               [nodes[2,i],nodes[2,i]+nmls[2,i]],
+    #               [nodes[3,i],nodes[3,i]+nmls[3,i]],
+    #               linecolor = :green,
+    #               legend = false);
+    # end
+    # for i ∈ 1:size(nodes,2)
+    #     a = plot!([nodes[1,i],nodes[1,i]+appnorms[1,i]],
+    #               [nodes[2,i],nodes[2,i]+appnorms[2,i]],
+    #               [nodes[3,i],nodes[3,i]+appnorms[3,i]],
+    #               linecolor = :red,
+    #               legend = false);
+    # end
+    
+    # display(a)
 end
 
 comp()
