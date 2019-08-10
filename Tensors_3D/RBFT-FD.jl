@@ -165,7 +165,7 @@ end
 same as `cent` but stores the centered nodes in `nodes`.
 """
 function cent!(nodes)
-    nodes = nodes .- nodes[:,1];
+    nodes .-= nodes[:,1];
 end
 
 # Positive Nth-D rotation function based on Givens rotations
@@ -372,15 +372,13 @@ function colloc(nodes, poly = Array{Int64}(undef,0,0); m = 3)
     end
 
     # Add polynomial contributions
-    if poly != []
-        for j ∈ 1:P, i ∈ 1:N
-            tmp = 1;
-            for k ∈ 1:D
-                tmp *= nodes[k,i]^poly[k,j];
-            end
-            
-            A12[i,j] = tmp;
+    for j ∈ 1:P, i ∈ 1:N
+        tmp = 1;
+        for k ∈ 1:D
+            tmp *= nodes[k,i]^poly[k,j];
         end
+            
+        A12[i,j] = tmp;
     end
 
     # Construst A
@@ -478,20 +476,20 @@ function S_xi(nodes, Xc, λ, ii, poly = Array{Int64}(undef,size(nodes,1),0); m =
     
     # Add polynomial contribution
     for i ∈ 1:P
-        p = poly[ii,i]
-        tmp2 = λ[i+N]*p;
-        for j ∈ 1:ii-1
-            tmp2 *= Xc[j]^poly[j,i]
-        end
+        p = poly[ii,i];
+        tmp2 = 0;
+        if p-1 >= 0
+            tmp2 = λ[i+N]*p;
+            for j ∈ 1:ii-1
+                tmp2 *= Xc[j]^poly[j,i];
+            end
 
-        # Add derivative component of polynomial
-        p = p-1;
-        if p >= 0
-            tmp2 *= Xc[ii]^p;
-        end
-        
-        for j ∈ ii+1:D
-            tmp2 *= Xc[j]^poly[j,i]
+            # Add derivative component of polynomial
+            tmp2 *= Xc[ii]^(p-1);
+            
+            for j ∈ ii+1:D
+                tmp2 *= Xc[j]^poly[j,i];
+            end
         end
         
         tmp += tmp2
@@ -526,22 +524,23 @@ function S_xii(nodes, Xc, λ, ii, poly = Array{Int64}(undef,size(nodes,1),0); m 
     # Add polynomial contribution
     for i ∈ 1:P
         p = poly[ii,i];
-        tmp2 = λ[i+N]*p*(p-1);
-
-        # Add standard polynomial terms
-        for j ∈ 1:ii-1
-            tmp2 *= Xc[j]^poly[j,i]
-        end
-
-        # Add derivative component of polynomial
-        p = p-2;
-        if p >= 0
+        tmp2 = 0;
+        if p-2 >= 0
+            tmp2 = λ[i+N]*p*(p-1);
+            
+            # Add standard polynomial terms
+            for j ∈ 1:ii-1
+                tmp2 *= Xc[j]^poly[j,i]
+            end
+            
+            # Add derivative component of polynomial
+            p = p-2;
             tmp2 *= Xc[ii]^p;
-        end
-
-        # Add more standard polynomial terms
-        for j ∈ ii+1:D
-            tmp2 *= Xc[j]^poly[j,i]
+            
+            # Add more standard polynomial terms
+            for j ∈ ii+1:D
+                tmp2 *= Xc[j]^poly[j,i]
+            end
         end
         
         tmp += tmp2
@@ -586,8 +585,8 @@ function S_xij(nodes, Xc, λ, ii, jj, poly = Array{Int64}(undef,size(nodes,1),0)
         end
         
         # Add derivative component of polynomial
-        p1 = p-1;
-        if p >= 0
+        p1 = p1-1;
+        if p1 >= 0
             tmp2 *= Xc[ii]^p1;
         end
         
@@ -596,8 +595,8 @@ function S_xij(nodes, Xc, λ, ii, jj, poly = Array{Int64}(undef,size(nodes,1),0)
         end
         
         # Add derivative component of polynomial
-        p2 = p-1;
-        if p >= 0
+        p2 = p2-1;
+        if p2 >= 0
             tmp2 *= Xc[ii]^p2;
         end
 
