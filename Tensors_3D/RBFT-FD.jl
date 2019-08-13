@@ -4,6 +4,7 @@
 using NearestNeighbors
 using LinearAlgebra
 using SparseArrays
+using Arpack
 include("PHS.jl")
 
 ### Approximate normal functions definitions
@@ -97,20 +98,23 @@ function orVecs(nodes, vecs, idx)
     # Number of nodes in cluster
     n = size(idx[1]);
 
+    # Populate index vectors
     an = repeat(1:N, inner = n);
-    bn = repeat(something, something, something);
-    D_n = spzeros(Float64, size(an,1), size(bn,1));
+    bn = vcat(idx...);
+    D_n = spzeros(Float64, N,N);
 
-    for j ∈ bn, i ∈ an
-        for k ∈ 1:D
-            D_n[i,j] += vecs[i,k]*vecs[j,k];
-        end
+    for i ∈ 1:size(an,1)
+        ann = an[i];
+        bnn = bn[i];
+        D_n[ann,bnn] += vecs[:,ann] ⋅ vecs[:,bnn];
     end
 
     D_n = D_n'*D_n;
     tmp, maxEig = eigs(D_n, nev = 1, which = :LM);
     maxEig = sign.(maxEig);
-    newVecs = maxEig'*vecs;
+
+    # Orient vectors
+    newVecs = maxEig' .* vecs;
 
     return newVecs
 end
@@ -136,9 +140,6 @@ function appNorms(nodes, idx)
         c = covar(nodes[:,idx[i]])
         nmls[:,i] = invIt(c, ϵ = 0, maxIts = 1000);
     end
-
-    # Orientating the normals (orVecs under construction)
-    # nmls = orVecs(nodes, nmls, idx);
     
     return nmls
 end

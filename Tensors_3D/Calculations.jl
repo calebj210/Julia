@@ -48,6 +48,9 @@ function find3DNormals(nodes, n, m, deg; idx = [])
         normals[:,i] = rotBack(tmpN,sc);
     end
 
+    # Orient normals
+    normals = orVecs(nodes, normals, idx);
+
     return normals
 end
 
@@ -58,30 +61,32 @@ function comp()
     # θ = range(0, 2*π*(1-1/N), length = N);
     # ϕ = range(1/M,π*(1-1/M), length = M);
     # nodes = dist(θ,ϕ);
-    nodes = randDist(4000);
+    nodes = randDist(5000);
     # obj = load("/home/cajacobs/Dropbox/PDEs-Curves-Surfaces/Nodes on surfaces/759hand.off");
     # nodes = zeros(3,size(obj.vertices,1))
     # for i ∈ 1:size(nodes,2)
     #     nodes[:,i] = obj.vertices[i][1:3];
     # end
     
-    deg = 2;
+    deg = 4;
     
     tmp = size(polyMat(2,deg),2);
+    
     nmls = find3DNormals(nodes, 2*tmp, 3, deg);
+    
     appnorms = appNorms(nodes, knnFull(nodes,2*tmp));
-    # nmls = appnorms
     for i ∈ 1:size(nodes,2)
         appnorms[:,i] /= norm(appnorms[:,i]);
     end
-    for i ∈ 1:size(nodes,2)
-        if nmls[:,i] ⋅ nodes[:,i] < 0
-            nmls[:,i] *= -1;
-        end
-        if appnorms[:,i] ⋅ nodes[:,i] < 0
-            appnorms[:,i] *= -1;
-        end
+    appnorms = orVecs(nodes, appnorms, knnFull(nodes,2*tmp));
+    
+    if nmls[:,1] ⋅ nodes[:,1] < 0
+        nmls *= -1;
     end
+    if appnorms[:,1] ⋅ nodes[:,1] < 0
+        appnorms *= -1;
+    end
+    
 
     appnorms -= nodes;
     nmls -= nodes;
@@ -96,14 +101,14 @@ function comp()
     display(maximum(nms2))
     
     # a = scatter(nodes[1,:], nodes[2,:], nodes[3,:]);
-    # for i ∈ 1:25:size(nodes,2)
+    # for i ∈ 1:size(nodes,2)
     #     a = plot!([nodes[1,i],nodes[1,i]+0.5*nmls[1,i]],
     #               [nodes[2,i],nodes[2,i]+0.5*nmls[2,i]],
     #               [nodes[3,i],nodes[3,i]+0.5*nmls[3,i]],
     #               linecolor = :orange,
     #               legend = false);
     # end
-    # for i ∈ 1:25:size(nodes,2)
+    # for i ∈ 1:size(nodes,2)
     #     a = plot!([nodes[1,i],nodes[1,i]+0.5*appnorms[1,i]],
     #               [nodes[2,i],nodes[2,i]+0.5*appnorms[2,i]],
     #               [nodes[3,i],nodes[3,i]+0.5*appnorms[3,i]],
