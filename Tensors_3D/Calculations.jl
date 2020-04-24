@@ -2,10 +2,9 @@
 ## Including used packages and files
 using Plots
 using FileIO
-using MeshIO
 include("RBFT-FD.jl")
 include("Nodes.jl")
-pyplot()
+plotly()
 
 ## Function for finding 3D surface normals
 function find3DNormals(nodes, n, m, deg; idx = [])
@@ -61,12 +60,13 @@ function comp()
     # θ = range(0, 2*π*(1-1/N), length = N);
     # ϕ = range(1/M,π*(1-1/M), length = M);
     # nodes = dist(θ,ϕ);
-    nodes = randDist(5000);
+    nodes = randDist(1000);
     # obj = load("/home/cajacobs/Dropbox/PDEs-Curves-Surfaces/Nodes on surfaces/759hand.off");
-    # nodes = zeros(3,size(obj.vertices,1))
-    # for i ∈ 1:size(nodes,2)
-    #     nodes[:,i] = obj.vertices[i][1:3];
-    # end
+    obj = load("/home/cajacobs/test.off");
+    nodes = zeros(3,size(obj.vertices,1))
+    for i ∈ 1:size(nodes,2)
+        nodes[:,i] = obj.vertices[i][1:3];
+    end
     
     deg = 4;
     
@@ -88,35 +88,36 @@ function comp()
     end
     
 
-    appnorms -= nodes;
-    nmls -= nodes;
-    nms1 = zeros(size(nodes,2));
-    nms2 = zeros(size(nodes,2));
-    for i ∈ 1:size(nodes,2);
-        nms1[i] = norm(nmls[:,i]);
-        nms2[i] = norm(appnorms[:,i]);
-    end
+    # appnorms -= nodes;
+    # nmls -= nodes;
+    # nms1 = zeros(size(nodes,2));
+    # nms2 = zeros(size(nodes,2));
+    # for i ∈ 1:size(nodes,2);
+    #     nms1[i] = norm(nmls[:,i]);
+    #     nms2[i] = norm(appnorms[:,i]);
+    # end
 
-    display(maximum(nms1))
-    display(maximum(nms2))
+    # display(maximum(nms1))
+    # display(maximum(nms2))
     
-    # a = scatter(nodes[1,:], nodes[2,:], nodes[3,:]);
-    # for i ∈ 1:size(nodes,2)
-    #     a = plot!([nodes[1,i],nodes[1,i]+0.5*nmls[1,i]],
-    #               [nodes[2,i],nodes[2,i]+0.5*nmls[2,i]],
-    #               [nodes[3,i],nodes[3,i]+0.5*nmls[3,i]],
-    #               linecolor = :orange,
-    #               legend = false);
-    # end
-    # for i ∈ 1:size(nodes,2)
-    #     a = plot!([nodes[1,i],nodes[1,i]+0.5*appnorms[1,i]],
-    #               [nodes[2,i],nodes[2,i]+0.5*appnorms[2,i]],
-    #               [nodes[3,i],nodes[3,i]+0.5*appnorms[3,i]],
-    #               linecolor = :red,
-    #               legend = false);
-    # end
+    a = scatter(nodes[1,:], nodes[2,:], nodes[3,:],
+                aspect_ratio = :equal)
+    for i ∈ 1:1:size(nodes,2)
+        a = plot!([nodes[1,i],nodes[1,i]+0.5*nmls[1,i]],
+                  [nodes[2,i],nodes[2,i]+0.5*nmls[2,i]],
+                  [nodes[3,i],nodes[3,i]+0.5*nmls[3,i]],
+                  linecolor = :orange,
+                  legend = false);
+    end
+    for i ∈ 1:1:size(nodes,2)
+        a = plot!([nodes[1,i],nodes[1,i]+0.5*appnorms[1,i]],
+                  [nodes[2,i],nodes[2,i]+0.5*appnorms[2,i]],
+                  [nodes[3,i],nodes[3,i]+0.5*appnorms[3,i]],
+                  linecolor = :red,
+                  legend = false);
+    end
     
-    # display(a)
+    display(a)
 end
 
 comp()

@@ -586,7 +586,7 @@ function errs(m,o=-10)
                   yaxis = :log);
         display(a)
     end
-    png(a,"fig_c.png")
+    png(a,"fig_b.png")
 end
 
 # Laplace-Beltrami Stuff

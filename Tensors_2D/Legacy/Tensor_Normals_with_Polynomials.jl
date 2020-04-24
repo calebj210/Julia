@@ -662,9 +662,10 @@ end
 # errs(7)
 
 # Single parameters
-# comp(5000,6,3,2)
+comp(5000,6,3,2)
 
 # Laplace-Beltrami
 # lapComp(1000, 11, 3, 5)
 
-lapErrs(7)
+# lapErrs(7)
+1

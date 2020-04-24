@@ -581,7 +581,7 @@ end
 
 function lapErrs(m,o=-10)
     neighbors = [5,9,13];
-    nodes = 30:100:2f000;
+    nodes = 30:100:2000;
     a = plot()
     for n ∈ neighbors
         if o == -10
@@ -601,7 +601,7 @@ function lapErrs(m,o=-10)
         a = plot!(nodes,err1,
                   label = string(n, " D_CDO^2"),
                   legend = :bottomleft,
-                  title = "RBFT-FD LBO on Pi",
+                  title = "RBFT-FD LBO on Unit Circle",
                   linestyle = :dash,
                   xaxis = :log,
                   yaxis = :log,
