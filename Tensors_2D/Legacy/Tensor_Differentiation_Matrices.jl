@@ -8,7 +8,7 @@ using NearestNeighbors
 using Plots
 using LaTeXStrings
 using BenchmarkTools
-pyplot()
+gr()
 
 
 ## Function definitions
@@ -508,62 +508,68 @@ function comp(N=100, n=10, m=3, o=n-1)
     D = constructLBD(nodes, n, m, 1, o);
 
     # Create biharmonic operator form Lap-Bel operator
-    D1 = D*D;
+    # D1 = D*D;
     
     # Discretize biharmonic operator
-    D2 = constructLBD(nodes, n, m, 2, o);
+    # D2 = constructLBD(nodes, n, m, 2, o);
         
     # Compute ∇∇F
     # laps = D*F;
 
     # Compute ∞-norm of error
-    a = scalError(trueBHF, D1*F);
+    # a = scalError(trueBHF, D1*F);
     
     # b = errPlot(nodes, a[2])
     # display(b)
 
     # c = plot3d(nodes[1,:],nodes[2,:],trueBHF);
-    c = plot3d(nodes[1,:],nodes[2,:], D2*F);
-    display(c)
+    # c = plot3d(nodes[1,:],nodes[2,:], D2*F);
+    # display(c)
 
     # d = spectrum(D);
     # display(d)
 
     # Heat propogation
-    # f = zeros(N);
-    # f[2000:3400] .= 100;
-    # D = I - 10000*D;
-    # e = scatter(nodes[1,:], nodes[2,:],
-    #             marker_z = f,
-    #             c = :plasma,
-    #             cbarlims = (0,100),
-    #             colorbar = :right,
-    #             aspectratio = :equal,
-    #             legend = false,
-    #             markersize = 2,
-    #             markerstrokealpha = 0,
-    #             markeralpha = .75,
-    #             title = "Temperature")
-    # display(e)
-    # sleep(0.01)
-    # for it ∈ 1:500
-    #    e =  scatter(nodes[1,:], nodes[2,:],
-    #                 marker_z = f,
-    #                 c = :plasma,
-    #                 cbarlims = (0,100),
-    #                 colorbar = :right,
-    #                 aspectratio = :equal,
-    #                 legend = false,
-    #                 markersize = 2,
-    #                 markerstrokealpha = 0,
-    #                 markeralpha = .75,
-    #                 title = "Temperature")
-    #     f = D\f;
-    #     display(e)
-    #     sleep(0.01)
-    # end
+    f = zeros(N);
+    f[2000:3400] .= 100;
+    f[7000:7750] .= 75;
+    f[8300:8500] .= 100;
+    f[1:900] .= 100;
+    f[5000:5600] .= 85;
+    D = I - 10000*D;
+    e = scatter(nodes[1,:], nodes[2,:],
+                marker_z = f,
+                c = :plasma,
+                cbarlims = (0,100),
+                colorbar = :right,
+                aspectratio = :equal,
+                legend = false,
+                markersize = 3,
+                markerstrokealpha = 0,
+                markeralpha = .75,
+                title = "Temperature")
+    display(e)
+    sleep(1)
+    png(e, "InitHeat.png")
+    for it ∈ 1:20
+       e =  scatter(nodes[1,:], nodes[2,:],
+                    marker_z = f,
+                    c = :plasma,
+                    cbarlims = (0,100),
+                    colorbar = :right,
+                    aspectratio = :equal,
+                    legend = false,
+                    markersize = 3,
+                    markerstrokealpha = 0,
+                    markeralpha = .75,
+                    title = "Temperature")
+        f = D\f;
+        display(e)
+        sleep(0.01)
+    end
+    png(e, "FinalHeat.png")
     
-    return a[1]
+    return
 end
 
 function lapErrs(m,o=-10)
