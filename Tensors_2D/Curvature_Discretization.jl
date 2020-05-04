@@ -7,12 +7,12 @@ using LaTeXStrings
 gr()
 
 ## Unit circle
-x(t) = 0.2cos.(t);
-y(t) = 0.2sin.(t);
+x(r,t) = r*cos.(t);
+y(r,t) = r*sin.(t);
 
 ## Small Circle
-x2(t) = 0.1*cos.(t) .+ 0.4;
-y2(t) = 0.1*sin.(t) .+ 0.4;
+x2(t) = 0.2*cos.(t) .+ 0.4;
+y2(t) = 0.2*sin.(t) .+ 0.4;
 
 ## True normals
 truX(t) = cos.(t);
@@ -42,12 +42,12 @@ function main1(N=20, n=5, m=3, o=0)
 end
 
 ## 1 Circles
-function main2(N=20, n=5, m=3, o=0, Δt = 0.01,TF=0.02)
+function main2(N=20, n=5, m=3, o=0, Δt = 0.01, TF=0.02, r=0.2)
     # Coordinate discretization
     t = range(0,2*π-2*π/N, length = N);
 
     # Creating our node distribution
-    nodes = [x(t)';y(t)'];
+    nodes = [x(r,t)';y(r,t)'];
     
     # Evolve curve
     time = Δt:Δt:TF;
@@ -65,7 +65,7 @@ function main2(N=20, n=5, m=3, o=0, Δt = 0.01,TF=0.02)
 
         # display(κ[1])
         
-        nodes += -K.*norms*Δt;
+        nodes += K.*norms*Δt;
         
         # plotA = scatter(nodes[1,:],nodes[2,:],
         #                 color = :blue,
@@ -76,15 +76,14 @@ function main2(N=20, n=5, m=3, o=0, Δt = 0.01,TF=0.02)
         #                 markerstrokealpha = 0,
         #                 xlims = (-0.3,0.3),
         #                 ylims = (-0.3,0.3));
-        # display(T)
+        # # display(T)
         # display(plotA)
-        # display(κ[1])
         # sleep(0.01)
         
         for j ∈ 1:N
             compR[j] = norm(nodes[:,j]);
         end
-        truR = fill((0.04-2T)^(0.5),N);
+        truR = fill((r^2+2T)^(0.5),N);
         radiusErr[i] = norm(scalError(truR,compR)[2],Inf); 
         i += 1;
     end
@@ -97,14 +96,16 @@ function main2(N=20, n=5, m=3, o=0, Δt = 0.01,TF=0.02)
     #                 markerstrokealpha = 0,
     #                 xlims = (-2,2),
     #                 ylims = (-2,2));
-    # plotB = plot(time,radiusErr,
-    #              title = "Relative Error for Shrinking Circle",
-    #              xlabel = "Time (s)",
-    #              ylabel = L"||\mathrm{Rel}\;\mathrm{Err}||_\infty",
-    #              yscale = :log10,
-    #              xlims = (0,0.02))
-    # display(plotB)
-    return radiusErr
+    plotB = plot(time,radiusErr,
+                 title = "Relative Error for Shrinking Circle",
+                 xlabel = "Time (s)",
+                 ylabel = L"||\mathrm{Rel}\;\mathrm{Err}||_\infty",
+                 yscale = :log10,
+                 xlims = (0,TF))
+    display(plotB)
+
+    
+    # return radiusErr
 end
 
 ## 2 Circles
@@ -210,4 +211,4 @@ function fig_b()
 end
 
 
-fig_b()
+main2(60, 12, 7, 5, 10^(-6), 0.01,0.2)
