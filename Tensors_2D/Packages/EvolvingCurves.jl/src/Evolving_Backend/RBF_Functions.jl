@@ -37,7 +37,7 @@ function collocM(x, m, o)
     return A
 end
 
-# Interpolation weights for 1D with helping terms
+# Find interpolation weights for 1D with helping terms
 function interpolate(nodes, m, o)
     n = size(nodes, 2);
 
@@ -60,15 +60,19 @@ function S(t, x, λ, m)
     nt = size(t,1);
     
     s = zeros(nt);
+
+    # Add RBF contribution
     for i ∈ 1:n, j ∈ 1:nt
         s[j] += λ[i]*ϕ(t[j], x[i], m);
     end
+
+    # Add polynomial contribution
     for i ∈ 0:nn-1, j ∈ 1:nt
         s[j] += λ[n+i+1]*t[j]^i;
     end
-    
+
     return s
-end 
+end
 
 # RBF interpolant derivative at s=0
 function S_x(x, λ, m)

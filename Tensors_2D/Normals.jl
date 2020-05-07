@@ -37,4 +37,4 @@ function main(N=20, n=5, m=3, o=0)
     return error
 end
 
-main(50,5,3,2)
+main(50,10,3,2)

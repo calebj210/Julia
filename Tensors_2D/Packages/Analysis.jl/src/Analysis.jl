@@ -108,6 +108,30 @@ function errPlot(nodes, errs)
 end
 
 # RBF interpolation plot
+# PHS
+ϕ(x1,x2,m) = abs(x1-x2)^m;
+
+# Interpolation function
+function S(x1, x, λ, m)
+    n = size(x,1);
+    nn = size(λ,1) - n;
+    nt = size(x1,1);
+    
+    s = zeros(nt);
+
+    # Add RBF contribution
+    for i ∈ 1:n, j ∈ 1:nt
+        s[j] += λ[i]*ϕ(x1[j], x[i], m);
+    end
+
+    # Add polynomial contribution
+    for i ∈ 0:nn-1, j ∈ 1:nt
+        s[j] += λ[n+i+1]*x1[j]^i;
+    end
+
+    return s
+end
+
 function interPlot(nodes, λ, m)
     x = nodes[1,:];
     y = nodes[2,:];

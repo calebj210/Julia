@@ -25,7 +25,10 @@ function main(N=20, n=5, m=3, o=0, Δt=0.1)
 
     T = Δt;
     while T < 1
-        norms = -findNormals(nodes, n, m, o)
+        norms = findNormals(nodes, n, m, o)
+        if (0 .- nodes[:,1]) ⋅ norms[:,1] < 0
+            norms *= -1;
+        end
         nodes += norms*Δt;
 
         T += Δt;
@@ -45,4 +48,4 @@ function main(N=20, n=5, m=3, o=0, Δt=0.1)
     end
 end
 
-main(20,5,3,2,0.1)
+main(100,40,3,12,0.01)

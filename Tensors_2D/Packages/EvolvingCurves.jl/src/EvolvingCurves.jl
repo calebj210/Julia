@@ -18,17 +18,15 @@ include("Evolving_Backend/RBF_Functions.jl")
 function findNormals(nodes, n, m, o)
     # Find number of nodes
     N = size(nodes, 2);
-    
-    # Compute approximate normals
-    appNorms = approxNormals(nodes);
-
+   
     # Find nearest neighbors
     idx = knnFull(nodes, n);
-    
-    # cent = zeros(2,n);
-    # rot = cent;
+
+    # Compute approximate normals
+    appNorms = approxNormals(nodes, idx);
+
+    # Begin computing normals at each node
     normals = zeros(2,N);
-    λ = zeros(n);
     for i ∈ 1:N
         # Find angle
         θ = findAngle(appNorms[:,i]);
@@ -55,6 +53,8 @@ function findNormals(nodes, n, m, o)
         # Rotate local normal to proper angle
         normals[:,i] = rotate(tmp, -θ);
     end
+
+    normals = orVecs(nodes, normals, idx)
     
     return normals
 end
