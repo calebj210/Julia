@@ -19,15 +19,13 @@ function nodeAdapt!(Nodes,n, m = 5, o = 3;cr=0.25,ca=0.75)
     # Compute approximate normals
     appNorms = approxNormals(nodes, idx);
     appNorms = orVecs(nodes, appNorms, idx);
-    
     if appNorms[:,1]⋅[1,0] < 0
         appNorms *= -1;
     end
 
-    C = vectorPlot(nodes, appNorms)
-    display(C)
-    sleep(3)
-    
+    # C = vectorPlot(nodes, appNorms)
+    # display(C)
+    # sleep(0.5)
 
     prox = zeros(n-1);
     newNodes = [];
@@ -124,11 +122,20 @@ function main(N=20, n=5, m=3, o=0)
     
     nodeAdapt!(Nodes, n, m, o);
     
-    B = nodePlot(reshape(Nodes, 2, :));
+    nodes = reshape(Nodes, (2,:));
+    
+    errs = []
+    for i∈1:size(nodes,2)
+        push!(errs,abs(norm(nodes[:,i])-1))
+    end
 
-    display(A)
-    sleep(1)
-    display(B)
+    # B = nodePlot(reshape(Nodes, 2, :));
+
+    # display(A)
+    # sleep(1)
+    # display(B)
+
+    display(errPlot(nodes, errs))
 end
 
-main(100,11,5,3)
+main(11,5,5,2)

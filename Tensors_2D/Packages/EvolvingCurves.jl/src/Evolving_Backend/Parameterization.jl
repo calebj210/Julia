@@ -4,6 +4,7 @@
 using NearestNeighbors
 using LinearAlgebra
 using SparseArrays
+using Arpack
 
 ## Backend functions
 ### Approximate normal functions definitions
@@ -49,12 +50,14 @@ function powIt(A; ε = 10^(-5), maxIts = 10)
 
     # Begin power iteration
     y1 = x;
+    λ0 = 0;
     for i ∈ 1:maxIts
+        λ1 = λ0
         y0 = y1;
         y1 = A*x;
-        x = y1/norm(y1,Inf);
-
-        if norm(y0-y1, Inf) < ε || norm(y0+y1, Inf) < ε
+        λ0 = norm(y1,Inf);
+        x = y1/λ0;
+        if abs(λ0-λ1) < ε
             return x
         end
     end
@@ -117,7 +120,8 @@ function orVecs(nodes, vecs, idx)
     end
 
     D_n = D_n'*D_n;
-    maxEig = powIt(D_n, ε = 10^(-15), maxIts = 100);
+    # maxEig = powIt(D_n, ε = 10^(-15), maxIts = 100);
+    tmp, maxEig = eigs(D_n, nev = 1, which = :LM);
     maxEig = sign.(maxEig);
 
     # Orient vectors
@@ -150,7 +154,6 @@ function approxNormals(nodes, idx)
 
     for i ∈ 1:N
         nmls[:,i] /= norm(nmls[:,i]);
-        display(norm(nmls[:,i]))
     end
     
     return nmls

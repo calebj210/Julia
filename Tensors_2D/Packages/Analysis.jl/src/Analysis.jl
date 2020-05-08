@@ -93,17 +93,18 @@ function errPlot(nodes, errs)
     # Scale errors logarithmically
     errs = log10.(errs);
 
+    M = maximum(errs);
+
     a = scatter(nodes[1,:], nodes[2,:],
                 marker_z = errs,
                 c = :viridis,
-                cbarlims = :auto,
+                cbarlims = (-16,M),
                 colorbar = :right,
                 aspectratio = :equal,
                 legend = false,
                 markersize = 2,
-                markerstrokealpha = 0,
-                markeralpha = .75,
-                title = "Normal Error")
+                markerstrokealpha = 1,
+                markeralpha = .75)
     return a
 end
 
