@@ -4,6 +4,7 @@ using EvolvingCurves
 using Analysis
 using LinearAlgebra
 using LaTeXStrings
+include("Node_Adapt.jl")
 gr()
 
 ## Unit circle
@@ -54,11 +55,24 @@ function main2(N=20, n=5, m=3, o=0, Δt = 0.01, TF=0.02, r=0.2)
     radiusErr = zeros(size(time,1));
     compR = zeros(N);
     i = 1;
+    k = 1;
     T = 0;
+    Nodes = nodes[:];
     for T ∈ time
+        if k > 10
+            Nodes = Nodes[1:2N];
+            nodeAdapt!(Nodes, n, m, o);
+            nodes = reshape(Nodes,2,:);
+            k=1;
+            display(size(Nodes,1)/2)
+        end
+        k += 1;
+        
         # Compute normal direction
         norms = findNormals(nodes, n, m, o);
-
+        if norms[:,1]⋅[1,0] < 0
+            norms *= -1;
+        end
         # Compute curvature
         κ = computeκ(nodes, n, m, o);
         K = [κ';κ']
@@ -97,11 +111,12 @@ function main2(N=20, n=5, m=3, o=0, Δt = 0.01, TF=0.02, r=0.2)
     #                 xlims = (-2,2),
     #                 ylims = (-2,2));
     plotB = plot(time,radiusErr,
-                 title = "Relative Error for Shrinking Circle",
+                 title = "Relative Error for Growing Circle",
                  xlabel = "Time (s)",
                  ylabel = L"||\mathrm{Rel}\;\mathrm{Err}||_\infty",
                  yscale = :log10,
-                 xlims = (0,TF))
+                 xlims = (0,TF),
+                 xticks = [0:TF/10:TF...])
     display(plotB)
 
     
@@ -211,4 +226,4 @@ function fig_b()
 end
 
 
-main2(60, 12, 7, 5, 10^(-6), 0.01,0.2)
+main2(50, 3, 3, 2, 10^(-4), 0.02,0.2)

@@ -2,6 +2,8 @@
 using ElasticArrays
 using LinearAlgebra
 using Analysis
+using Plots
+using LaTeXStrings
 include("/home/cajacobs/Documents/Julia/Tensors_2D/Packages/EvolvingCurves.jl/src/Evolving_Backend/Parameterization.jl")
 include("/home/cajacobs/Documents/Julia/Tensors_2D/Packages/EvolvingCurves.jl/src/Evolving_Backend/RBF_Functions.jl")
 
@@ -129,13 +131,23 @@ function main(N=20, n=5, m=3, o=0)
         push!(errs,abs(norm(nodes[:,i])-1))
     end
 
-    # B = nodePlot(reshape(Nodes, 2, :));
+    B = nodePlot(reshape(Nodes, 2, :));
 
     # display(A)
     # sleep(1)
     # display(B)
 
-    display(errPlot(nodes, errs))
+    # E = errPlot(nodes, errs);
+    # E = plot(E,dpi=300,
+    #          title = "Unit Circle Error After Refinement",
+    #          colorbar_title = L"\log_{10} err")
+    # savefig(E, "fig_a.png")
+
+    A = plot(A, dpi=300,
+             title = "Unit Circle with 30 nodes",
+             markersize=3)
+    # savefig(A, "fig_b.png")
+    display(B)
 end
 
-main(11,5,5,2)
+main(30,7,11,5)

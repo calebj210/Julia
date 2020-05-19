@@ -102,7 +102,7 @@ function errPlot(nodes, errs)
                 colorbar = :right,
                 aspectratio = :equal,
                 legend = false,
-                markersize = 2,
+                markersize = 3,
                 markerstrokealpha = 1,
                 markeralpha = .75)
     return a
