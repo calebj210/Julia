@@ -401,8 +401,6 @@ terms are used. The order of the PHS, `m`, can also be specified.
 function findλ(nodes, f, poly = Array{Int64}(undef,0,0); m = 3)
     # Number of nodes
     N = size(f,1);
-    # Number of dimensions
-    D = size(nodes,1);
     # Number of polynomial terms
     P = size(poly,2);
 

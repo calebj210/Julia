@@ -4,7 +4,6 @@ using EvolvingCurves
 using Analysis
 using LinearAlgebra
 using LaTeXStrings
-include("Node_Adapt.jl")
 gr()
 
 ## Unit circle
@@ -20,26 +19,26 @@ truX(t) = cos.(t);
 truY(t) = sin.(t);
 
 ## Curvature testing
-function main1(N=20, n=5, m=3, o=0)
+function main1(N=20, n=5, m=3, o=0; r=0.2)
     # Coordinate discretization
     t = range(0,2*π-2*π/N, length = N);
 
     # Creating our node distribution
-    nodes = [x(t)';y(t)'];
+    nodes = [x(r,t)';y(r,t)'];
 
-    κ1 = computeK(nodes, n, m, o)[1] - 1;
-    display(κ1)
+    κ = computeκ(nodes, n, m, o);
 
-    # Coordinate discretization
-    t = range(0,2*π-2*π/N, length = 2N);
-
-    # Creating our node distribution
-    nodes = [x2(t)';y2(t)'];
-
-    κ2 = computeK(nodes, n, m, o)[1] - 1;
-    display(κ2)
+    # True solution
+    trueκ = zeros(N)
+    for i ∈ 1:N
+        trueκ = 1/norm(nodes[:,i])
+    end
     
-    display(log2(abs(κ1/κ2)));
+    # Compute the errors
+    err,normErrs = scalError(trueκ, κ)
+
+    # Display the error
+    display(err)
 end
 
 ## 1 Circles
@@ -59,20 +58,12 @@ function main2(N=20, n=5, m=3, o=0, Δt = 0.01, TF=0.02, r=0.2)
     T = 0;
     Nodes = nodes[:];
     for T ∈ time
-        if k > 10
-            Nodes = Nodes[1:2N];
-            nodeAdapt!(Nodes, n, m, o);
-            nodes = reshape(Nodes,2,:);
-            k=1;
-            display(size(Nodes,1)/2)
-        end
-        k += 1;
-        
         # Compute normal direction
         norms = findNormals(nodes, n, m, o);
         if norms[:,1]⋅[1,0] < 0
             norms *= -1;
         end
+        
         # Compute curvature
         κ = computeκ(nodes, n, m, o);
         K = [κ';κ']
@@ -225,5 +216,5 @@ function fig_b()
     savefig(B,"fig_b.png")
 end
 
-
-main2(50, 3, 3, 2, 10^(-4), 0.02,0.2)
+main1(100,11,7,3,r=0.2)
+# main2(50, 3, 3, 2, 10^(-4), 0.02,0.2)
