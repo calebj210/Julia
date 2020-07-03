@@ -150,7 +150,7 @@ end
 
 ## Discretizations
 # Populate Laplace-Beltrami discretization matrix
-function constructLBD(nodes, n, m, o)
+function constructLBO(nodes, n, m, o)
     # Find number of nodes
     N = size(nodes, 2);
     

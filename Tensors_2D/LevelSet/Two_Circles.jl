@@ -122,4 +122,4 @@ function grow(N; n, m, o, Δt, tf, initCnt)
     end
 end
 
-grow(25, n=9, m=5, o=2, Δt=10^(-5), tf=0.01, initCnt = 200) 
+grow(25, n=9, m=5, o=2, Δt=10^(-4), tf=0.01, initCnt = 25) 

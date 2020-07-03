@@ -40,6 +40,189 @@ function generateNodeBand(Nodes)
     return (nodes,f)
 end
 
+# Hexagonal grid generator
+function hexGen(N; minx, maxx, miny, maxy)
+    # Compute bound ranges
+    Δx = maxx - minx
+    Δy = maxy - miny
+
+    # Compute number of nodes in each dimension
+    n = round(Int,sqrt(N*Δx/Δy))
+    m = round(Int, sqrt(N*Δy/Δx))
+    
+    # Compute base grid
+    x = 0:n-1
+    y = 0:m-1
+    nodes = [repeat(x, inner = (m,1))' / ((n-1)+0.5) * Δx;
+             repeat(y, outer = (n,1))' / (m-1)*Δy]
+
+    # Compute x offsets
+    xOff = repeat(repeat([0,0.5 / ((n-1)+0.5) * Δx],
+                         outer = (ceil(Int,m/2),1))[1:m],
+                  outer = (n,1)) .+ minx
+
+    # Offset the nodes
+    nodes[1,:] += xOff
+    nodes[2,:] .+= miny
+    
+    return nodes
+end
+
+# Coulomb-Newton Method for generating node band
+function coulNewton(zrs, Nodes, Finit; n, m, o, maxIts=200, μ=2, η=0.01, Δt=0.1, ε=10^(-3))
+    # Number of nodes
+    N = size(Nodes,2)
+    # Number of zeros
+    Z = size(zrs,2)
+    
+    # Compute polynomial terms and number of terms
+    polMat = polyMat(o)
+    P = size(polMat,2)
+
+    # Initialize f
+    f = [Finit;zeros(N+Z)]
+
+    # Combine zero-level-set and nodes
+    nodes = [Nodes zrs]
+
+    # Preallocate space for the final node band
+    band = Array{Float64}(undef, (2,N+Z))
+    
+    # Compute KDTree for background nodes
+    kdtree = KDTree(nodes[:,1:N])
+    
+    # Begin Coulomb-Newton iteration on zero-level-set
+    for i∈1:maxIts
+        # display(scatter(nodes[1,N+1:end],nodes[2,N+1:end],
+        #                 ratio = 1))
+        # sleep(.01)
+
+        # Compute nearest neigbors
+        idx, tmp = knn(kdtree, nodes[:,N+1:end], n, true)
+
+        # Compute nearest neighbors on the zero-level-set
+        zeroKDTree = KDTree(nodes[:,N+1:end])
+        zerIdx, dists = knn(zeroKDTree, nodes[:,N+1:end], 5, true)
+        
+        # Reset Coulombic force and f*∇f/||∇f||
+        Fc = zeros(2,Z)
+        ∇f = zeros(2,Z)
+        
+        # Compute gradient and function values at each node as well as the
+        # Coulombic forces
+        for j∈1:Z
+            # Compute interpolant weights
+            λ = findλ(nodes[:,idx[j]], f[idx[j]], polMat, m=m)
+            
+            # Compute function values and first order derivatives
+            f[N+j] = S(nodes[:,idx[j]], nodes[:,N+j], λ, polMat, m=m)
+            fx = S_xi(nodes[:,idx[j]], nodes[:,N+j], λ, 1, polMat, m=m)
+            fy = S_xi(nodes[:,idx[j]], nodes[:,N+j], λ, 2, polMat, m=m)
+
+            # Compute f*∇f/||∇f||
+            ∇f[:,j] = f[N+j]*[fx,fy]/(norm([fx,fy])^2)
+
+            # Compute Coulombic force
+            for k∈2:5
+                Fc[:,j] += (nodes[:,N+j] - nodes[:, N+zerIdx[j][k]]) / dists[j][k]^3
+            end
+        end
+
+        # Scale Coulombic force gradient
+        Fc *= μ*Δt/2
+
+        # Iterate nodes
+        nodes[:,N+1:end] += Fc - ∇f
+    end
+
+    # Compute ambient node bounds and ranges
+    xmin = minimum(nodes[1,1:N])
+    xmax = maximum(nodes[1,1:N])
+    xrng = xmax-xmin
+    
+    ymin = minimum(nodes[2,1:N])
+    ymax = maximum(nodes[2,1:N])
+    yrng = ymax-ymin
+    
+    # Construct initial node band
+    xmin += xrng/8
+    xmax -= xrng/8
+    ymin += yrng/8
+    ymax -= yrng/8
+    
+    band = hexGen(30Z, minx=xmin, maxx=xmax, miny=ymin, maxy=ymax)
+
+    # Compute number of nodes in band
+    bN = size(band,2)
+
+    # Combine node band and zeroSet and preallocate space for function values
+    band = [band nodes[:,N+1:end]]
+    bf = Array{Float64}(undef, bN+Z)
+    bf[bN+1:end] = f[end-Z+1:end]
+    
+    # Begin Coulomb-Newton iteration on background nodes
+    for i∈1:maxIts
+        # Compute KDTree for nodes
+        kdtree = KDTree(nodes)
+
+        # Compute KDTree for node band
+        bandKDTree = KDTree(band)
+        
+        # Compute nearest neighbors of node band to the ambient node set
+        idx, tmp = knn(kdtree, band[:,1:bN], n, true)
+
+        # Compute nearest neighbors and their distances in the node band
+        bandIdx, dists = knn(bandKDTree, band[:,1:bN], n, true)
+        
+        # Reset Coulombic force and f*∇f/||∇f||
+        Fc = zeros(2,bN)
+        ∇f = zeros(2,bN)
+        
+        # Compute gradient and function values at each node as well as the
+        # Coulombic forces
+        for j∈1:bN
+            # Compute interpolant weights
+            λ = findλ(nodes[:,idx[j]], f[idx[j]], polMat, m=m)
+            
+            # Compute function values and first order derivatives
+            bf[j] = S(nodes[:,idx[j]], band[:,j], λ, polMat, m=m)
+            fx = S_xi(nodes[:,idx[j]], band[:,j], λ, 1, polMat, m=m)
+            fy = S_xi(nodes[:,idx[j]], band[:,j], λ, 2, polMat, m=m)
+
+            # Compute f*∇f/||∇f||
+            ∇f[:,j] = bf[j]*[fx,fy]/(norm([fx,fy])^2)
+
+            # Compute Coulombic force
+            for k∈2:n
+                Fc[:,j] += (band[:,j] - band[:, bandIdx[j][k]]) / dists[j][k]^2
+            end
+        end
+
+        # Scale Coulombic force gradient
+        Fc *= μ*Δt
+        ∇f *= η
+
+        # Iterate nodes
+        band[:,1:bN] += Fc - ∇f
+
+        # plotA = scatter(band[1,1:bN],band[2,1:bN],
+        #                 ratio = 1,
+        #                 markersize = 1)
+        # scatter!(band[1,bN+1:end],band[2,bN+1:end],
+        #          markersize = 2)
+        # scatter!(nodes[1,1:N],nodes[2,1:N],
+        #          markersize = 0.5)
+        # display(plotA)
+
+        # Check for convergence
+        if maximum(abs.(Fc-∇f)/xrng) <= ε
+            return (band, bf, bN)
+        end
+    end
+    
+    return (band, bf, bN)
+end
+
 # Routine for finding the normals
 function findNormals(nodes, f, n, m, o)
     # Number of nodes
@@ -404,7 +587,7 @@ function newtonSolve(X, nodes, F; n=5, m=5, o=1, ε=10^(-10), maxIts=100)
         end
 
         # Compute next solution
-        X -= .9*∇f
+        X -= ∇f
 
         # Check bounds
         for j∈1:N
