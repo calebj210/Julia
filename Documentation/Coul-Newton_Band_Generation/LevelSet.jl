@@ -183,26 +183,34 @@ function coulNewtonBand(Nodes, Finit; n, m, o, maxIts=200, μ=2, η=0.01, Δt=0.
     # Compute number of nodes in band
     bN = size(band,2)
 
-    # plotA = scatter(nodes[1,:],nodes[2,:],
-    #                 marker_z = Finit,
-    #                 c = :viridis,
-    #                 legend = false,
-    #                 colorbar = true,
-    #                 colorbar_title = "Distance Function",
-    #                 markeralpha = 0.9,
-    #                 markerstrokewidth = 0,
-    #                 ratio = 1,
-    #                 markersize = 3,
-    #                 markershape = :+,
-    #                 xlims = (-2,2),
-    #                 ylims = (-2,2),
-    #                 xticks = [-2:0.5:2...],
-    #                 yticks = [-2:0.5:2...])
-    # scatter!(band[1,:],band[2,:],
-    #         c = :grey,
-    #          markeralpha = 0.5,
-    #          markersize = 1.5)
-    # display(plotA))
+    plotA = scatter(nodes[1,:],nodes[2,:],
+                    marker_z = Finit,
+                    c = :viridis,
+                    legend = false,
+                    colorbar = true,
+                    colorbar_title = "Distance Function",
+                    markeralpha = 0.9,
+                    markerstrokewidth = 0,
+                    ratio = 1,
+                    markersize = 3,
+                    markershape = :+,
+                    xlims = (-2,2),
+                    ylims = (-2,2),
+                    xticks = [-2:0.5:2...],
+                    yticks = [-2:0.5:2...])
+    scatter!(band[1,:],band[2,:],
+            c = :grey,
+             markeralpha = 0.5,
+             markersize = 1.5)
+    t2 = range(0,2*π, length = 10N)
+    plot!(x(1,t2),y(1,t2),
+          linewidth = 1.5,
+          linealpha = 0.75,
+          c = :black,
+          dpi = 300)
+    display(plotA)
+    sleep(5)
+    savefig(plotA, "fig_a.png")
 
     # Preallocate space for node band function values
     bf = Array{Float64}(undef, bN)
@@ -252,33 +260,42 @@ function coulNewtonBand(Nodes, Finit; n, m, o, maxIts=200, μ=2, η=0.01, Δt=0.
         # Iterate nodes
         band += Fc - ∇f
         
-        # plotA = scatter(band[1,:],band[2,:],
-        #                 c = :grey,
-        #                 markeralpha = 0.75,
-        #                 markerstrokewidth = 0,
-        #                 ratio = 1,
-        #                 markersize = 1.5,
-        #                 xlims = (-1.25,1.25),
-        #                 ylims = (-1.25,1.25),
-        #                 dpi = 300)
-        # scatter!(nodes[1,:],nodes[2,:],
-        #          marker_z = Finit,
-        #          c = :viridis,
-        #          legend = false,
-        #          colorbar = true,
-        #          colorbar_title = "Distance Function",
-        #          markeralpha = 0.5,
-        #          markerstrokewidth = 0,
-        #          ratio = 1,
-        #          markersize = 3,
-        #          markershape = :+)
-        # display(plotA)
+        plotA = scatter(band[1,:],band[2,:],
+                        c = :grey,
+                        markeralpha = 0.75,
+                        markerstrokewidth = 0,
+                        ratio = 1,
+                        markersize = 1.5,
+                        xlims = (-1.25,1.25),
+                        ylims = (-1.25,1.25),
+                        dpi = 300)
+        scatter!(nodes[1,:],nodes[2,:],
+                 marker_z = Finit,
+                 c = :viridis,
+                 legend = false,
+                 colorbar = true,
+                 colorbar_title = "Distance Function",
+                 markeralpha = 0.5,
+                 markerstrokewidth = 0,
+                 ratio = 1,
+                 markersize = 3,
+                 markershape = :+,
+                 dpi = 300)
+        t2 = range(0,2*π, length = 10N)
+        plot!(x(1,t2),y(1,t2),
+              linewidth = 2,
+              linealpha = 0.75,
+              c = :black,
+              dpi = 300)
+        display(plotA)
 
         # Check for convergence
         if maximum(abs.(Fc-∇f)/xrng) <= ε
             return (band, bf, bN)
         end
     end
+
+    savefig(plotA, "fig_b.png")
     
     return (band, bf, bN)
 end
