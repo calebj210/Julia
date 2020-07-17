@@ -68,6 +68,35 @@ function hexGen(N; minx, maxx, miny, maxy)
     return nodes
 end
 
+# Node reinitialization algorithm
+function reinit(nodes; oldNodes, F, zeroSet, replace = false)
+    # Number of nodes
+    N = size(nodes, 2)
+
+    # Generate KD trees of node sets
+    zeroKDTree = KDTree(zeroSet)
+    oldKDTree = KDTree(oldNodes)
+
+    # Compute nearest neighbors to the newest node set
+    dists = nn(zeroKDTree, nodes)[2]
+    idx = nn(oldKDTree, nodes)[1]
+
+    # Compute distance function
+    f = zeros(N)
+    for i∈1:N
+        f[i] = sign(F[idx[i]])*dists[i][1]
+    end
+
+    # Check for node replacement
+    if replace
+        # Compute nearest neighbors to the zero-set
+        newKDTree = KDTree(nodes)
+        zeroIdx = 
+    end
+
+    return f
+end
+
 # Coul-Newton method for adaptive nodes
 function coulNewtonAdapt(zrs, Nodes, Finit; n, m, o, maxIts=200, μ=2, Δt=0.1, ε=10^(-3))
     # Number of nodes
@@ -133,7 +162,7 @@ function coulNewtonAdapt(zrs, Nodes, Finit; n, m, o, maxIts=200, μ=2, Δt=0.1, 
     end
 
     zrs = newtonSolve(nodes[:,N+1:end], nodes[:,1:N], f[1:N], n=n, m=m, o=o,
-    maxIts = 200) 
+    maxIts = 200, ε = 10^(-13)) 
     
     return zrs
 end

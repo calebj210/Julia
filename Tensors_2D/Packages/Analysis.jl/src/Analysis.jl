@@ -90,7 +90,7 @@ end
 function errPlot(nodes, errs)
     N = size(errs,1);
 
-    # Scale errors logarithmically
+    # # Scale errors logarithmically
     errs = log10.(errs);
 
     M = maximum(errs);
