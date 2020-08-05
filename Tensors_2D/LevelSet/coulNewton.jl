@@ -28,8 +28,8 @@ function narrowBand(N; n, m, o, r)
 
     # Construct narrow band
     nodes,F,NN = coulNewtonBand(Nodes, F, n=n, m=m, o=o, maxIts=500, μ=2,
-                            η=0.01, Δt=0.00001, ε=0*10^(-3))
-
+                                η=0.01, Δt=0.00001, ε=0*10^(-3))
+    
     # Construct distance function for ambient nodes
     F = zeros(size(nodes,2))
     for i∈eachindex(F)

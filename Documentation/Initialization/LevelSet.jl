@@ -68,43 +68,6 @@ function hexGen(N; minx, maxx, miny, maxy)
     return nodes
 end
 
-# Hexagonal band generartor
-function hexBand(zeroSet; N=1000, n=15)
-    # Compute node bounds
-    mins = minimum(zeroSet, dims=2)
-    maxs = maximum(zeroSet, dims=2)
-    
-    # Generate background hex grid
-    nodes = hexGen(N, minx=2mins[1], maxx=2maxs[1], miny=2mins[2], maxy=2maxs[2])
-
-    # Generate KDTree of node set
-    kdtree = KDTree(nodes)
-
-    # Compute nearest neighbors
-    idx = knn(kdtree, zeroSet, n, false)[1]
-
-    # Take union of nearest neighbors
-    idx = union(idx...)
-
-    # Remove nodes not near the surface
-    nodes = nodes[:,idx]
-
-    return nodes
-end
-function hexBand(zeroSet, bNodes; n=15)
-    # Generate KDTree of node set
-    kdtree = KDTree(bNodes)
-
-    # Compute nearest neighbors
-    idx = knn(kdtree, zeroSet, n, false)[1]
-
-    # Take union of nearest neighbors
-    idx = union(idx...)
-
-    # Remove nodes not near the surface
-    nodes = bNodes[:,idx]
-end
-
 # Distance function initializer
 function initialize(surfNodes, backNodes, norms; n=5, m=5, o=0, maxIts=500, ε=10^(-10), Δt=1, prompt=false)
     # Compute number of nodes to be initialized
@@ -186,7 +149,7 @@ function initialize(surfNodes, backNodes, norms; n=5, m=5, o=0, maxIts=500, ε=1
 end
 
 # Node reinitialization algorithm
-function reinit(nodes; oldNodes, F, zeroSet, smooth = false, n=1, m=5, o=0)
+function reinit(nodes; oldNodes, F, zeroSet, replace = false, n=1, m=5, o=0)
     # Number of nodes
     N = size(nodes, 2)
 
@@ -205,7 +168,7 @@ function reinit(nodes; oldNodes, F, zeroSet, smooth = false, n=1, m=5, o=0)
     end
 
     # Check for node replacement
-    if smooth
+    if replace
         # Compute nearest neighbors to the zero-set
         newKDTree = KDTree(nodes)
         zeroIdx = knn(newKDTree, zeroSet, 3, true)[1]
@@ -762,7 +725,7 @@ function discretize∂x∂y(nodes, n, m, o)
 end
 
 ## Newton's Method for finding zero level-set
-function newtonSolve(X, nodes, F; n=5, m=5, o=1, ε=10^(-10), maxIts=100, prompt = false)
+function newtonSolve(X, nodes, F; n=5, m=5, o=1, ε=10^(-10), maxIts=100)
     # Compute number of nodes in initial guess
     N = size(X, 2)
 
@@ -804,9 +767,6 @@ function newtonSolve(X, nodes, F; n=5, m=5, o=1, ε=10^(-10), maxIts=100, prompt
         
         # Test convergence criteria
         if maximum(abs.(f)) < ε
-            if prompt
-                print(string("Surface converged in ", i, " iteration."))
-            end
             return X
         end
 
@@ -822,9 +782,6 @@ function newtonSolve(X, nodes, F; n=5, m=5, o=1, ε=10^(-10), maxIts=100, prompt
     end
 
     # Display maximum iterations used
-    if prompt
-        print("Maximum iterations used, solution may be inaccurate!\n")
-    end
-    
+    print("Maximum iterations used, solution may be inaccurate!\n")
     return X
 end
