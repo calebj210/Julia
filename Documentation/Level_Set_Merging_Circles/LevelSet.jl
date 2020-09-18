@@ -4,15 +4,43 @@ using SparseArrays
 include("LevelSetup.jl")
 include("RBF_Functions.jl")
 
+# Function for generating node band around surface
+function generateNodeBand(Nodes)
+    # Compute the number of nodes
+    N = size(Nodes,2)
+
+    # Find nearest neighbors
+    idx = knnFull(Nodes, 5)
+
+    # Find the approximate normals of our surface
+    norms = approxNormals(Nodes, idx)
+
+    # Orient surface normals
+    norms = orVecs(Nodes, norms, idx)
+
+    # Scale normals for adding nodes
+    for i ∈ 1:N
+        norms[:,i] *= 0.25*norm(Nodes[:,i] - Nodes[:,idx[i][2]])
+    end
+
+    # Compute new node set with bands
+    nodes = [Nodes (Nodes - norms) (Nodes + norms) (Nodes - 2norms) (Nodes + 2norms)]
+
+    # Assign distance values to the node set
+    # f = [fill(0,N); fill(-1,N); fill(1,N)]
+    f = zeros(5N)
+    for i∈1:N
+        tmp = norm(norms[:,i])
+        f[N+i] = -tmp
+        f[2N+i] = tmp
+        f[3N+i] = -2tmp
+        f[4N+i] = 2tmp
+    end
+
+    return (nodes,f)
+end
+
 # Hexagonal grid generator
-"""
-    hexGen(N; minx, maxx, miny, maxy)
-
-Generate a hexagonal grid with approximately 'N' nodes that spans the rectangle
-specified by 'minx', 'maxx', 'miny', and 'maxy'
-
-See 'hexBand'.
-"""
 function hexGen(N; minx, maxx, miny, maxy)
     # Compute bound ranges
     Δx = maxx - minx
@@ -41,15 +69,6 @@ function hexGen(N; minx, maxx, miny, maxy)
 end
 
 # Hexagonal band generartor
-"""
-    hexBand(zeroSet; N=1000, n=15)
-
-Generate a hexagonal band around the nodes specified by 'zeroSet'. The maximum
-number of nodes in the background set to consider around each node in zeroSet is given by 'n'. 'N'
-species approximate number of nodes in the background set given by 'hexGen'.
-
-See 'hexGen'
-"""
 function hexBand(zeroSet; N=1000, n=15)
     # Compute node bounds
     mins = minimum(zeroSet, dims=2)
@@ -72,13 +91,6 @@ function hexBand(zeroSet; N=1000, n=15)
 
     return nodes
 end
-"""
-    hexBand(zeroSet, bNodes; n=15)
-
-Generate a node band around the nodes given by 'zeroSet'. The band is generated
-from nodes given by 'bNodes'. The number of nodes to consider around each node
-in 'zeroSet' is given by 'n'. 
-"""
 function hexBand(zeroSet, bNodes; n=15)
     # Generate KDTree of node set
     kdtree = KDTree(bNodes)
@@ -94,14 +106,6 @@ function hexBand(zeroSet, bNodes; n=15)
 end
 
 # Distance function initializer
-"""
-    initialize(surfNodes, backNodes, norms; 
-               n=5, m=5, o=0, 
-               maxIts=500, ε=10^(-10), Δt=1, 
-               prompt=false)
-
-Level-set initializer when true distance function is not known or too complex to compute.
-"""
 function initialize(surfNodes, backNodes, norms; n=5, m=5, o=0, maxIts=500, ε=10^(-10), Δt=1, prompt=false)
     # Compute number of nodes to be initialized
     N = size(backNodes, 2)
@@ -182,12 +186,6 @@ function initialize(surfNodes, backNodes, norms; n=5, m=5, o=0, maxIts=500, ε=1
 end
 
 # Node reinitialization algorithm
-"""
-    reinit(nodes; oldNodes, F, zeroSet, smooth = false, n=1, m=5, o=0)
-
-Level-set reinitialization that uses the 'oldNodes' to reinitialize a new
-level-set funciton.
-"""
 function reinit(nodes; oldNodes, F, zeroSet, smooth = false, n=1, m=5, o=0)
     # Number of nodes
     N = size(nodes, 2)
@@ -232,15 +230,6 @@ function reinit(nodes; oldNodes, F, zeroSet, smooth = false, n=1, m=5, o=0)
 end
 
 # Coul-Newton method for adaptive nodes
-"""
-    coulNewtonAdapt(zrs, Nodes, Finit; 
-                    n, m, o, 
-                    maxIts=200, μ=2, Δt=0.1, ε=10^(-10))
-
-Coul-Newton based adaptive surface node refinement. The algorithm requires an
-initial surface node set 'zrs', a background node set 'Nodes' and finaly the
-function values over 'Nodes' given by 'Finit'.
-"""
 function coulNewtonAdapt(zrs, Nodes, Finit; n, m, o, maxIts=200, μ=2, Δt=0.1, ε=10^(-10))
     # Number of nodes
     N = size(Nodes,2)
@@ -312,13 +301,6 @@ end
 
 
 # Coulomb-Newton Method for generating node band
-"""
-    coulNewtonBand(Nodes, Finit; n, m, o, 
-                   maxIts=200, μ=2, η=0.01, Δt=0.1, ε=10^(-3))
-
-Coul-Newton based narrow band generatore. The function requires a background
-node set ('Nodes') with an overlayed level-set function 'Finit'.
-"""
 function coulNewtonBand(Nodes, Finit; n, m, o, maxIts=200, μ=2, η=0.01, Δt=0.1, ε=10^(-3))
     # Number of nodes
     N = size(Nodes,2)
@@ -462,13 +444,71 @@ function coulNewtonBand(Nodes, Finit; n, m, o, maxIts=200, μ=2, η=0.01, Δt=0.
     return (band, bf, bN)
 end
 
+# Routine for finding the normals
+function findNormals(nodes, f, n, m, o)
+    # Number of nodes
+    N = size(nodes,2)
+
+    # Compute polynomial degree matrix
+    polMat = polyMat(o)
+
+    # Compute nearest neighbors
+    idx = knnFull(nodes, n)
+
+    # Preallocate space for the normal directions
+    norms = zeros(2,N)
+    
+    # Compute gradient of our level set at each node
+    for i ∈ 1:N
+        # Compute interpolant weights
+        λ = findλ(nodes[:,idx[i]], f[idx[i]], polMat, m = m)
+
+        # Compute gradient
+        x1Grad = S_xi(nodes[:,idx[i]], nodes[:,i], λ, 1, polMat, m = m) 
+        x2Grad = S_xi(nodes[:,idx[i]], nodes[:,i], λ, 2, polMat, m = m)
+        grad = [x1Grad,x2Grad]
+
+        # Normalize and store normals
+        norms[:,i] = grad/norm(grad)
+    end
+
+    return norms
+end
+
+# Routine for computing the curvature
+function computeκ(nodes, f, n, m, o)
+    # Number of nodes
+    N = size(nodes,2)
+
+    # Compute polynomial degree matrix
+    polMat = polyMat(o)
+
+    # Compute nearest neighbors
+    idx = knnFull(nodes, n)
+
+    # Preallocate space for the normal directions
+    κ = zeros(N)
+    
+    # Compute gradient of our level set at each node
+    for i ∈ 1:N
+        # Compute interpolant weights
+        λ = findλ(nodes[:,idx[i]], f[idx[i]], polMat, m = m)
+
+        # Compute all of the needed derivatives
+        Dx1 = S_xi(nodes[:,idx[i]], nodes[:,i], λ, 1, polMat, m = m)
+        Dx2 = S_xi(nodes[:,idx[i]], nodes[:,i], λ, 2, polMat, m = m)
+        Dx11 = S_xii(nodes[:,idx[i]], nodes[:,i], λ, 1, polMat, m = m)
+        Dx22 = S_xii(nodes[:,idx[i]], nodes[:,i], λ, 2, polMat, m = m)
+        Dx12 = S_xij(nodes[:,idx[i]], nodes[:,i], λ, polMat, m = m)
+
+        # Compute curvature
+        κ[i] = (Dx11*Dx2^2 - 2Dx1*Dx2*Dx12 + Dx22*Dx1^2)/((Dx1^2 + Dx2^2)^(3/2))
+    end
+
+    return κ
+end
 
 # Routine for discretizing the Laplacian ∇²
-"""
-    discretize∇²(nodes, n, m, o)
-
-Level-set laplacian discretizer
-"""
 function discretize∇²(nodes, n, m, o)
     # Number of nodes
     N = size(nodes,2)
@@ -538,15 +578,7 @@ function discretize∇²(nodes, n, m, o)
     return D
 end
 
-# ∂x discretizer
-"""
-    discretize∂xi(nodes, n, m, o, ii)
-
-Level-set RBF-FD discretization of the first derivative. The function requires a
-level-set background node set 'nodes' aswell as number of nearest neighbors 'n',
-PHS degree 'm', degree of appended polynomial 'o', and the variable x_ii that we
-will differentiate with respect to 'ii'. 
-"""
+# ∂x discretizer 
 function discretize∂xi(nodes, n, m, o, ii)
     # Number of nodes
     N = size(nodes,2)
@@ -573,8 +605,6 @@ function discretize∂xi(nodes, n, m, o, ii)
 
         # Compute collocation matrix
         A = colloc(nodes[:,idx[i]], polMat, m = m)
-
-        print("cond(A) = ", log10(cond(A)), ".\n")
         
         ## Construct linear operator vector
         # Compute PHS components
@@ -609,15 +639,7 @@ function discretize∂xi(nodes, n, m, o, ii)
     return Dx
 end
 
-# ∂x² discretizer
-"""
-    discretize∂xii(nodes, n, m, o, ii)
-
-Level-set RBF-FD discretization of the second derivative. The function requires a
-level-set background node set 'nodes' aswell as number of nearest neighbors 'n',
-PHS degree 'm', degree of appended polynomial 'o', and the variable x_ii that we
-will differentiate with respect to twice 'ii'. 
-"""
+# ∂x² discretizer 
 function discretize∂xii(nodes, n, m, o, ii)
     # Number of nodes
     N = size(nodes,2)
@@ -678,14 +700,7 @@ function discretize∂xii(nodes, n, m, o, ii)
     return Dxx
 end
 
-# ∂x∂y discretizer
-"""
-        discretize∂x∂y(nodes, n, m, o)
-
-Level-set RBF-FD discretization of the mixed partial derivative ∂x∂y. The function requires a
-level-set background node set 'nodes' aswell as number of nearest neighbors 'n',
-PHS degree 'm', and the degree of the appended polynomial 'o'.
-"""
+# ∂x∂y discretizer 
 function discretize∂x∂y(nodes, n, m, o)
     # Number of nodes
     N = size(nodes,2)
@@ -747,23 +762,9 @@ function discretize∂x∂y(nodes, n, m, o)
 end
 
 ## Newton's Method for finding zero level-set
-"""
-    newtonSolve(X, nodes, F; n=5, m=5, o=1, 
-                ε=10^(-10), maxIts=100, prompt = false)
-
-Newton's method for finding the zero-set of a given level-set function
-specified by 'nodes' with distance function 'F'. As always, 'n' is the number of
-neighbors, 'm' is the order of the PHS, and 'o' is the degree of the appeneded
-polynomial for RBF-FD. 'ε' is the tolerance with which to teset for convergence,
-'maxIts' is the maximum number of iterations allowed for convergence, and
-'prompt' tells the function to indicate when convergence was not met in 'maxIts'.
-"""
 function newtonSolve(X, nodes, F; n=5, m=5, o=1, ε=10^(-10), maxIts=100, prompt = false)
     # Compute number of nodes in initial guess
     N = size(X, 2)
-    
-    # Store initial guess
-    Xinit = copy(X)
 
     # Compute node bounds
     maxX = maximum(nodes[1,:])
@@ -815,7 +816,7 @@ function newtonSolve(X, nodes, F; n=5, m=5, o=1, ε=10^(-10), maxIts=100, prompt
         # Check bounds
         for j∈1:N
             if !(X[1,j] > minX && X[1,j] < maxX && X[2,j] > minY && X[2,j] < maxY)
-                X[:,j] = Xinit[:,j]
+                X[:,j] = nodes[:,j]
             end
         end
     end

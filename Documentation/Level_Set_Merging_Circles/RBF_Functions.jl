@@ -1,15 +1,15 @@
-### RBF related functions
+## RBF related functions
 
-# PHS definitions and derivatives
-ϕ(X,Y,m) = norm(X-Y)^m
+# PHS
+ϕ(X,Y,m) = norm(X-Y)^m;
 ϕ_xi(X,Y,m,i) = m*(X[i]-Y[i])*norm(X-Y)^(m-2)
 ϕ_xii(X,Y,m,i) =
     begin
-        nm = norm(X-Y)
+        nm = norm(X-Y);
         
         return m*nm^(m-2) + m*(m-2)*(X[i]-Y[i])^2*nm^(m-4)
     end
-ϕ_xij(X,Y,m,i=1,j=2) = m*(m-2)*(X[i]-Y[i])*(X[j]-Y[j])*norm(X-Y)^(m-4)
+ϕ_xij(X,Y,m,i=1,j=2) = m*(m-2)*(X[i]-Y[i])*(X[j]-Y[j])*norm(X-Y)^(m-4);
 
 # Polynomial degree array generator
 """
@@ -35,24 +35,24 @@ function polyMat(deg,D=2)
     if deg < 0
         return Array{Int64}(undef,D,0)
     else
-        tmp = zeros(D)
-        array = [copy(tmp)]
-        idx = 1
-        i = 1
+        tmp = zeros(D);
+        array = [copy(tmp)];
+        idx = 1;
+        i = 1;
         while true
             if tmp[1] == deg
                 break
             end
             if sum(tmp) == deg
-                tmp[idx] = 0
-                tmp[idx-1] += 1
-                idx -= 1
-                push!(array,copy(tmp))
+                tmp[idx] = 0;
+                tmp[idx-1] += 1;
+                idx -= 1;
+                push!(array,copy(tmp));
             elseif idx != D
-                idx += 1
+                idx += 1;
             else
-                tmp[idx] += 1
-                push!(array,copy(tmp))
+                tmp[idx] += 1;
+                push!(array,copy(tmp));
             end
         end
         return reduce(hcat, array)
@@ -65,38 +65,38 @@ end
 
 `colloc` takes the local nodes, `nodes`, and polynomial terms, `poly`, to
 produce a collocation matrix for RBF interpolation or RBF-FD operator
-discretization. The order of the PHS can be specified by `m`.
+discretization. The order of the PHS can specified by `m`.
 """
 function colloc(nodes, poly = Array{Int64}(undef,0,0); m = 3)
     # Number of nodes in cluster
-    N = size(nodes,2)
+    N = size(nodes,2);
     # Number of polynomial terms
-    P = size(poly,2)
+    P = size(poly,2);
     # Number of dimensions
     D = size(poly,1)
     
     # Preallocating space
-    A11 = zeros(N,N)
-    A12 = zeros(N,P)
+    A11 = zeros(N,N);
+    A12 = zeros(N,P);
 
     # Add PHS contributions
     for j ∈ 1:N, i ∈ 1:N
-        A11[i,j] = ϕ(nodes[:,j],nodes[:,i],m)
+        A11[i,j] = ϕ(nodes[:,j],nodes[:,i],m);
     end
 
     # Add polynomial contributions
     for j ∈ 1:P, i ∈ 1:N
         tmp = 1;
         for k ∈ 1:D
-            tmp *= nodes[k,i]^poly[k,j]
+            tmp *= nodes[k,i]^poly[k,j];
         end
             
-        A12[i,j] = tmp
+        A12[i,j] = tmp;
     end
 
     # Construst A
     A = [A11 A12;
-         A12' zeros(P,P)]
+         A12' zeros(P,P)];
     
     return A 
 end
@@ -135,7 +135,6 @@ end
 Compute the RBF interpolation at `Xc` given the interpolation weights `λ`.
 
 `λ` can be found using `findλ`.
-'poly' can be constructed using 'polyMat'
 """
 function S(nodes, Xc, λ, poly = Array{Int64}(undef,size(nodes,1),0); m = 3)
     # Number of nodes
@@ -174,16 +173,14 @@ See `S` or `findλ`.
 """
 function S_xi(nodes, Xc, λ, ii, poly = Array{Int64}(undef,size(nodes,1),0); m = 3)
     # Number of nodes
-    N = size(nodes,2)
+    N = size(nodes,2);
     # Number of polynomial terms
-    P = size(poly,2)
+    P = size(poly,2);
     # Number of dimensions
     D = size(nodes,1)
 
-    # Initialize 
-    tmp = 0
-
     # Add PHS contribution
+    tmp = 0;
     for i ∈ 1:N
         tmp += λ[i]*ϕ_xi(Xc,nodes[:,i],m,ii);
     end
@@ -191,11 +188,7 @@ function S_xi(nodes, Xc, λ, ii, poly = Array{Int64}(undef,size(nodes,1),0); m =
     # Add polynomial contribution
     for i ∈ 1:P
         p = poly[ii,i];
-
-        # Initialize polynomial derivative
         tmp2 = 0;
-
-        # Mulitply different components of each polynomial term
         if p-1 >= 0
             tmp2 = λ[i+N]*p;
             for j ∈ 1:ii-1
@@ -227,11 +220,11 @@ See `S`, `S_xi`, or `findλ`.
 """
 function S_xii(nodes, Xc, λ, ii, poly = Array{Int64}(undef,size(nodes,1),0); m = 3)
     # Number of nodes
-    N = size(nodes,2)
+    N = size(nodes,2);
     # Number of dimensions
-    D = size(nodes,1)
+    D = size(nodes,1);
     # Number of polynomial terms
-    P = size(poly,1)
+    P = size(poly,1);
 
     # Add PHS contribution
     tmp = 0;
@@ -276,16 +269,16 @@ See `S`, `S_xi`, `S_xij`, or `findλ`.
 """
 function S_xij(nodes, Xc, λ, poly = Array{Int64}(undef,size(nodes,1),0); m = 3)
     # Number of nodes
-    N = size(nodes,2)
+    N = size(nodes,2);
     # Number of dimensions
-    D = size(nodes,1)
+    D = size(nodes,1);
     # Number of polynomial terms
-    P = size(poly,2)
+    P = size(poly,2);
 
     # Add PHS contribution
     tmp = 0;
     for i ∈ 1:N
-        tmp += λ[i]*ϕ_xij(Xc,nodes[:,i],m)
+        tmp += λ[i]*ϕ_xij(Xc,nodes[:,i],m);
     end
     
     # Add polynomial contribution

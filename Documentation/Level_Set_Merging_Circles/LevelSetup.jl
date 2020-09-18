@@ -138,12 +138,6 @@ approxNormals(nodes) = approxNormals(nodes, knnFull(nodes,5))
 
 ## Find indices for k nearest neighbors
 # KNN for an unordered data set
-"""
-    knnFull(nodes, n)
-
-K nearest neighbors (KNN) search. The function computes cluters with 'n' nearest
-neighbors among 'nodes'.
-"""
 function knnFull(nodes, n)
     kdtree = KDTree(nodes);
     idx, tmp = knn(kdtree, nodes, n, true);
