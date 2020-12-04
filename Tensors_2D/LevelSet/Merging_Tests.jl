@@ -80,6 +80,10 @@ function simulate(sN,N; n, m, o, r, c, maxIts=250, Δt, tf, width)
         ϕx = Dx*f
         ϕy = Dy*f
 
+        # Compute laplacian hyperviscosity
+        # Δϕ = 0*f
+        Δϕ = 10^(-3)*(Dx*Dx + Dy*Dy)^2*f
+
         # Compute ∇ϕ
         ∇ϕ = [ϕx';ϕy']
 
@@ -99,7 +103,7 @@ function simulate(sN,N; n, m, o, r, c, maxIts=250, Δt, tf, width)
         end
         
         # Compute next time step
-        f -= κ .* nDot∇ϕ * Δt
+        f -= (κ .* nDot∇ϕ + Δϕ) * Δt
 
         # Check for solution plotting and error calulations
         if i == time[end]
@@ -219,7 +223,7 @@ function timeTest(N, n, Δt)
 end
 
 # Run single test
-simulate(100,1000, n=11, m=5, o=2, r=1, c=0.8, Δt=10^(-4), tf=0.05, width=30)
+simulate(100,2000, n=21, m=5, o=2, r=1, c=0.8, Δt=10^(-4), tf=0.05, width=60)
 
 # Run density test
 # test1 = densityTest([250,500,1000,2000,4000],5)

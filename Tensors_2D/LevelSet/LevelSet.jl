@@ -17,7 +17,7 @@ function hexGen(N; minx, maxx, miny, maxy)
     # Compute bound ranges
     Δx = maxx - minx
     Δy = maxy - miny
-
+    
     # Compute number of nodes in each dimension
     n = round(Int,sqrt(N*Δx/Δy))
     m = round(Int, sqrt(N*Δy/Δx))
@@ -573,8 +573,6 @@ function discretize∂xi(nodes, n, m, o, ii)
 
         # Compute collocation matrix
         A = colloc(nodes[:,idx[i]], polMat, m = m)
-
-        print("cond(A) = ", log10(cond(A)), ".\n")
         
         ## Construct linear operator vector
         # Compute PHS components
