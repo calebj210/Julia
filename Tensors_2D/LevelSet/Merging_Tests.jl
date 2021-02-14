@@ -5,6 +5,7 @@ using Plots
 using Analysis
 using ColorSchemes
 using LaTeXStrings
+using DifferentialEquations
 include("LevelSet.jl")
 
 # Surface parameterization
@@ -35,7 +36,7 @@ function simulate(sN,N; n, m, o, r, c, maxIts=250, Δt, tf, width)
                     ratio = 1,
                     dpi = 300)
     display(plotA)
-    
+
     # Initialize node band
     f = zeros(N)
     for i∈1:N
@@ -55,7 +56,7 @@ function simulate(sN,N; n, m, o, r, c, maxIts=250, Δt, tf, width)
     # show(eigvals(Array(Dy)))
     # print("cond(Dx) = ", log10(cond(Array(Dx))), ".\n")
     # print("cond(Dy) = ", log10(cond(Array(Dy))), ".\n")
-    
+
     # Initialize time variable
     time = Δt:Δt:tf
 
@@ -82,7 +83,7 @@ function simulate(sN,N; n, m, o, r, c, maxIts=250, Δt, tf, width)
 
         # Compute laplacian hyperviscosity
         # Δϕ = 0*f
-        Δϕ = 10^(-3)*(Dx*Dx + Dy*Dy)^2*f
+        Δϕ = 10^(-2)*(Dx*Dx + Dy*Dy)^2*f
 
         # Compute ∇ϕ
         ∇ϕ = [ϕx';ϕy']
@@ -101,7 +102,7 @@ function simulate(sN,N; n, m, o, r, c, maxIts=250, Δt, tf, width)
         for j∈1:N
             nDot∇ϕ[j] = norm∇ϕ[:,j]⋅∇ϕ[:,j]
         end
-        
+
         # Compute next time step
         f -= (κ .* nDot∇ϕ + Δϕ) * Δt
 
@@ -109,19 +110,19 @@ function simulate(sN,N; n, m, o, r, c, maxIts=250, Δt, tf, width)
         if i == time[end]
             # Compute zeroSet for solution visualization and analysis
             zeroSet = coulNewtonAdapt(zeroSet, nodes, f, n=n, m=m, o=o, maxIts=500, μ=1.25, Δt=10^(-5), ε=10^(-13))
-            
+
             # Plot solution
-            # plotA = scatter(zeroSet[1,:],zeroSet[2,:],
-            #                 ratio = 1,
-            #                 legend = false,
-            #                 xlims = (-(c+2r),c+2r),
-            #                 ylims = (-(c+2r),c+2r),
-            #                 markersize = 2,
-            #                 dpi=300)
-            
+            plotA = scatter(zeroSet[1,:],zeroSet[2,:],
+                            ratio = 1,
+                            legend = false,
+                            xlims = (-(c+2r),c+2r),
+                            ylims = (-(c+2r),c+2r),
+                            markersize = 2,
+                            dpi=300)
+
             # Compute true radius of circles at current time
             rts = fill(rt(r, i), 2sN)
-            
+
             # Compute radius of each node
             rads = zeros(2sN)
             for j∈1:2sN
@@ -131,10 +132,10 @@ function simulate(sN,N; n, m, o, r, c, maxIts=250, Δt, tf, width)
                     rads[j] = norm(zeroSet[:,j] + [c,c])
                 end
             end
-            
+
             # Compute errors
             maxErr, errs = scalError(rts,rads)
-            
+
             # Plot solution with errors overlayed
             display(scatter(zeroSet[1,:],zeroSet[2,:],
                             marker_z = log10.(errs),
@@ -142,16 +143,16 @@ function simulate(sN,N; n, m, o, r, c, maxIts=250, Δt, tf, width)
                             legend = false,
                             colorbar = true,
                             markeralpha = 0.75,
-                            markersize = 2,
+                            markersize = 3,
                             ratio = 1))
         end
-        
+
         k += 1
     end
 
     # Print errors to terminal
-    # display(norm(errs))
-    
+    display(norm(errs))
+
     # return (maxErr, errs)
     return [N, maxErr]
 end
@@ -219,7 +220,7 @@ function timeTest(N, n, Δt)
         errs[3,i] = readline()
     end
 
-    return errs 
+    return errs
 end
 
 # Run single test
