@@ -9,7 +9,7 @@ using Arpack
 ## Backend functions
 ### Approximate normal functions definitions
 # Inverse iteration routine to find the eigenvector associated with the
-# smallest eigenvalue 
+# smallest eigenvalue
 """
     invIt(A; ϵ = 10^(-5), maxIts = 10)
 
@@ -30,7 +30,7 @@ function invIt(A; ε = 10^(-5), maxIts = 10)
             y0 = y1;
             y1 = B\x;
             x = y1/norm(y1, Inf);
-            
+
             if norm(y0-y1, Inf) < ε || norm(y0+y1, Inf) < ε
                 return x
             end
@@ -51,7 +51,7 @@ Compute the covariance matrix given a cluster xⱼ defined by `nodes`
 function covar(nodes)
     # Number of nodes
     N = size(nodes,2);
-    
+
     # Find average vector
     x̄ = nodes[:,1]
     for i ∈ 2:N
@@ -63,10 +63,10 @@ function covar(nodes)
     A = zeros(size(nodes,1),size(nodes,1))
     for i ∈ 1:N
         diff = nodes[:,i] - x̄;
-        
+
         A += diff*diff';
     end
-    
+
     return A
 end
 
@@ -131,7 +131,7 @@ function approxNormals(nodes, idx)
     for i ∈ 1:N
         nmls[:,i] /= norm(nmls[:,i]);
     end
-    
+
     return nmls
 end
 approxNormals(nodes) = approxNormals(nodes, knnFull(nodes,5))
@@ -147,7 +147,7 @@ neighbors among 'nodes'.
 function knnFull(nodes, n)
     kdtree = KDTree(nodes);
     idx, tmp = knn(kdtree, nodes, n, true);
-    
+
     return idx
 end
 
@@ -176,7 +176,7 @@ function rotUp!(nodes, normal)
     # Dimension of space
     D= size(nodes,1);
     nml = copy(normal);
-    
+
     # Begin rotations
     sc = zeros(2,D-1)
     for i ∈ 1:D-1
@@ -187,17 +187,17 @@ function rotUp!(nodes, normal)
         # Compute sine and cosine values
         s = x/mag;
         c = y/mag;
-        
+
         # Store sine and cosine values for later
         sc[:,i] = [s,c];
-        
+
         # Construct rotation matrix
         rot = [c -s;
                s c];
-        
+
         nml[[i,D]] = [0,mag]
         nodes[[i,D],:] = rot*nodes[[i,D],:];
     end
-    
+
     return sc
 end

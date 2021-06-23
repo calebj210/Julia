@@ -54,7 +54,7 @@ function approxNormals(nodes)
     # Number of nodes
     N = size(nodes,2);
     nmls = zeros(2,N);
-    
+
     # First Node
     tmp = nodes[:,2] - nodes[:,N];
     tmp = rot90(tmp);
@@ -80,7 +80,7 @@ function rot90(vec)
     tmp = zeros(2);
     tmp[1] = vec[2];
     tmp[2] = -vec[1];
-    
+
     return tmp
 end
 
@@ -89,7 +89,7 @@ end
 function knnFull(nodes, n)
     kdtree = KDTree(nodes);
     idx, tmp = knn(kdtree, nodes, n, true);
-    
+
     return idx
 end
 
@@ -100,7 +100,7 @@ function knnFullOrd(nodes, n)::Array{Array{Int,1},1}
     for i ∈ 1:N
         push!(idx,zeros(n))
     end
-    
+
     # Put nth node as nth first index
     for i ∈ 1:N
         idx[i][1] = i;
@@ -114,9 +114,9 @@ function knnFullOrd(nodes, n)::Array{Array{Int,1},1}
         else
             k = i - floor(j/2);
             idx[i][j] = k<=0 ? N+k : k;
-        end 
+        end
     end
-    
+
     return idx
 end
 
@@ -134,7 +134,7 @@ sgn(x) = x >= 0 ? 1 : -1;
 function findAngle(node)
     b = node[2]/norm(node);
     θ = sgn(node[1])acos(b);
-    
+
     return θ
 end
 
@@ -143,10 +143,10 @@ function rotate(nodes, θ)
     # Compute rotation matrix
     rotor = [cos(θ) -sin(θ);
              sin(θ) cos(θ)];
-    
+
     # Rotate all vectors
     nodes = rotor*nodes;
-    
+
     return nodes
 end
 
@@ -176,7 +176,7 @@ function interpolate(nodes, m, o)
     for i ∈ 1:n, j ∈ 1:n
         A0[i,j] = ϕ(x[i], x[j], m);
     end
-    
+
     # Create helping terms
     A1[1,:] .= 1;
     for i ∈ 1:o, j ∈ 1:n
@@ -186,7 +186,7 @@ function interpolate(nodes, m, o)
     # Create full A
     A = [A0 A1';
          A1 zeros(o+1,o+1)];
-    
+
     # Solve for weights
     λ = A\f;
 
@@ -198,7 +198,7 @@ function S(t, x, λ, m)
     n = size(x,1);
     nn = size(λ,1) - n;
     nt = size(t,1);
-    
+
     s = zeros(nt);
     for i ∈ 1:n, j ∈ 1:nt
         s[j] += λ[i]*ϕ(t[j], x[i], m);
@@ -206,14 +206,14 @@ function S(t, x, λ, m)
     for i ∈ 0:nn-1, j ∈ 1:nt
         s[j] += λ[n+i+1]*t[j]^i;
     end
-    
+
     return s
-end 
+end
 
 # RBF interpolant derivative at s=0
 function S_x(x, λ, m)
     n = size(x,1);
-    
+
     s = 0;
     for i ∈ 1:n
         s += λ[i]*ϕ_x(0, x[i], m);
@@ -223,14 +223,14 @@ function S_x(x, λ, m)
     if size(λ,1) > n+1
         s += λ[n+2];
     end
-    
+
     return s
 end
 
 # RBF interpolant second derivative at s=0
 function S_xx(x, λ, m)
     n = size(x,1);
-    
+
     s = 0;
     for i ∈ 1:n
         s += λ[i]*ϕ_xx(0, x[i], m);
@@ -240,7 +240,7 @@ function S_xx(x, λ, m)
     if size(λ,1) > n+2
         s += 2*λ[n+3];
     end
-    
+
     return s
 end
 
@@ -248,7 +248,7 @@ end
 function ∇∇(nodes, F, n, m, o)
     # Find number of nodes
     N = size(nodes, 2);
-    
+
     # Compute approximate normals
     appNorms = approxNormals(nodes);
 
@@ -278,14 +278,14 @@ function ∇∇(nodes, F, n, m, o)
         S_ss = S_xx(rot[1,:], λs, m);
         S_f = S_x(rot[1,:], λf, m);
         S_ff = S_xx(rot[1,:], λf, m);
-        
+
         # Compute length element
         s = 1 + S_s^2;
-        
+
         # Compute ∇∇F
         vals[i] = s^(-1)*S_ff - s^(-2)*S_s*S_ss*S_f;
     end
-    
+
     return vals
 end
 
@@ -293,13 +293,13 @@ end
 function findNormals(nodes, n, m, o)
     # Find number of nodes
     N = size(nodes, 2);
-    
+
     # Compute approximate normals
     appNorms = approxNormals(nodes);
 
     # Find nearest neighbors
     idx = knnFullOrd(nodes, n);
-    
+
     cent = zeros(2,n);
     rot = cent;
     normals = zeros(2,N);
@@ -319,18 +319,18 @@ function findNormals(nodes, n, m, o)
 
         # Compute derivative at S1 = 0
         f_s = S_x(rot[1,:], λ, m);
-        
+
         # Compute length element
         s = 1 + f_s^2;
         L = sqrt(s);
-        
+
         # Compute normal at S1 = 0
         tmp = [-f_s/L, 1/L];
-        
+
         # Rotate local normal to proper angle
         normals[:,i] = rotate(tmp, -θ);
     end
-    
+
     return normals
 end
 
@@ -355,7 +355,7 @@ function scalError(trues, calcs)
     for j ∈ 1:N
         magDiff = norm(trues[j]-calcs[j]);
         mag = norm(trues[j]);
-        
+
         # A routine to handle mag ≈ 0
         if mag <= 10^(-13)
             normErrs[j] = 1magDiff;
@@ -364,7 +364,7 @@ function scalError(trues, calcs)
         end
     end
     err = maximum(normErrs);
-    
+
     return (err,normErrs)
 end
 
@@ -372,14 +372,16 @@ end
 # Plot of nodes and vectors
 function vectorPlot(points, direction)
     N = size(points, 2);
-    vecs = points + 0.1*direction;
+    vecs = points + 75*direction;
     a = scatter(points[1,:],points[2,:],
                 aspectratio = :equal,
                 legend = false,
                 show = false,
-                markersize = 2,
+                markersize = 4,
+                markerstrokewidth = 0,
                 markerstrokealpha = 0,
-                markeralpha = .9);
+                markeralpha = .9,
+                title = L"\pi\mathrm{-Curve}\;\mathrm{Normals}");
     for i ∈ 1:N
         plot!([points[1,i], vecs[1,i]],
               [points[2,i], vecs[2,i]],
@@ -417,10 +419,13 @@ function errPlot(nodes, errs)
                 colorbar = :right,
                 aspectratio = :equal,
                 legend = false,
-                markersize = 2,
-                markerstrokealpha = 0,
+                markersize = 4,
+                markerstrokealpha = 0.0,
+                markerstrokewidth = 0.0,
                 markeralpha = .75,
-                title = "Normal Error")
+                title = L"\pi\mathrm{-Curve}\;\mathrm{Normal}\;\mathrm{Error}",
+                colorbar_title = L"\log_{10}(Error)",
+                dpi = 300)
     return a
 end
 
@@ -430,7 +435,7 @@ function interPlot(nodes, λ, m)
     y = nodes[2,:];
     t = range(minimum(x), maximum(x), length = 100);
     s = S(t, x, λ, m);
-    
+
     a = scatter(x,y,
                 color = :blue,
                 aspectratio = :equal,
@@ -448,13 +453,13 @@ end
 function aniPlot(nodes, n = 10, m = 3, o = 3, delay = 0.001)
     # Find number of nodes
     N = size(nodes, 2);
-    
+
     # Compute approximate normals
     nmls = approxNormals(nodes);
 
     # Find nearest neighbors
     idx = knnFullOrd(nodes, n);
-    
+
     cent = zeros(2,n);
     rot = cent;
     λ = zeros(n);
@@ -496,7 +501,7 @@ function aniPlot(nodes, n = 10, m = 3, o = 3, delay = 0.001)
 
         f = plot(a,b,c,d,e,
                  layout = l)
-        
+
         display(f)
         sleep(delay)
     end
@@ -506,41 +511,43 @@ end
 function comp(N=100, n=10, m1=3, o=n-1)
     # Parameterizing our curve
     t = range(0,2*π-2*π/N, length = N);
-    
+
     # Compute true normals
     truNorms = [piNormsX.(t)'; piNormsY.(t)'];
     for i ∈ 1:N
         truNorms[:,i] = truNorms[:,i]/norm(truNorms[:,i]);
     end
-    
+
     # Generate nodes
     nodes = dist(piX.(t), piY.(t))
     appnorms = approxNormals(nodes)
     for i ∈ 1:N
         appnorms[:,i] = appnorms[:,i]/norm(appnorms[:,i]);
     end
-    
+
     normals = findNormals(nodes, n, m1, o);
 
     # aniPlot(nodes, n, m1, o, 0.01)
-    
-    # a = vectorPlot(nodes, normals);
+
+    a = vectorPlot(nodes, normals);
     # b = vectorPlot(nodes, appnorms);
-    #display(a)
-    
+    # display(a)
+    png(a, "Normals.png")
+
     a = vecError(truNorms, normals)[1]
     b = vecError(truNorms, appnorms)[1]
 
-    # c = errPlot(nodes, vecError(truNorms, normals)[2]);
-    # display(c)
-    
+    c = errPlot(nodes, vecError(truNorms, normals)[2]);
+    display(c)
+    png(c, "Normal_Error.png")
+
     return [a,b]
 end
 
 function errs(m,o=-10)
     neighbors = [11];
     nodes = 1000:10000:100000;
-    
+
     tmp = 0
     errapp = [];
 
@@ -564,7 +571,7 @@ function errs(m,o=-10)
         else
             oo = o;
         end
-        
+
         err = [];
         for N ∈ nodes
             comps = comp(N, n, m, oo)
@@ -573,16 +580,16 @@ function errs(m,o=-10)
                 push!(errapp,comps[2]);
             end
         end
-        
+
         # if tmp == 0
         #     a = plot!(nodes,errapp,
         #               label = "Geometric",
         #               xaxis = :log,
         #               yaxis = :log)
         # end
-        
+
         tmp = 1;
-        
+
         a = plot!(nodes,err,
                   label = string(n," Neighbors"),
                   legend = :topright,
@@ -614,7 +621,7 @@ function lapComp(N=100, n=10, m1=3, o=n-1)
     # c = plot3d(nodes[1,:],nodes[2,:],true∇∇F);
     # c = plot3d!(nodes[1,:],nodes[2,:],laps);
     # display(c)
-    
+
     return a[1]
 end
 
@@ -641,13 +648,13 @@ function lapErrs(m,o=-10)
         else
             oo = o;
         end
-        
+
         err = [];
         for N ∈ nodes
             comps = lapComp(N, n, m, oo)
             push!(err,comps);
         end
-        
+
         a = plot!(nodes,err,
                   label = string(n, " Neighbors"),
                   legend = :topright,
@@ -662,10 +669,9 @@ end
 # errs(7)
 
 # Single parameters
-comp(5000,6,3,2)
+comp(1000,9,5,3)
 
 # Laplace-Beltrami
 # lapComp(1000, 11, 3, 5)
 
 # lapErrs(7)
-1

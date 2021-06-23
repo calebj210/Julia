@@ -42,7 +42,7 @@ function approxNormals(nodes)
     # Number of nodes
     N = size(nodes,2);
     nmls = zeros(2,N);
-    
+
     # First Node
     tmp = nodes[:,2] - nodes[:,N];
     tmp = rot90(tmp);
@@ -68,7 +68,7 @@ function rot90(vec)
     tmp = zeros(2);
     tmp[1] = vec[2];
     tmp[2] = -vec[1];
-    
+
     return tmp
 end
 
@@ -76,7 +76,7 @@ end
 function knnFull(nodes, n)
     kdtree = KDTree(nodes);
     idx, tmp = knn(kdtree, nodes, n, true);
-    
+
     return idx
 end
 
@@ -93,7 +93,7 @@ sgn(x) = x >= 0 ? 1 : -1;
 function findAngle(node)
     b = node[2]/norm(node);
     θ = sgn(node[1])acos(b);
-    
+
     return θ
 end
 
@@ -102,10 +102,10 @@ function rotate(nodes, θ)
     # Compute rotation matrix
     rotor = [cos(θ) -sin(θ);
              sin(θ) cos(θ)];
-    
+
     # Rotate all vectors
     nodes = rotor*nodes;
-    
+
     return nodes
 end
 
@@ -128,7 +128,7 @@ function interpolate(nodes, m)
     A = zeros(n,n);
     x = nodes[1,:];
     f = nodes[2,:];
-    
+
     # Define A
     for i ∈ 1:n, j ∈ 1:n
         A[i,j] = ϕ(x[i], x[j], m);
@@ -144,24 +144,24 @@ end
 function S(t, x, λ, m)
     n = size(x,1);
     nt = size(t,1);
-    
+
     s = zeros(nt);
     for i ∈ 1:n, j ∈ 1:nt
         s[j] += λ[i]*ϕ(t[j], x[i], m);
     end
-    
+
     return s
 end
 
 # Interpolation derivative function
 function S_x(x, λ, m)
     n = size(x,1);
-    
+
     s = 0;
     for i ∈ 1:n
         s += λ[i]*ϕ_x(0, x[i], m);
     end
-    
+
     return s
 end
 
@@ -170,13 +170,13 @@ end
 function findNormals(nodes, n, m)
     # Find number of nodes
     N = size(nodes, 2);
-    
+
     # Compute approximate normals
     appNorms = approxNormals(nodes);
 
     # Find nearest neighbors
     idx = knnFull(nodes, n);
-    
+
     cent = zeros(2,n);
     rot = cent;
     normals = zeros(2,N);
@@ -196,18 +196,18 @@ function findNormals(nodes, n, m)
 
         # Compute derivative at S1 = 0
         f_s = S_x(rot[1,:], λ, m);
-        
+
         # Compute length element
         s = 1 + f_s^2;
         L = sqrt(s);
-        
+
         # Compute normal at S1 = 0
         tmp = [-f_s/L, 1/L];
-        
+
         # Rotate local normal to proper angle
         normals[:,i] = rotate(tmp, -θ);
     end
-    
+
     return normals
 end
 
@@ -266,7 +266,7 @@ function interPlot(nodes, λ, m)
     y = nodes[2,:];
     t = range(minimum(x), maximum(x), length = 100);
     s = S(t, x, λ, m);
-    
+
     a = scatter(x,y,
                 color = :blue,
                 aspectratio = :equal,
@@ -283,17 +283,17 @@ end
 function aniPlot(nodes, n = 10, m = 3, delay = 0.001)
     # Find number of nodes
     N = size(nodes, 2);
-    
+
     # Compute approximate normals
     nmls = approxNormals(nodes);
 
     # Find nearest neighbors
     idx = knnFull(nodes, n);
-    
+
     cent = zeros(2,n);
     rot = cent;
     λ = zeros(n);
-    for i ∈ 1:N
+    anim = @animate for i ∈ 1:N
         # Find angle
         θ = findAngle(nmls[:,i]);
 
@@ -330,39 +330,43 @@ function aniPlot(nodes, n = 10, m = 3, delay = 0.001)
                  ylims = (-.25,.25))
 
         f = plot(a,b,c,d,e,
-                 layout = l)
-        
+                 layout = l,
+                 dpi = 300)
+
         display(f)
-        sleep(delay)
+        f
+        # sleep(delay)
     end
+
+    mp4(anim, "Coordinate_Transformation.mp4", fps = 30)
 end
 
 ## Main function for finding normals
 function comp(N=100, n=10, m1=.1, m2=0.5)
     # Parameterizing our curve
     t = range(0,2*π-2*π/N, length = N);
-    
+
     # Compute true normals
     truNorms = [piNormsX.(t)'; piNormsY.(t)'];
     for i ∈ 1:N
         truNorms[:,i] = truNorms[:,i]/norm(truNorms[:,i]);
     end
-    
+
     # Generate nodes
     nodes = dist(piX.(t), piY.(t))
     appnorms = approxNormals(nodes)
     for i ∈ 1:N
         appnorms[:,i] = appnorms[:,i]/norm(appnorms[:,i]);
     end
-    
+
     normals = findNormals(nodes, n, m1);
 
-    # aniPlot(nodes, n, m1, 0.01)
-    
+    aniPlot(nodes, n, m1, 0.0)
+
     #a = vectorPlot(nodes, normals);
     # b = vectorPlot(nodes, appnorms);
     #display(a)
-    
+
     a = vecError(truNorms, normals)
     # a = vecError(truNorms, appnorms
 
@@ -388,4 +392,6 @@ function errs(n,m)
     # end
 end
 
-errs(15,5)
+# errs(15,5)
+
+comp(1000, 19, 5)

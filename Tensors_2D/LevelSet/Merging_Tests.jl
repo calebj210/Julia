@@ -104,14 +104,14 @@ function simulate(sN,N; n, m, o, r, c, maxIts=250, Δt, tf, width)
         end
 
         # Compute next time step
-        f -= (κ .* nDot∇ϕ + Δϕ) * Δt
+        f -= (κ .* nDot∇ϕ) * Δt
 
         # Check for solution plotting and error calulations
         if i == time[end]
             # Compute zeroSet for solution visualization and analysis
             zeroSet = coulNewtonAdapt(zeroSet, nodes, f, n=n, m=m, o=o, maxIts=500, μ=1.25, Δt=10^(-5), ε=10^(-13))
 
-            # Plot solution
+            # # Plot solution
             plotA = scatter(zeroSet[1,:],zeroSet[2,:],
                             ratio = 1,
                             legend = false,
@@ -119,6 +119,17 @@ function simulate(sN,N; n, m, o, r, c, maxIts=250, Δt, tf, width)
                             ylims = (-(c+2r),c+2r),
                             markersize = 2,
                             dpi=300)
+
+            # Plot hex band
+            # plotA = scatter(nodes[1,:],nodes[2,:],
+            #         legend = false,
+            #         marker_z = f,
+            #         colorbar = true,
+            #         markeralpha = 0.75,
+            #         markersize = 4,
+            #         ratio = 1,
+            #         dpi = 300)
+            #         display(plotA)
 
             # Compute true radius of circles at current time
             rts = fill(rt(r, i), 2sN)
@@ -224,7 +235,7 @@ function timeTest(N, n, Δt)
 end
 
 # Run single test
-simulate(100,2000, n=21, m=5, o=2, r=1, c=0.8, Δt=10^(-4), tf=0.05, width=60)
+simulate(100,2000, n=21, m=5, o=2, r=1, c=0.8, Δt=10^(-4), tf=0.05, width=10)
 
 # Run density test
 # test1 = densityTest([250,500,1000,2000,4000],5)
