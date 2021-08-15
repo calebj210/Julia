@@ -1,5 +1,5 @@
 using Plots
-using Analysis
+include("/home/merlin/Documents/Julia/Tensors_2D/Packages/Analysis.jl/src/Analysis.jl")
 using ColorSchemes
 using LaTeXStrings
 using SparseArrays
@@ -13,7 +13,7 @@ y(r,t) = r*sin.(t)
 rt(r0,t) = sqrt(r0^2 + 2t)
 
 ##
-# Generate helping nodes for the surfaces nodes
+# Generate band of helping nodes around the surface
 #
 function helpingNodes(zeroSet, norms, width)
     nodes = hcat(zeroSet + width * norms,
@@ -113,7 +113,7 @@ function timeSolve(N; n, m, o, r, c, width, Δt, tf)
 
     # Plot solution with errors overlayed
     for i = 0:10
-        plotA = vectorPlot(zeroSet, norms)
+        plotA = Analysis.vectorPlot(zeroSet, norms)
         display(plotA)
         sleep(5)
 
