@@ -9,5 +9,5 @@
 
 ### Using this repo
 ```sh
-$ git clone https://github.com/cajacobs/personal.git
+$ git clone git@github.com:calebj210/Julia.git
 ```
