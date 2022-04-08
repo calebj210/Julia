@@ -2,7 +2,7 @@
 # 2×2 First Order ODE Solver Using Trapezoidal rule
 #
 # Author: Caleb Jacobs
-# Date last modified: 14-Mar-2022
+# Date last modified: 03-04-2022
 =#
 
 using Plots
@@ -18,6 +18,15 @@ function f(t, y)
     else
         return [y[2], ((1 - t^2)*y[1] - t*y[2]) / (t^2)]
     end
+end
+
+# Tricky eigenvalue system
+h(x, y, λ) = [y[2], y[2] / (1 + x) - (1 + x) * λ * y[1]] 
+
+# Evaluate system at specified eigenvalue λ
+function H(λ)
+    htmp(x, y) = h(x, y, λ)
+    richTrap(htmp, 0, 1, [0, 1], n = 1, rn = 9)
 end
 
 # Newton method system solver
@@ -86,6 +95,52 @@ function richTrap(f, a, b, y0; n = 1, rn = 1)
     return r[rn, rn]
 end
 
-besselJ = richTrap(f, 0, 3*π, [0,1/2], n = 40, rn = 10)
-display(besselJ)
-display(besselJ - besselj(1, 3*π))
+# Bisection method for root finding 
+function bisect(f, a, b; maxIts = 100, ε = 1e-8)
+    # Check required conditions
+    if a > b 
+        return NaN
+    end
+
+    fa = f(a)       # Left function value
+    fb = f(b)       # Right function value
+
+    if (sign(fa) == sign(fb))
+        return NaN
+    end
+
+    c = 0.0             # Initialize solution
+
+    # Begin bisecting
+    for n ∈ 1 : maxIts
+        c = (a + b) / 2
+        
+        fc = f(c)
+
+        # Check for convergence
+        if abs(fc) < ε || (b - a) / 2 < ε
+            return c
+        end
+
+        # Check for which side to cut interval
+        if sign(fc) == sign(fa)
+            a  = c
+            fa = fc
+        else
+            b  = c
+            fb = fc
+        end
+    end
+
+    display("Convergence never met, λ found:")
+    c
+end
+
+# besselJ = richTrap(f, 0, 3*π, [0,1/2], n = 40, rn = 10)
+# display(besselJ)
+# display(besselJ - besselj(1, 3*π))
+
+sol = bisect(H, 6.7, 6.8, ε = 1e-15)
+tru = 6.773873469310561
+display(sol)
+display(abs(tru - sol) / tru)
