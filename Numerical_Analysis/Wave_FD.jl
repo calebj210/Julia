@@ -32,14 +32,14 @@ function solveInitial(a, f, x, t, ht, u0, u1)
     sleep(1)
     
     # Compute inner node step
-    u[inr, 2] = (2ht * u1x[inr] 
+    u[inr, 2] =   (2ht * u1x[inr] 
                 + (ax[inr] * ht^2 / (hx^2) + adx[inr] * ht^2 / (2hx)) .* u[inr .+ 1, 1] 
                 + (2 .- ax[inr] * 2ht^2 / (hx^2)) .* u[inr, 1] 
                 + (ax[inr] * ht^2 / (hx^2) - adx[inr] * ht^2 / (2hx)) .* u[inr .- 1, 1]
                 + ht^2 * f.(x[inr], t)) / 2
 
     # Compute boundary node step using period BCs
-    u[[1,n], 2] .= (2ht * u1x[1]
+    u[[1,n], 2] .=   (2ht * u1x[1]
                    + (ax[1] * ht^2 / (hx^2) + adx[1] * ht^2 / (2hx)) * u[2, 1] 
                    + (2 - ax[1] * 2ht^2 / (hx^2)) * u[1, 1] 
                    + (ax[1] * ht^2 / (hx^2) - adx[1] * ht^2 / (2hx)) * u[n - 1, 1]
@@ -66,22 +66,22 @@ function solveFD(a, f, hx, ht, u0, u1, tf)
 
     inr = 2:(n - 1)                     # Inner range
     
-    display(plot(x, uNew))
+    display(plot(x, u[:,1]))
 
     while t < tf
         # Compute inner node step
-        uNew[inr] = (ax[inr] * ht^2 / (hx^2) + adx[inr] * ht^2 / (2hx)) .* u[inr .+ 1, 2] 
+        uNew[inr] .=  ((ax[inr] * ht^2 / (hx^2) + adx[inr] * ht^2 / (2hx)) .* u[inr .+ 1, 2] 
                     + (2 .- ax[inr] * 2ht^2 / (hx^2)) .* u[inr, 2] 
                     + (ax[inr] * ht^2 / (hx^2) - adx[inr] * ht^2 / (2hx)) .* u[inr .- 1, 2]
                     + ht^2 * f.(x[inr], t)
-                    - u[inr, 1]
+                    - u[inr, 2])
     
         # Compute boundary node step using period BCs
-        uNew[[1,n]] .= (ax[1] * ht^2 / (hx^2) + adx[1] * ht^2 / (2hx)) * u[2, 2] 
+        uNew[[1,n]] .=   ((ax[1] * ht^2 / (hx^2) + adx[1] * ht^2 / (2hx)) * u[2, 2] 
                        + (2 - ax[1] * 2ht^2 / (hx^2)) * u[1, 2] 
                        + (ax[1] * ht^2 / (hx^2) - adx[1] * ht^2 / (2hx)) * u[n - 1, 2]
                        + ht^2 * f.(x[1], t)
-                       - u[1, 1]
+                       - u[1, 1])
 
         u[:, 1] = u[:, 2]   # Move current nodes back
         u[:, 2] = uNew      # Move new nodes into current
