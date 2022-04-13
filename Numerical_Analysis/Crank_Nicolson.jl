@@ -3,12 +3,14 @@
 #   ∂t(u) = ∂x(a(x) ∂x(u)) + f(x,t)
 #
 # Author: Caleb Jacobs
-# DLM: 10-04-2022
+# DLM: 12-04-2022
 =#
 
 using ForwardDiff
 using LinearAlgebra
 using Plots
+
+default(xlims = (0, 1), ylims = (-1, 1))
 
 """
     getCRMat(a, x, ht)
