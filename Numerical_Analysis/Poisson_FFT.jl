@@ -9,6 +9,12 @@
 using FFTW
 using Plots
 
+default(c = :viridis, 
+        st = :contourf, 
+        levels = 20, 
+        aspect_ratio = :equal,
+        dpi = 300)
+
 
 """
     getGrid(Nx, Ny)
@@ -44,9 +50,9 @@ function poissonSolve(f, Nx, Ny)
     U = FFTW.r2r(a, FFTW.RODFT00) /
         (4 * (Nx + 1) * (Ny + 1))   # Get solution via inverse sine FFT
 
-    display(contour(x, y, U, st = :contour, 
-                    fill = true, 
-                    aspect_ratio = :equal))
+    plt = contour(x, y, U, fill = true)
 
-    return U
+    display(plt)
+
+    return (U, plt)
 end
