@@ -102,7 +102,7 @@ end
 Generate `N` random nodes in a unit disk.
 """
 function randDisk(N)
-    Random.seed!(315)
+    Random.seed!(210)
     r = sqrt.(rand(N))
     θ = 2π * rand(N)
 
@@ -139,17 +139,15 @@ end
 Generate nodes over surface of a circle with curvature κ
 """
 function getNodes(N, κ)
-    # x = hexDisk(N)
-    # N = size(x, 2)
-    x = range(-1, 1, length = N)'
+    x = hexDisk(N)
+    N = size(x, 2)
+    # x = range(-1, 1, length = N)'
 
     if κ > 0
         z = [sqrt(κ^(-2) - norm(x[i]).^2) - κ^(-1) for i ∈ 1:N]
     else
         z = zeros(N)
     end
-
-    display(norm(z))
 
     X = [x; z']
 end
