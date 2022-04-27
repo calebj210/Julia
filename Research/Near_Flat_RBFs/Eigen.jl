@@ -35,6 +35,9 @@ function eigPlot(ϕ, ε, N)
             msα = 0,
             xscale = :log10,
             yscale = :log10,
+            xlabel = L"\kappa",
+            ylabel = L"\lambda",
+            title  = "Eigenvalues vs Curvature",
             legend = false,
             colorbar = false,
             aspect_ratio = :auto)

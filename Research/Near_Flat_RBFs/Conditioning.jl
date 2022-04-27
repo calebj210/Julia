@@ -2,15 +2,18 @@
 # Experimenting with the condition number of collocation matrix
 #
 # Author: Caleb Jacobs
-# DLM: 22-04-2022
+# DLM: 26-04-2022
 =#
 
 using Plots
+using Plots.PlotMeasures
 using LinearAlgebra
 using DoubleFloats
 using Random
+using LaTeXStrings
+using Printf
 
-default(levels = 100, aspect_ratio = :equal, c = :viridis)
+default(levels = 300, aspect_ratio = :none, c = :viridis)
 
 Φ(r, ε) = ℯ^(-(ε * r)^2)
 
@@ -130,6 +133,8 @@ function hexDisk(N)
         end
     end
 
+    @printf "Number of nodes n = %d\n" N
+
     return xFull[:, 1 : j - 1]
 end
 
@@ -139,14 +144,14 @@ end
 Generate nodes over surface of a circle with curvature κ
 """
 function getNodes(N, κ)
-    x = hexDisk(N)
-    N = size(x, 2)
-    # x = range(-1, 1, length = N)'
+    # x = randDisk(N)
+    # N = size(x, 2)
+    x = range(-1, 1, length = N)'
 
     if κ > 0
-        z = [sqrt(κ^(-2) - norm(x[i]).^2) - κ^(-1) for i ∈ 1:N]
+        z = [sqrt(κ^(-2) - norm(x[:,i]).^2) - κ^(-1) for i ∈ 1:N]
     else
-        z = zeros(N)
+        z = Double64.(zeros(N))
     end
 
     X = [x; z']
@@ -176,4 +181,60 @@ end
 function test1()
     κ = 1 ./ (1.5 .^ [0:10...])
     streamPlots(Φ, 9, 75, 75, Double64.(κ))
+end
+
+function plotData(N)
+    κ = [0, 0.5, 1]
+    l = @layout [a b c]
+
+    p = plot(aspect_ratio = :none, layout = l, size = (1000, 300))
+    for i ∈ 1:3
+        X = getNodes(N, κ[i])
+
+        scatter!(X[1,:], X[2,:], X[3,:],
+                 subplot = i, 
+                 xlims = (-1.1, 1.1),
+                 ylims = (-1.1, 1.1),
+                 zlims = (-1.1, 1.1),
+                 color = :black,
+                 ms = 1,
+                 legend = false,
+                 dpi = 90,
+                 title = L"\kappa = %$(κ[i])",
+                 xlabel = "x",
+                 ylabel = "y",
+                 zlabel = "z",
+                 aspect_ratio = :equal,
+                 bottom_margin = 10mm)
+    end
+
+    return p
+end
+
+function discreteCond(ϕ, N)
+    κ = Double64.([1, 0.75, 0.5, 0.25, 0.1, 0])
+    l = @layout [a b c; d e f]
+
+    p = plot(aspect_ratio = :none, layout = l, size = (1200, 500))
+    for i ∈ 1 : length(κ)
+        ε = getε(100, 100)
+        X = getNodes(N, κ[i])
+        
+        conds = getConds(X, ϕ, ε)
+
+        plot!(real.(ε[1,:]), imag.(ε[:,1]), log10.(conds), 
+              st = contour, 
+              subplot = i,
+              title = L"\kappa = %$(κ[i])",
+              colorbar_title = L"\log_{10}(\mathrm{cond}(A))",
+              xlabel = L"Re(\varepsilon)",
+              ylabel = L"Im(\varepsilon)",
+              xlims  = (0,1),
+              ylims  = (0,1),
+              aspect_ratio = :equal,
+              right_margin = 6mm,
+              left_margin  = 6mm)
+    end
+
+    return p
 end
