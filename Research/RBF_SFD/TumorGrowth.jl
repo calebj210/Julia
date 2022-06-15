@@ -65,7 +65,7 @@ function plotSurface(Γ, u; ttl = "")
             size  = 20,
             color = u,
             colorscale = "Viridis",
-#             colorbar = attr(title="Concentration"),
+            colorbar = attr(title=""),
             opacity = 1
         )
     )
@@ -148,7 +148,7 @@ function test1(T::Float64 = 1.0; ε = 0.01, δ = 0.4, N = 1000, n = 11, m = 3, o
                  progress_steps = 1)
 
     for i ∈ 1:length(sol)
-        display(plotSurface(sol[i][3:5, :], sol[i][1, :]), ttl = "t = $(sol.t[i])")
+        display(plotSurface(sol[i][3:5, :], sol[i][1, :], ttl = "t = $(sol.t[i])"))
     end
 
     return sol
