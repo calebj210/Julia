@@ -503,6 +503,34 @@ function computeΔ(nodes, F, c::Common)
     return ΔF
 end
 
+# Compute hyperviscoisty term
+function computeHyperV(nodes, F, c::Common)
+    d, N = size(nodes)                          # Dimension and # of nodes
+    clusts = c.clusts                           # Rotated node clusters
+    pols   = c.pols                             # Polynomial matrix
+    λs     = c.λs                               # Interpolant weights
+    n      = c.n                                # # of nearest neighbors
+    m      = c.m                                # Shape parameter
+    idx    = c.idx                              # KNN indices
+    P      = size(pols, 2)                      # # of polynomial terms
+    
+    Δ⁸F = zeros(N)
+    for i ∈ 1:N
+        s0 = zeros(d - 1)                       # Center to evaluate at
+        
+        A = colloc(clusts[i][1:d - 1, :],       # Collocation matrix
+                   pols, m = m)
+
+        λF = A \ [F[idx[i]]; zeros(P)]
+
+        Δ⁸F[i] = Δ(s0,
+                  x -> S(clusts[i], x, λs[i], pols, m = m),
+                  x -> S(clusts[i], x, λF, pols, m = m))
+    end
+
+    return Δ⁸F
+end
+
 # Compute surface divergence term
 function computeSurfDiv(nodes, F, c::Common, ε, δ)
     d, N = size(nodes)                          # Dimension and # of nodes
@@ -522,17 +550,46 @@ function computeSurfDiv(nodes, F, c::Common, ε, δ)
                    pols, m = m)
 
         λF = A \ [F[idx[i]]; zeros(P)]
-        
+
+        u = x -> S(clusts[i], x, λF,    pols, m = m)        
         z = x -> S(clusts[i], x, λs[i], pols, m = m)
 
         Div[i] = ∇Γdot(s0,
                   z,
-                  x -> (-ε * H(x, z) + δ * F[i]) * normal(x, z))
+                  x -> (ε * H(x, z) + δ * u(x)) * normal(x, z))
     end
 
     return Div
 end
 
+# Compute surface divergence of u
+function computeSurfDivU(nodes, F, c::Common)
+    d, N = size(nodes)                          # Dimension and # of nodes
+    clusts = c.clusts                           # Rotated node clusters
+    pols   = c.pols                             # Polynomial matrix
+    λs     = c.λs                               # Interpolant weights
+    n      = c.n                                # # of nearest neighbors
+    m      = c.m                                # Shape parameter
+    idx    = c.idx                              # KNN indices
+    P      = size(pols, 2)                      # # of polynomial terms
+    
+    Div = zeros(N)
+    for i ∈ 1:N
+        s0 = zeros(d - 1)                       # Center to evaluate at
+        
+        A = colloc(clusts[i][1:d - 1, :],       # Collocation matrix
+                   pols, m = m)
+
+        λF = A \ [F[idx[i]]; zeros(P)]
+
+        u = x -> S(clusts[i], x, λF,    pols, m = m)        
+        z = x -> S(clusts[i], x, λs[i], pols, m = m)
+
+        Div[i] = ∇Γdot(s0, z, x -> u(x) * normal(x, z))
+    end
+
+    return Div
+end
 # Compute normal velocity
 function computeNormVel(nodes, u, c::Common, ε, δ)
     d, N = size(nodes)                          # Dimension and # of nodes

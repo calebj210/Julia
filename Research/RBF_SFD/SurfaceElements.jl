@@ -33,6 +33,7 @@ function Δ(s::Vector, z, f)                         # Laplace-Beltrami operator
 end
 
 Δ²(s, z, f) = Δ(s, z, x -> Δ(x, z, f))              # Biharmonic operator
+Δ⁸(s, z, f) = Δ⁸(s, z, x -> Δ⁸(x, z, f))            # 8th order hyperviscosity term
 
 function ∇Γ(s::Vector, z, f)                        # Surface gradient
     d = length(s)
