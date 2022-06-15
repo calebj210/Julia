@@ -51,6 +51,20 @@ function plotSurface(Γ, u; ttl = "")
             text = ttl,
             xanchor = "center",
             yanchor = "top"
+        ),
+
+        scene = attr(
+            xaxis = attr(
+                range = [-2, 2]
+            ),
+
+            yaxis = attr(
+                range = [-2, 2]
+            ),
+
+            zaxis = attr(
+                range = [-2, 2]
+            )
         )
 
     )
