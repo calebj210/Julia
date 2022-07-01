@@ -252,7 +252,7 @@ function twoCircles(N; n, m, o, r, c, Δt, tf)
              ylims = (-2r,2r),
              dpi = 300)
     display(plotA)
-    savefig(plotA, "Two_Cirlces_Merge_2.png")
+    # savefig(plotA, "Two_Cirlces_Merge_2.png")
     display("Press enter to continue")
     readline()
     return 0
@@ -319,7 +319,10 @@ function twoCircles(N; n, m, o, r, c, Δt, tf)
     display(plotA)
 end
 
-# narrowBand(1000, n=7, m=5, o=1, r=1)
-# surfaceAdapt(30, n=7, m=5, o=1, r=1)
-# growingCircle(1000, n=13, m=5, o=2, r=1, Δt=10^(-5), tf=0.02)
+narrowBand(1000, n=7, m=5, o=1, r=1)
+readline()
+surfaceAdapt(30, n=7, m=5, o=1, r=1)
+readline()
+growingCircle(1000, n=13, m=5, o=2, r=1, Δt=10^(-5), tf=0.02)
+readline()
 twoCircles(1500, n=13, m=5, o=2, r=0.9sqrt(2),c=1, Δt=10^(-4), tf=0.04)

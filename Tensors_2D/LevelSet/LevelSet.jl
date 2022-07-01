@@ -13,7 +13,7 @@ specified by 'minx', 'maxx', 'miny', and 'maxy'
 
 See 'hexBand'.
 """
-function hexGen(N; minx, maxx, miny, maxy)
+function hexGen(N; minx = -1, maxx = 1, miny = -1, maxy = 1)
     # Compute bound ranges
     Δx = maxx - minx
     Δy = maxy - miny
@@ -39,6 +39,8 @@ function hexGen(N; minx, maxx, miny, maxy)
     
     return nodes
 end
+hexGen(N, xlims, ylims) = hexGen(N, minx = xlims[1], maxx = xlims[2], 
+                                    miny = ylims[1], maxy = ylims[2])
 
 # Hexagonal band generartor
 """
@@ -238,7 +240,7 @@ end
                     maxIts=200, μ=2, Δt=0.1, ε=10^(-10))
 
 Coul-Newton based adaptive surface node refinement. The algorithm requires an
-initial surface node set 'zrs', a background node set 'Nodes' and finaly the
+initial surface node set 'zrs', a background node set 'Nodes' and finally the
 function values over 'Nodes' given by 'Finit'.
 """
 function coulNewtonAdapt(zrs, Nodes, Finit; n, m, o, maxIts=200, μ=2, Δt=0.1, ε=10^(-10))

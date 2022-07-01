@@ -251,11 +251,11 @@ end
 # Nodes plot
 function nodePlot(set1)
     a = scatter(set1[1,:],set1[2,:],
-                color = :blue,
+                color = :black,
                 show = false,
                 legend = false,
                 aspectratio = :equal,
-                markersize = 1,
+                markersize = 2,
                 markerstrokealpha = 0)
     return a
 end
@@ -274,7 +274,7 @@ function interPlot(nodes, λ, m)
                 legend = false,
                 markersize = 1.5,
                 markerstrokealpha = 0)
-    plot!(t,s,lw=1)
+    plot!(t,s,lw=2)
 
     return a
 end
@@ -293,7 +293,7 @@ function aniPlot(nodes, n = 10, m = 3, delay = 0.001)
     cent = zeros(2,n);
     rot = cent;
     λ = zeros(n);
-    anim = @animate for i ∈ 1:N
+    for i ∈ 15 
         # Find angle
         θ = findAngle(nmls[:,i]);
 
@@ -311,34 +311,42 @@ function aniPlot(nodes, n = 10, m = 3, delay = 0.001)
         a = plot(nodePlot(nodes),
                  title = "Initial Node Set",
                  xlims = (-1.1,1.1),
-                 ylims = (-1.1,1.1))
+                 ylims = (-1.1,1.1),
+                 dpi = 300)
         b = plot(nodePlot(nodes[:,idx[i]]),
                  title = "Nearest Neighbors",
                  xlims = (-1.1,1.1),
-                 ylims = (-1.1,1.1))
+                 ylims = (-1.1,1.1),
+                 dpi = 300)
         c = plot(nodePlot(cent),
                  title = "Centered",
-                 xlims = (-.25,.25),
-                 ylims = (-.25,.25))
+                 xlims = (-.1,.1),
+                 ylims = (-.1,.1),
+                 dpi = 300)
         d = plot(nodePlot(rot),
                  title = "Rotated",
-                 xlims = (-.25,.25),
-                 ylims = (-.25,.25))
+                 xlims = (-.1,.1),
+                 ylims = (-.1,.1),
+                 dpi = 300)
         e = plot(interPlot(rot, λ, m),
                  title = "Interpolated",
-                 xlims = (-.25,.25),
-                 ylims = (-.25,.25))
+                 xlims = (-.1,.1),
+                 ylims = (-.1,.1),
+                 dpi = 300)
 
         f = plot(a,b,c,d,e,
                  layout = l,
                  dpi = 300)
 
+        png(a, "nodeSet.png")
+        png(b, "KNN.png")
+        png(c, "cents.png")
+        png(d, "rotated.png")
+        png(e, "interp.png")
+
         display(f)
-        f
         # sleep(delay)
     end
-
-    mp4(anim, "Coordinate_Transformation.mp4", fps = 30)
 end
 
 ## Main function for finding normals
