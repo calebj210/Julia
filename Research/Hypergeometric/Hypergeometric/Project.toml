@@ -1,0 +1,4 @@
+name = "Hypergeometric"
+uuid = "8b1fcca3-8b80-4ca9-b70d-c71dd941d44e"
+authors = ["Caleb Jacobs <calebjacobs210@gmail.com>"]
+version = "0.1.0"
