@@ -68,8 +68,8 @@ function _pFq(f, c, d, n, h, singInfo)
     IbVals[z .== zₐ] .= 0
 
     # Internal node indices
-    @. intIdx = real(idxVec) >= n[1] && real(idxVec) <= n[2] && 
-                imag(idxVec) >= n[3] && imag(idxVec) <= n[4]
+    @. intIdx = findall(real(idxVec) >= n[1] && real(idxVec) <= n[2] && 
+                        imag(idxVec) >= n[3] && imag(idxVec) <= n[4])
 
     # Global operator matrices
     G1 = spzeros(length(intIdx), length(zVec)) # Standard corrections
@@ -85,22 +85,24 @@ function _pFq(f, c, d, n, h, singInfo)
     nS = 25                                    # Number of nodes in correction stencil
     t = range(0, 2π * (1 - 1 / ns), length = ns)
 
-    Ra = 3                                     # Radius of stencil around za
-    Rb = 3                                     # Radius of stencil around zb
-    Rc = 3                                     # Radius of stencil around corner
-    pa = 2                                     # Node away from za to start trapezoidal rule
-    pa = 2                                     # Node away from zb to start trapezoidal rule
-    pa = 2                                     # Node away from corner to start trapezoidal rule
+    Ra = 3                                      # Radius of stencil around za
+    Rb = 3                                      # Radius of stencil around zb
+    Rc = 3                                      # Radius of stencil around corner
+    pa = 2                                      # Node away from za to start trapezoidal rule
+    pa = 2                                      # Node away from zb to start trapezoidal rule
+    pa = 2                                      # Node away from corner to start trapezoidal rule
 
-    ###### Need to fix these index finders
-    aIdx = findall(x -> x == round.(cis(Ra * t)), idxVec) # Grid indices of near circle elements
-    bIdx = findall(x -> x == round.(cis(Rb * t)), idxVec) # Grid indices of near circle elements
-    cIdx = findall(x -> x == round.(cis(Rc * t)), idxVec) # Grid indices of near circle elements
-    ######
+    # Find grid points that are approximately on circle
+    aIdx = findall(x -> !isnothing(x), 
+           indexin(idxVec, round.(Ra * cis.(t))))
+    bIdx = findall(x -> !isnothing(x), 
+           indexin(idxVec, round.(Rb * cis.(t))))
+    cIdx = findall(x -> !isnothing(x), 
+           indexin(idxVec, round.(Rc * cis.(t))))
 
-    na = length(aIdx)           # Number of nodes at orgin
-    nb = length(bIdx)           # Number of nodes about evaluation point
-    nc = length(cIdx)           # Number of singularity free nodes
+    na = length(aIdx)                           # Number of nodes at orgin
+    nb = length(bIdx)                           # Number of nodes about evaluation point
+    nc = length(cIdx)                           # Number of singularity free nodes
 
     aIdxVec = idxVec(aIdx)
     bIdxVec = idxVec(bIdx)
@@ -124,9 +126,32 @@ function _pFq(f, c, d, n, h, singInfo)
     cwbTop = centralWeights(β, -im, pa, aIdxVec)
     cwbBot = centralWeights(β,  im, pa, aIdxVec)
 
-    r = min(nhProb, singPos / h)                                 # Radius about central node
-    centerIdxVec = findall(x -> x == round.(cis(r * t)), idxVec) # Grid indices of near circle elements
+    r = min(nhProb, singPos / h)                    # Radius about central node
+    originIdx = findall(x -> !isnothing(x),         # origin index
+           indexin(idxVec, round.(r * cis.(t))))
     radius = r * h
 
-    ## Stopped at line 110
+    origin = findall(iszero, zIdx)                  # Origin position
+    
+    for i ∈ eachindex(intIdx)
+        Wtr = zeros(size(z))                        # Trapezoidal rule weights
+        Wa  = zeros(length(z))
+        Wb  = zeros(length(z))
+        Wc  = zeros(length(z))
+
+        zb = zVec(intIdx(i))                        # Evaluation point
+
+        if abs(zb) <= radius
+            Gc[i, originIdx] = centralWeights(α, β, zb, idxVec[originIdx]) 
+        else
+            x0Idx = round(real(zb) / h)             # real part of evaluation point
+            y0Idx = round(imag(zb) / h)             # imaginary part of evaluation point
+            
+            δza = 10                                # Safe distance from za
+            δzb = 10                                # Safe distance from zb
+            δzc = 0                                 # Safe distance from zc
+            
+            # Stopped at line 138
+        end
+    end
 end
