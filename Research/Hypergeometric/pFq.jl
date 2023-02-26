@@ -1,7 +1,7 @@
 # Compute generalized hypergeometric pFq 
 #
-# Author: Caleb Jacobs, Cecile Piret
-# DLM: 23-02-2022
+# Authors: Caleb Jacobs, Cecile Piret
+# DLM: 26-02-2022
 
 using LinearAlgebra
 using SparseArrays
@@ -157,6 +157,201 @@ function _pFq(f, c, d, n, h, singInfo)
                 flagb = 0
                 path = [0 0; x0Idx y0Idx]
             elseif x0Idx >= -δza && abs(y0Idx) > δzb
+                flagb = 1
+                if y0Idx < 0
+                    falgn = 1
+                end
+                path = [0 0; -(δza + δzb) 0; -(δza + δzb) y0Idx; x0Idx y0Idx]
+            elseif x0Idx >= 0 && abs(y0Idx) < δzb
+                falgb = 1
+                path = [0 0; 0 sign(y0Idx)*(δza + δzb); x0Idx sign(y0Idx)*(δza + δzb); x0Idx y0Idx]
+            elseif x0Idx < 0 && y0Idx > δzb         # Positive test
+                flagb = 0
+                path = [0 0; x0Idx 0; x0Idx y0Idx]
+            elseif x0Idx < 0 && y0Idx < -δzb        # Negative test
+                flagn = 1
+                flagb = 0
+                path = [0 0; x0Idx 0; x0Idx y0Idx]
+            elseif x0Idx < 0 && abs(y0Idx) <= δzb
+                flagb = 0
+                path = [0 0; 0 sign(y0Idx)*(δza + δzb); x0Idx sign(y0Idx)*(δza + δzb); x0Idx y0Idx]
+            end
+
+            IaVals = similar(z)
+            if flagb == 1
+                IaVals .= (zb - z).^β
+            else
+                IaVals .= (z - zb).^β
+            end
+            IabVals = IaVals .* IbVals
+
+            # Integrate over path
+            for pathIdx ∈ 2 : size(path, 1)
+                # Get TR weights
+                stpx = sign(path[pathIdx, 1] - path[pathIdx - 1, 1])
+                dx   = stpx + (stpx == 0)
+
+                stpy = sign(path[pathIdx, 2] - path[pathIdx - 1, 2])
+                dy   = stpy + (spty == 0)
+
+                yiPath = origin[1][1] .- [path[pathIdx - 1, 2] : dy : path[pathIdx, 2]...]
+                xiPath = origin[1][2] .- [path[pathIdx - 1, 1] : dx : path[pathIdx, 1]...]
+
+                dir = stpx + im * stpy
+                dir = dir / abs(dir)
+                hDir = h * dir
+
+                corrTR = ones(size(z[yiPath, xiPath]))
+
+                if flagn == 1 && abs(zIdx[yiPath[1], xiPath[1]]) < eps() && abs(imag(zIdx[yiPath[end], xiPath[end]])) < eps()
+                    corrTR = corrTR * cis(-2π * α)
+                end
+
+                trPath = hDir * corrTR
+
+                if pathIdx == 2 && pathIdx == size(path, 1)
+                    trPath[1 : pa] .= 0
+                    trPath[end + 1 - pb : end] .= 0
+                elseif pathIdx == 2
+                    trPath[1 : pa] .= 0
+                    trPath[end + 1 - pc : end] .= 0
+                elseif pathIdx == size(path, 1)
+                    trPath[1 : pc] .= 0
+                    trPath[end + 1 - pb : end] .= 0
+                else 
+                    trPath[1 : pc] .= 0
+                    trPath[end + 1 - pc : end] .= 0
+                end
+
+                Wtr[yiPath, xiPath] += trPath       # TR weights
+
+                # Get start corrections
+                if pathIdx == 2
+                    zsaImag = h * imag(aIdxVec)
+
+                    sheetCorra = ones(na, 1)
+                    if imag(zb) <= 2 * Ra * h > 0 && real(zb) >= 0 && flagb == 0
+                        sheetCorra[zsaImag .>= imag(zb)] .= cis(-2π * β)
+                    elseif imag(zb) >= -2 * Ra * h && imag(zb) <= 0 && real(zb) >= 0 && flagb == 0
+                        sheetCorra[zsaImag .< imag(zb)] .= cis(2π * β)
+                    end
+
+                    if flagn == 1
+                        sheetCorra *= cis(-2π * α)
+                    end
+
+                    Wa[aIdx] += hDir^(α + 1) * sheetCorra .*(
+                                (spty == 0 && stpx >  0) * cwaLft + # Left start correction
+                                (stpy == 0 && stpx <  0) * cwaRht + # Left end correction
+                                (stpy >  0 && stpx == 0) * cwaBot + # Bottom start correction
+                                (stpy <  0 && stpx == 0) * cwaTop)  # Top start correction
+                else
+                    cjIdx = findall(indexin(idxVec, zIdx[yiPath[1], xiPath[1]] + cIdxVec))
+                    Zc    = zIdx[yiPath[1], xiPath[1]]
+
+                    sheetCorrc = ones(nc, 1)
+                    if imag(Zc) <= 2Rc && imag(Zc) >= 0 && real(Zc) < 0 && flagn == 0
+                        sheetCorrc[imag[idxVec[cjIdx]] .< 0] .= cis(2π * α)
+                    elseif (imag(Zc) >= -2Rb && imag(Zc) < 0 && real(Zc) < 0 && flagn == 0) || (imag(Zc) == 0 && real(Zc) < 0 && flagn == 1)
+                        sheetCorrc[imag[idxVec[cjIdx]] .< 0] .= cis(-2π * α)
+                    end
+
+                    Wc[cIdx] += hDir * sheetCorrc .* (
+                                (spty == 0 && stpx >  0) * cwLft +  # Left start correction
+                                (stpy == 0 && stpx <  0) * cwRht +  # Left end correction
+                                (stpy >  0 && stpx == 0) * cwBot +  # Bottom start correction
+                                (stpy <  0 && stpx == 0) * cwTop)   # Top start correction
+                end
+
+                # End correction
+                if pathIdx == size(path, 1)
+                    trnsltdbIdxVec = zIdx[yiPath[end], xiPath[end]] + bIdxVec
+                    bIdx = findall(indexin(idxVec, trnsltdbIdxVec))
+                    zsbImag = imag(trnsltdbIdxVec)
+
+                    sheetCorrb = ones(nb, 1)
+                    if imag(zb) <= Rb * h && imag(zb) >= 0 && real(zb) < 0
+                        sheetCorrb[zsbImag .< 0] .= cis(2π * α)
+                    elseif imag(zb) >= -Rb * h && imag(zb) < 0 && real(zb) < 0
+                        sheetCorrb[zsbImag .>= 0] .= cis(-2π * α)
+                    elseif imag(zb) >= -2Rb * h && imag(zb) < 0 && real(zb) > 1 && length(c) == 2
+                        sheetCorrb[zsbImag .> 0] .= cis(2π * c[1])
+                    elseif imag(zb) <= 2Rb * h && imag(zb) > 0 && real(zb) > 1 && length(c) == 2
+                        sheetCorrb[zsbImag .<= 0] .= cis(-2π * c[1])
+                    end
+
+                    Wb[bIdx] += (-hDir) ^ (β + 1) * sheetCorrb .* (
+                                (spty == 0 && stpx >  0) * cwbLft +  # Right end correction
+                                (stpy == 0 && stpx <  0) * cwbRht +  # Left end correction
+                                (stpy >  0 && stpx == 0) * cwbBot +  # Bottom end correction
+                                (stpy <  0 && stpx == 0) * cwbTop)   # Top end correction
+
+                else
+                    cjIdx = findall(indexin(idxVec, zIdx[yiPath[end], xiPath[end]] + cIdxVec))
+                    Zc    = zIdx[yiPath[end], xiPath[end]]
+
+                    sheetCorrc = ones(nc, 1)
+                    if imag(Zc) <= 2Rc && imag(Zc) >= 0 && real(Zc) < 0 && flagn == 0
+                        sheetCorrc[imag[idxVec[cjIdx]] .< 0] .= cis(2π * α)
+                    elseif (imag(Zc) >= -2Rb && imag(Zc) < 0 && real(Zc) < 0) || (imag(Zc) == 0 && real(Zc) < 0 && flagn == 1)
+                        sheetCorrc[imag[idxVec[cjIdx]] .< 0] .= cis(-2π * α)
+                    end
+
+                    Wc[cIdx] += hDir * sheetCorrc .* (
+                                (spty == 0 && stpx >  0) * cwLft +  # Left start correction
+                                (stpy == 0 && stpx <  0) * cwRht +  # Left end correction
+                                (stpy <  0 && stpx == 0) * cwBot +  # Bottom start correction
+                                (stpy >  0 && stpx == 0) * cwTop)   # Top start correction
+                end
+            end
+
+            # Transform the matrices W with Wb into the jth row of the global matrix G
+            tmp = (Wc .* IabVals[:]).'
+            Gpos1 = findall(tmp)
+            G1[intIdx[i], Gpos1] .= tmp[Gpos1]
+
+            tmp = (Wtr[:] .* IabVals[:]).'
+            Gpos2 = findall(tmp)
+            G2[intIdx[i], Gpos2] .= tmp[Gpos2]
+
+            tmp = ((Wc + Wtr[:]) .* IabVals[:]).'
+            Gpos = findall(tmp)
+            G[intIdx[i], Gpos] .= tmp[Gpos]
+
+            tmp = (Wb .* IbVals[:]).'
+            Gposb = findall(tmp)
+            G1[intIdx[i], Gposb] .= tmp[Gposb]
+
+            tmp = (Wa .* IabVals[:]).'
+            Gposa = findall(tmp)
+            G2[intIdx[i], Gposa] .= tmp[Gposa]
+        end
+
+        if angle(zb) > 0 && flagb == 0
+            Cb[i] = cis(π * β)
+            Ca[i] = cis(π * β)
+        elseif flagb == 0
+            Cb[i] = cis(-π * β)
+            Ca[i] = cis(-π * β)
+        end
+        
+        if flagb == 1
+            if y0Idx < 0 && y0Idx >= -10
+                Cb[i] = cis(π * β)
+            elseif y0Idx <= -10
+                Cb[i] = cis(-π * β)
+            elseif y0Idx > 0 && y0Idx <= 10
+                Cb[i] = cis(-sign(imag(zb)) * π * β)
+            elseif y0Idx > 10
+                Cb[i] = cis(-sign(imag(zb)) * π * β)
+            end
+
+            Ca[i] = 1
         end
     end
+
+    Dmat = GCenter + diag(Cb) * Gb[intIdx, :] - diag(Ca) * (G1[intIdx, :] + Ga[intIdx, :])
+    int = Dmat * F[:]
+
+    return gamma(d[end]) / gamma(c[end]) / gamma(d[end] - c[end]) * int .* z[] .^ (1 - d[end])
 end
