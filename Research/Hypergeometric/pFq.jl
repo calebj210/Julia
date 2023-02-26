@@ -151,7 +151,12 @@ function _pFq(f, c, d, n, h, singInfo)
             δzb = 10                                # Safe distance from zb
             δzc = 0                                 # Safe distance from zc
             
-            # Stopped at line 138
+            flagb = 0                               # Relocate branch cut
+            flagn = 0                               # Allow integration along negative real axis
+            if x0Idx == 0 || y0Idx == 0
+                flagb = 0
+                path = [0 0; x0Idx y0Idx]
+            elseif x0Idx >= -δza && abs(y0Idx) > δzb
         end
     end
 end
