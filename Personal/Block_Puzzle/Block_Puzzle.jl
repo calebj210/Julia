@@ -7,12 +7,13 @@ using Plots
 
 # Puzze data structure
 mutable struct Chain
-    const n::Int                # Number of links
-    const link::Vector          # link data vector
-    dirs::Array{Int64, 1}       # Direction at each link
-    idx::Int                    # Current link
-    pos::CartesianIndex{3}      # Current position
-    state::Array{Int64, 3}      # Solution state tensor
+    const n::Int                        # Number of links
+    const link::Vector                  # link data vector
+    dirs::Array{Int64, 1}               # Direction at each link
+    idx::Int                            # Current link
+    pos::CartesianIndex{3}              # Current position
+    state::Array{Int64, 3}              # Solution state tensor
+    solns::Array{Array{Int64, 1}, 1}
 end
 
 # Check if chain is valid
@@ -52,12 +53,39 @@ function initChain(chain)::Chain
             zeros(Int, length(chain)),
             1, 
             CartesianIndex(1,1,1), 
-            BitArray(undef, 3, 3, 3))
+            BitArray(undef, 3, 3, 3),
+            [])
     
     C.state .= true
     toggleState(C)
 
     return C
+end
+
+# Get carteseian direction based on index
+function getCartIndex(C::Chain, dir::Int)
+    predir = 0          # Previous direction
+    if C.idx != 1
+        predir = abs(C.dirs[C.idx - 1])
+    end
+
+    v = CartesianIndex(0,0,0)
+
+    if     predir != 1 && dir == 1
+        v = CartesianIndex( 1, 0, 0)
+    elseif predir != 1 && dir == -1
+        v = CartesianIndex(-1, 0, 0)
+    elseif predir != 2 && dir == 2
+        v = CartesianIndex( 0, 1, 0)
+    elseif predir != 2 && dir == -2
+        v = CartesianIndex( 0,-1, 0)
+    elseif predir != 3 && dir == 3
+        v = CartesianIndex( 0, 0, 1)
+    elseif predir != 3 && dir == -3
+        v = CartesianIndex( 0, 0,-1)
+    end
+
+    return v
 end
 
 # Try to walk in direction (true = success, false = failed)
@@ -71,19 +99,9 @@ function walk(C::Chain; rev = false)::Bool
     end
 
     # Translate direction into meaningful data
-    v = CartesianIndex(0,0,0)
-    if dir == 1
-        v = CartesianIndex( 1, 0, 0)
-    elseif dir == -1
-        v = CartesianIndex(-1, 0, 0)
-    elseif dir == 2
-        v = CartesianIndex( 0, 1, 0)
-    elseif dir == -2
-        v = CartesianIndex( 0,-1, 0)
-    elseif dir == 3
-        v = CartesianIndex( 0, 0, 1)
-    elseif dir == -3
-        v = CartesianIndex( 0, 0,-1)
+    v = getCartIndex(C, dir)
+    if v == CartesianIndex(0,0,0)
+        return false
     end
 
     clear = true            # Is path currently clear
@@ -121,37 +139,43 @@ end
 
 # Plot solution
 function plot(C::Chain)
-    pts = zeros(3, C.n)
+    for soln ∈ C.solns
+        pts = zeros(3, C.n)
 
-    for i ∈ 1 : C.n - 1
-        dir = C.dirs[i]
-        if dir == 1
-            v = [ 1, 0, 0]
-        elseif dir == -1
-            v = [-1, 0, 0]
-        elseif dir == 2
-            v = [ 0, 1, 0]
-        elseif dir == -2
-            v = [ 0,-1, 0]
-        elseif dir == 3
-            v = [ 0, 0, 1]
-        elseif dir == -3
-            v = [ 0, 0,-1]
+        for i ∈ 1 : C.n - 1
+            dir = soln[i]
+            if dir == 1
+                v = [ 1, 0, 0]
+            elseif dir == -1
+                v = [-1, 0, 0]
+            elseif dir == 2
+                v = [ 0, 1, 0]
+            elseif dir == -2
+                v = [ 0,-1, 0]
+            elseif dir == 3
+                v = [ 0, 0, 1]
+            elseif dir == -3
+                v = [ 0, 0,-1]
+            end
+            
+            pts[:, i + 1] = pts[:, i] + (C.link[i] + 1) * v
         end
-        
-        pts[:, i + 1] = pts[:, i] + (C.link[i] + 1) * v
-    end
 
-    plot3d(pts[1,:], pts[2,:], pts[3,:])
+        display(plot3d(pts[1,:], pts[2,:], pts[3,:]))
+
+        println("Press enter to continue")
+        readline()
+    end
 end
 
 # Recursive chain solver
 function solve(C::Chain)
     # Check if we are at the end of the link
     if C.idx > C.n
-        display(C.state)
-        display(C.dirs)
-        return true
+        tmp = copy(C.dirs)
+        push!(C.solns, tmp)
+        return false
+#         return true
     end
 
     # Try moving in each direction
@@ -211,13 +235,16 @@ end
 
 function driver()
     chain = [1,0,0,1,0,1,0,0,1,1,0,0,0,1,1,1,1]
+#     chain = [1,1,1,1,0,0,0,1,1,0,0,1,0,1,0,0,1]   # Reverse of chain
 
-    (val, C) = solve(chain)
+    @time (val, C) = solve(chain)
     
-    if val
-        println("Solution found!")
+    if length(C.solns) != 0
+        println(length(C.solns), " solution found!")
         plot(C)
     else
         println("No solution found :(")
     end
+
+    println("Note there are only two solutions which are actually mirrors of each other!")
 end
