@@ -10,10 +10,10 @@ using Plots
 using BenchmarkTools
 
 """
-    convergencePlot(a, b, f, ∫f; r = 5, DFT = true, greg = false, nLow = 10, nHigh = 1000, nStep = 1, oLow = 0, oHigh = 10)
+    convergenceOldPlot(a, b, f, ∫f; r = 5, DFT = true, greg = false, nLow = 10, nHigh = 1000, nStep = 1, oLow = 0, oHigh = 10)
 Construct convergence plot of applying DFT or Gregory corrections to `f` over the bounds from `a` to `b`. The true solution to compare to is given by `∫f`. The number of nodes away for DFT is given by `r`.
 """
-function convergencePlot(a, b, f, ∫f; r = 5, DFT = true, greg = false, nLow = 10, nHigh = 1000, nStep = 1, oLow = 0, oHigh = 10)
+function convergenceOldPlot(a, b, f, ∫f; r = 5, DFT = true, greg = false, nLow = 10, nHigh = 1000, nStep = 1, oLow = 0, oHigh = 10)
     ns   = [nLow:nStep:nHigh...]                # Number of nodes
     errsDFT     = zeros(length(ns))             # Initialize DFT errors
     errsGregory = zeros(length(ns))             # Initialize Gregory errors
@@ -59,7 +59,7 @@ end
     convergencePlot(a, b, f, α ∫f; r = 5, DFT = true, greg = false, nLow = 10, nHigh = 1000, nStep = 1, oLow = 0, oHigh = 10)
 Construct convergence plot of applying DFT or Gregory corrections to `f` over the bounds from `a` to `b`. The true solution to compare to is given by `∫f`. The number of nodes away for DFT is given by `r`.
 """
-function convergenceSingPlot(a, b, f, α, ∫f; r = 5, nLow = 10, nHigh = 1000, nStep = 1, oLow = 0, oHigh = 10)
+function convergencePlot(a, b, f, ∫f; α = 0, β = 0, r = 5, nLow = 10, nHigh = 1000, nStep = 1, oLow = 0, oHigh = 10)
     ns   = [nLow:nStep:nHigh...]           # Number of nodes
     errs = zeros(length(ns))               # Initialize DFT errors
 
@@ -69,7 +69,7 @@ function convergenceSingPlot(a, b, f, α, ∫f; r = 5, nLow = 10, nHigh = 1000, 
         plot!(ns[[1,end]], 1 ./ ns[[1,end]].^3, lw = 3, ls = :dash)
     for N ∈ oLow : oHigh
         for i ∈ 1 : length(ns)
-            errs[i] = abs(singDFTInt(f, a, b, ns[i], N, r, α) - ∫f)
+            errs[i] = abs(dftInt(f, a, b, α = α, β = β, n = ns[i], N = N, r = r) - ∫f)
         end
 
         plot!(ns, errs, 

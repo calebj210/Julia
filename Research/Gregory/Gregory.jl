@@ -2,7 +2,7 @@
 # Generalized Gregory Integration
 #
 # Author: Caleb Jacobs
-# DLM: August 30, 2023
+# DLM: August 31, 2023
 =#
 
 using SpecialFunctions
@@ -74,7 +74,7 @@ end
 Generate `N` equispaced nodes on a complex circle of radius `r`.
 """
 function getNodes(N::Integer, r)
-    z⃗ = [r * cispi(2i / N) for i ∈ 0 : N - 1]      # Compute scaled roots of unitny
+    z⃗ = [r * cispi(-2i / N) for i ∈ 0 : N - 1]      # Compute scaled roots of unitny
 
     return z⃗
 end
@@ -93,10 +93,12 @@ end
     getDFTCorrections(α, h, r, N)
 Compute trapezoidal rule end corrections given the nodes are `N` roots of unity scaled to a radius of `r`. Note, `α` is the order of the singularity and `h` is the trapezoidal rule spacing.
 """
-function getDFTCorrections(α, h, r, N)
-    w⃗ = ifft(dftζ⃗(α, h, r, N))      # Compute weights using by applying an FFT to the ζ vector
+function getDFTCorrections(α, h, θ, r, N)
+    ω⃗ = ifft(dftζ⃗(α, h, r, N))          # Compute weights using by applying an FFT to the ζ vector
 
-    return w⃗
+    ω⃗ *= h^(1 - α) * cis((1 - α) * θ)   # Scale weights by stepsize and direction
+
+    return ω⃗
 end
 
 """
@@ -139,16 +141,88 @@ function singDFTInt(f, a, b, n, N, r, α)
 
     if N > 0
         wL = getDFTCorrections(α, h, r*h, N)                    # Left, singularity correction weights
-        fLeft  = h^(1 - α) * wL ⋅ f.(z⃗Ends .+ a)                # Left end correction
+        fLeft  = wL ⋅ f.(z⃗Ends .+ a)                            # Left end correction
 
         wR = getDFTCorrections(0, h, r*h, N)                    # Right correction weights
-        fRight = h * wR ⋅ sf.(-z⃗Ends .+ b)                      # Right end correction
+        fRight = wR ⋅ sf.(-z⃗Ends .+ b)                          # Right end correction
     else
         fLeft  = 0
-        fRight = h * f(b)
+        fRight = h * fs(b)
     end
 
     ∫fdx = fLeft + fInt + fRight                                # Compute corrected integral
 
     return ∫fdx
 end
+
+"""
+    dftInt(f, a, b; α = 0, β = 0, n = 100, N = 20)
+Integrate a function `f` / ((x-`a`)`ᵅ`(`b`-x)`ᵝ`) from `a` to `b` using `n` internal trapezoidal nodes and `N` correction nodes at each endpoint a distance of `r`h away from the base point.
+"""
+function dftInt(f, a, b; α = 0, β = 0, n = 50, N = 20, r = 5)
+    h = abs(b - a) / (n + 1)                                    # Internal trapezoidal spacing
+    θ = angle(b - a)                                            # Angle of travel for trapezoidal nodes
+    z⃗Int  = a .+ h * [1 : n...] * cis(θ)                        # Internal nodes
+    z⃗Ends = getNodes(N, r * h)                                  # End correction nodes
+
+    # Set internal and endpoint functions
+    fi(x) = f(x) / (x - a)^α / (b - x)^β                        # Function to use inside
+    fa(x) = f(x) / (b - x)^β                                    # Function to use at a
+    fb(x) = f(x) / (x - a)^α                                    # Function to use at b
+
+    # Compute left end corrections
+    if N > 0
+        ωL = getDFTCorrections(α, h, θ, r*h, N)
+        left∫ = sum(ωL .* fa.(cis(θ) * z⃗Ends .+ a))             # Nth order right correction
+    else
+        left∫ = (α == 0 ? h * fa(a) : 0)                        # Zeroth order left correction
+    end
+
+    # Compute internal trapezoidal rule
+    int∫ = h * cis(θ) * sum(fi.(z⃗Int))
+
+    # Compute right end corrections
+    if N > 0
+        ωR = getDFTCorrections(β, h, θ, r*h, N)
+        right∫ = sum(ωR .* fb.(-cis(θ) * z⃗Ends .+ b))           # Nth order right correction
+    else
+        right∫ = (β == 0 ? h * fb(b) : 0)                       # Zeroth order right correction
+    end
+        
+    ∫f = left∫ + int∫ + right∫                                  # Compute total integral
+
+    return ∫f
+end
+# function dftInt(f, a, b; α = 0, β = 0, n = 40, N = 20, r = 5)
+#     z⃗Int  = [range(a, b, length = n + 2)...][2 : end - 1]       # Internal nodes
+#     h     = z⃗Int[2] - z⃗Int[1]                                   # Internal node spacing
+#     z⃗Ends = getNodes(N, r * h)                                  # End correction nodes
+# 
+#     # Set internal and endpoint functions
+#     fi(x) = f(x) / (x - a)^α / (b - x)^β                        # Function to use inside
+#     fa(x) = f(x) / (b - x)^β                                    # Function to use at a
+#     fb(x) = f(x) / (x - a)^α                                    # Function to use at b
+# 
+#     # Compute left end corrections
+#     if N > 0
+#         ωL = getDFTCorrections(α, h, r*h, N)
+#         left∫ = ωL ⋅ fa.(z⃗Ends .+ a)                            # Nth order right correction
+#     else
+#         left∫ = (α == 0 ? h * fa(a) : 0)                        # Zeroth order left correction
+#     end
+# 
+#     # Compute internal trapezoidal rule
+#     int∫ = h * sum(fi.(z⃗Int))
+# 
+#     # Compute right end corrections
+#     if N > 0
+#         ωR = getDFTCorrections(β, h, r*h, N)
+#         right∫ = ωR ⋅ fb.(-z⃗Ends .+ b)                          # Nth order right correction
+#     else
+#         right∫ = (β == 0 ? h * fb(b) : 0)                       # Zeroth order right correction
+#     end
+#         
+#     ∫f = left∫ + int∫ + right∫                                  # Compute total integral
+# 
+#     return ∫f
+# end
