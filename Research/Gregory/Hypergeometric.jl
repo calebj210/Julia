@@ -2,7 +2,7 @@
 # Routines for computing hypergeometric functions
 #
 # Author: Caleb Jacobs
-# DLM: September 1, 2023
+# DLM: September 5, 2023
 =#
 
 using SpecialFunctions
@@ -60,6 +60,29 @@ end
     pFq(a⃗, b⃗, z)
 Compute the generalized pFq hypergeometric function.
 """
+function pFq(a, b, z; n = 30, N = 20, start = true, R = .5, TN = 50)
+    if abs(z) <= R
+        return taylorpFq(a,b,z, N = TN)         # Use Taylor series if z is too close to the origin
+    end
+
+    α = 1 - a[end]                              # Base point singularity order
+    β = 1 + a[end] - b[end]                     # Evaluation point singularity order
+
+    # Check for known base cases
+    if length(a) == 1 && length(b) == 1
+        val = dftInt(exp, 0, z, α = α, β = β, n = n, N = N)                         # 1F1
+    elseif length(a) == 2 && length(b) == 1
+        val = dftInt(x -> (1 - x)^(-a[1]), 0, z, α = α, β = β, n = n, N = N)        # 2F1
+    else
+        val = dftInt(x -> pFq(a[1 : end - 1], b[1 : end - 1], x, start = false),    # (p-1)F(q-1)
+                     0, z, α = α, β = β, n = n, N = N)
+    end
+
+    Γ = z^(1 - b[end]) * gamma(b[end]) / gamma(a[end]) / gamma(b[end] - a[end])     # Constant
+
+    return Γ * val
+end
+
 ### Okay formula except it uses the rescaled formula for 2F1 and 1F1 when outside of taylor radius
 # function pFq(a, b, z; n = 40, N = 20, R = .5)
 #     if abs(z) <= R
@@ -84,44 +107,21 @@ Compute the generalized pFq hypergeometric function.
 # 
 #     return Γ * val
 # end
-### Best definition, uses standard formula for every pFq evaluation
-# function pFq(a, b, z; n = 40, N = 20)
-#     α = 1 - a[end]
-#     β = 1 + a[end] - b[end]
-# 
-#     if length(a) == 1 && length(b) == 1
-#         val = dftInt(t -> exp(t * z), 0, 1, α = α, β = β, n = n, N = N)
-#     elseif length(a) == 2 && length(b) == 1
-#         val = dftInt(t -> (1 - t * z)^(-a[1]), 0, 1, α = α, β = β, n = n, N = N)
-#     else
-#         val = dftInt(t -> pFq(a[1 : end - 1], b[1 : end - 1], t * z),
-#                      0, 1, α = α, β = β, n = n, N = N)
-#     end
-# 
-#     Γ = gamma(b[end]) /gamma(a[end]) / gamma(b[end] - a[end])
-# 
-#     return Γ * val
-# end
-### Fully rescaled formula, not working currently and has sublinear convergence rates
-function pFq(a, b, z; n = 30, N = 20, start = true, R = .5, TN = 50)
-    if abs(z) <= R
-        return taylorpFq(a,b,z, N = TN)         # Use Taylor series if z is too close to the origin
-    end
+# Wiki formula
+function _pFq(a, b, z; n = 40, N = 20)
+    α = 1 - a[end]
+    β = 1 + a[end] - b[end]
 
-    α = 1 - a[end]                              # Base point singularity order
-    β = 1 + a[end] - b[end]                     # Evaluation point singularity order
-
-    # Check for known base cases
     if length(a) == 1 && length(b) == 1
-        val = dftInt(exp, 0, z, α = α, β = β, n = n, N = N)                         # 1F1
+        val = dftInt(t -> exp(t * z), 0, 1, α = α, β = β, n = n, N = N)
     elseif length(a) == 2 && length(b) == 1
-        val = dftInt(x -> (1 - x)^(-a[1]), 0, z, α = α, β = β, n = n, N = N)        # 2F1
+        val = dftInt(t -> (1 - t * z)^(-a[1]), 0, 1, α = α, β = β, n = n, N = N)
     else
-        val = dftInt(x -> pFq(a[1 : end - 1], b[1 : end - 1], x, start = false),    # (p-1)F(q-1)
-                     0, z, α = α, β = β, n = n, N = N)
+        val = dftInt(t -> pFq(a[1 : end - 1], b[1 : end - 1], t * z),
+                     0, 1, α = α, β = β, n = n, N = N)
     end
 
-    Γ = z^(1 - b[end]) * gamma(b[end]) / gamma(a[end]) / gamma(b[end] - a[end])     # Constant
+    Γ = gamma(b[end]) /gamma(a[end]) / gamma(b[end] - a[end])
 
     return Γ * val
 end

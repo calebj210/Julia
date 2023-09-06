@@ -2,7 +2,7 @@
 # Generalized Gregory Integration
 #
 # Author: Caleb Jacobs
-# DLM: September 1, 2023
+# DLM: September 5, 2023
 =#
 
 using SpecialFunctions
@@ -92,17 +92,6 @@ function dftInt(f, a, b; α = 0, β = 0, n = 50, N = 20, r = 5)
     θ = angle(b - a)                                            # Angle of travel for trapezoidal nodes
     z⃗Int  = a .+ h * [1 : n...] * cis(θ)                        # Internal nodes
     z⃗Ends = getNodes(N, r * h)                                  # End correction nodes
-
-    # Ensure singularities are within |α| < 1
-#     tmp = α % 1
-#     αr  = α - tmp
-#     α   = tmp
-# 
-#     tmp = β % 1
-#     βr  = β - tmp
-#     β   = tmp
-
-#     h(x) = (x - a)^αr * (b - x)^βr
 
     # Set internal and endpoint functions
     fi(x) = f(x) / (x - a)^α / (b - x)^β                        # Function to use inside
