@@ -2,11 +2,12 @@
 # Collection of functions for visuallizing properties of integrators
 #
 # Author: Caleb Jacobs
-# DLM: August 30, 2023
+# DLM: September 6, 2023
 =#
 
 include("Gregory.jl")
-using Plots
+using PlotlyJS
+using Colors
 using BenchmarkTools
 
 """
@@ -82,4 +83,47 @@ function convergencePlot(a, b, f, ∫f; α = 0, β = 0, r = 5, nLow = 10, nHigh 
     end
     
     display(p)
+end
+
+function complexPlot(z⃗, f⃗)
+    x⃗ = real(z⃗[:])
+    y⃗ = imag(z⃗[:])
+    args = angle.(f⃗[:])
+    args[args .< 0] .+= 2π
+
+    plt = plot(heatmap(
+            x = x⃗,
+            y = y⃗,
+            z = args,
+            zsmooth = "fast",
+            zmin = 0, zmax = 2π,
+            colorscale = colors.hsv,
+            colorbar = attr(
+                tickmode = "array",
+                tickvals = [0, π, 2π],
+                ticktext = ["-π", "0", "π"])),
+        Layout(
+            width = 800, height = 800))
+    
+    return plt
+end
+
+function complexPlot3d(z⃗, f⃗)
+    x⃗ = real(z⃗)
+    y⃗ = imag(z⃗)
+    z⃗ = abs.(f⃗)
+    args = angle.(f⃗)
+    args[args .< 0] .+= 2π
+
+    plt = plot(surface(
+            x = x⃗, y = y⃗, z = z⃗,
+            surfacecolor = args,
+            cmin = 0, cmax = 2π,
+            colorscale = colors.hsv,
+            colorbar = attr(
+                tickmode = "array",
+                tickvals = [0, π, 2π],
+                ticktext = ["-π", "0", "π"])))
+        
+    return plt
 end
