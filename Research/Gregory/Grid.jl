@@ -1,19 +1,31 @@
 #=
-# Generalized Gregory quadrature for computing hypergeometric pFq on a grid
+# Constructors and routines for working with complex grids for quadrature.
 #
 # Author: Caleb Jacobs
-# DLM: September 7, 2023
+# DLM: September 8, 2023
 =#
 
 using Plots
 
+"Complex grid for use with grid based quadratures."
 struct Grid
-    z::Vector{ComplexF64}   # Grid points
-    dx::Int                 # Index spacing in x
-    dy::Int                 # Index spacing in y
-    c::Int                  # Index of origin
-    h::Float64              # Grid spacing
-    r::Float64              # Boundary of grid
+    "Grid points"
+    z::Vector{ComplexF64}
+
+    "Index spacing in x"
+    dx::Int             
+
+    "Index spacing in y"
+    dy::Int            
+
+    "Origin index"
+    c::Int              
+
+    "Grid spacing"
+    h::Float64           
+
+    "Radius of square grid"
+    r::Float64            
 end
 
 """
@@ -41,9 +53,10 @@ end
 
 """
     getGrid(n, r)
-Generate a complex grid of radius `r` with n nodes from the origin to the adjacent boundaries.
+
+Generate a complex grid of radius `r` with `n` nodes from the origin to the adjacent boundaries.
 """
-function getGrid(n, r)
+function getGrid(n, r)::Grid
     x⃗ = [range(0, r, length = n + 1)...]                # real parts
     y⃗ = [range(0, r, length = n + 1)...]                # imaginary parts
 
@@ -59,7 +72,8 @@ end
 
 """
     getIdx(z, g)
-Find index in g of z.
+
+Find index in `g` of `z`.
 """
 function getIdx(z::ComplexF64, g::Grid)
     if abs(real(z)) > g.r || abs(imag(z)) > g.r
@@ -78,9 +92,34 @@ function getIdx(z::ComplexF64, g::Grid)
     end
 end
 
+"""
+    getIntIdx(r, g)
+
+Find indices of nodes in grid `g` that are within `r` of the origin.
+"""
+function getIntIdx(r, g::Grid)
+    if r > sqrt(2) * g.r
+        return [1 : length(g.z)...]     # Return all indices if radius is bigger than grid
+    end
+
+    lIdx = floor(Int64, g.c - r * g.dx) # Left index to search from
+    rIdx =  ceil(Int64, g.c + r * g.dx) # Right index to search to
+
+    indices = Array{Int64}([])          # Initialize internal index array
+
+    for i ∈ lIdx : rIdx
+        if abs(g.z[i]) <= r
+            push!(indices, i)           # Add index if z value is in disk of radius r
+        end
+    end
+
+    return indices
+end
+
 """ 
     getLinearIndices(zIdx, g)
-Get indices to traverse the complex grid from 0 to z with index zIdx. The indices are returned as a tuple (horizontal, vertical)
+
+Get indices to traverse the complex grid from 0 to z with index `zIdx`. The indices are returned as a tuple (horizontal, vertical)
 """
 function getLinearIndices(zIdx::Int64, g::Grid)
     Nx = round(Int64, real(g.z[zIdx]) / g.h)
