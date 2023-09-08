@@ -12,6 +12,18 @@ struct Grid
     "Grid points"
     z::Vector{ComplexF64}
 
+    "Internal indices"
+    i::Vector{Int64}
+
+    "External indices"
+    e::Vector{Int64}
+
+    "Padding indices"
+    p::Vector{Int64}
+
+    "Type of point, 'i', 'e', 'p'"
+    t::Vector{Char}
+
     "Index spacing in x"
     dx::Int             
 
@@ -33,18 +45,22 @@ end
 Display the path defined by idx through the grid g.
 """
 function plotPath(idx::Vector{Int64}, g::Grid)
-    plt = plot(g.z, st = :scatter, c = :red, ratio = 1, legend = false)
+    plt = plot(g.z, st = :scatter, c = :red, ratio = 1, legend = false,
+          mα = 0.9, msw = 0)
     
-    plot!(g.z[idx], st = :scatter, mz = 1 : length(idx), c = :viridis)
+    plot!(g.z[idx], st = :scatter, mz = 1 : length(idx), c = :viridis,
+          mα = 0.9, msw = 0)
 
     return plt
 end
 function plotPath(idx::Tuple{Vector, Vector}, g::Grid)
-    plt = plot(g.z, st = :scatter, c = :red, ratio = 1, legend = false)
+    plt = plot(g.z, st = :scatter, c = :red, ratio = 1, legend = false,
+               mα = 0.9, msw = 0)
     
     for i ∈ idx
         if !isempty(i)
-            plot!(g.z[i], st = :scatter, mz = 1 : length(i), c = :viridis)
+            plot!(g.z[i], st = :scatter, mz = 1 : length(i), c = :viridis,
+                  mα = 0.9, msw = 0)
         end
     end
 
@@ -52,24 +68,77 @@ function plotPath(idx::Tuple{Vector, Vector}, g::Grid)
 end
 
 """
-    getGrid(n, r)
+    plotGrid(g)
+
+Plot grid `g` highlighting internal nodes, external nodes, and padding nodes.
+"""
+function plotGrid(g::Grid)
+    plt = plot(g.z[g.i], st = scatter, c = :green, mα = 0.75, msw = 0, label = "Internal")
+    plot!(g.z[g.e], st = scatter, c = :blue, mα = 0.75, msw = 0, label = "External")
+    plot!(g.z[g.p], st = scatter, c = :red,  mα = 0.75, msw = 0, label = "Padding")
+    plot!(ratio = 1)
+end
+
+"""
+    getGrid(n, r; ir = 0.5, p = 0)
 
 Generate a complex grid of radius `r` with `n` nodes from the origin to the adjacent boundaries.
+
+`ir` specifies the radius of the internal nodes and `p` gives the number of padding nodes to add.
 """
-function getGrid(n, r)::Grid
+function getGrid(n, r; ir = 0.5, p = 0)::Grid
     x⃗ = [range(0, r, length = n + 1)...]                # real parts
     y⃗ = [range(0, r, length = n + 1)...]                # imaginary parts
+    h  = abs(x⃗[2] - x⃗[1])                               # Grid spacing
 
-    grid = [-x⃗[end:-1:2];x⃗]' .+ im * [-y⃗[end:-1:2];y⃗]   # Grid matrix
+    pad = r .+ h * [1:p...]                             # Padded nodes
+    xp = [-pad; -x⃗[end: -1: 2]; x⃗; pad]                 # Padded x vector
+    yp = [-pad; -y⃗[end: -1: 2]; y⃗; pad]                 # Padded y vector
+
+    grid = xp' .+ im * yp                               # Padded grid matrix
 
     dx = stride(grid, 2)                                # Index distance to move in x
     dy = stride(grid, 1)                                # Index distance to move in y
-    c  = 1 + n * (dx + dy)                              # Index of origin
-    h  = abs(grid[2] - grid[1])                         # Grid spacing
+    c  = 1 + (p + n) * (dx + dy)                        # Index of origin
 
-    return Grid(grid[:], dx, dy, c, h, r)
+    z⃗ = vec(grid)                                       # Vectorize matrix grid
+    i = Array{Int64}([])                                # Initialize internal index array
+    e = Array{Int64}([])                                # Initialize external index array
+    p = Array{Int64}([])                                # Initialize padding index array
+    t = similar(z⃗, Char)                                # Initialize type array
+
+    # Populate index arrays
+    for (idx, z) ∈ pairs(z⃗)
+        if abs(z) <= ir
+            push!(i, idx)                               # Internal node
+            t[idx] = 'i'
+        elseif abs(real(z)) > r || abs(imag(z)) > r
+            push!(p, idx)                               # Padding node
+            t[idx] = 'p'
+        else
+            push!(e, idx)                               # External node
+            t[idx] = 'e'
+        end
+    end
+
+    return Grid(z⃗, i, e, p, t, dx, dy, c, h, r)
 end
 
+"""
+    getReducedGridMap(g)
+
+Compute index map from internal and external node indices to non-padded grid.
+"""
+function getReducedGridMap(g)
+    iMap = Array{Int64}
+    eMap = Array{Int64}
+
+    for i ∈ eachindex(g.t)
+        
+    end
+    
+    return(iMap, eMap)
+end
 """
     getIdx(z, g)
 
@@ -90,30 +159,6 @@ function getIdx(z::ComplexF64, g::Grid)
     else
         throw(DomainError(z, "argument must be on the complex grid"))
     end
-end
-
-"""
-    getIntIdx(r, g)
-
-Find indices of nodes in grid `g` that are within `r` of the origin.
-"""
-function getIntIdx(r, g::Grid)
-    if r > sqrt(2) * g.r
-        return [1 : length(g.z)...]     # Return all indices if radius is bigger than grid
-    end
-
-    lIdx = floor(Int64, g.c - r * g.dx) # Left index to search from
-    rIdx =  ceil(Int64, g.c + r * g.dx) # Right index to search to
-
-    indices = Array{Int64}([])          # Initialize internal index array
-
-    for i ∈ lIdx : rIdx
-        if abs(g.z[i]) <= r
-            push!(indices, i)           # Add index if z value is in disk of radius r
-        end
-    end
-
-    return indices
 end
 
 """ 
