@@ -20,7 +20,7 @@ end
 
 Compute internal weights for ``∫₀ᶻ(u)ᵅ(z-u)ᵝf(u)du`` where `idx` are the indices of the internal nodes in the grid `g`.
 """
-function getIntWeights(z, g::Grid, α, β)
+function getInternalWeights(z, g::Grid, α, β)
     # Left hand side
     A = getVand(g.i, g)
 
@@ -61,11 +61,81 @@ Generate differentiation matrix for ``∫₀ᶻ(u)ᵅ(z-u)ᵝf(u)du`` over a gri
 The radius to use the Taylor expansion is given by `ir` while the relative radius of the correction stencils are given by `er`.
 """
 function getDiffMat(n, r, α, β; ir = 0.5, er = 5)
-    g = getGrid(n, r, ir = ir, p = er)                  # Generate grid
+    g = getGrid(n, r, ir = ir, p = er)                      # Generate grid
 
-    bpω = getCorrectionWeights(er, g, α)                # Base point correction
-    epω = getCorrectionWeights(er, g, β)                # End point correction
+    (iMap, eMap) = getReducedGridMap(g)                     # Index maps to reduced grid for indexing through diff matrix
 
-    D = zeros(length(g.i) + length(g.e), length(g.z))
+    D = zeros(length(g.i) + length(g.e), length(g.z))       # Initialize differentiation matrix
 
+    # Populate internal weights using Taylor expansion approximation
+    for (i, z) ∈ pairs(g.i)
+        D[iMap[i], g.i] = getInternalWeights(z, g, α, β)
+    end
+
+    # Populate external weights using trapezoidal rule and end corrections
+    bpω = getCorrectionWeights(er, g, α)                    # Base point correction
+    crω = getCorrectionWeights(er, g, 0.0)                  # Corner correction
+    epω = getCorrectionWeights(er, g, β)                    # End point correction
+
+    for (i, z) ∈ pairs(g.e)
+        # Populate trapezoidal weights
+        (hIdx, vIdx) = getPathIndices(i, g)                 # Indices along path of integration
+
+        αβt = g.z[hIdx].^α * (z .- g.z[hIdx]).^β            # Horizontal α-β term in integrand
+        if real(z) > 0
+            D[eMap(i), hIdx] =  g.h * αβt                   # Set trapezoidal weights moving right
+        else
+            D[eMap(i), hIdx] = -g.h * αβt                   # Set trapezoidal weights moving left
+        end
+
+        αβt = g.z[vIdx].^α * (z .- g.z[vIdx]).^β            # Vertical α-β term in integrand
+        if imag(z) > 0
+            D[eMap(i), vIdx] .=  im * g.h * αβt             # Set trapezoidal weights moving up
+        else
+            D[eMap(i), vIdx] .= -im * g.h * αβt             # Set trapezoidal weights moving down
+        end
+
+        # Populate left-right end correction weights
+        bpIdx = getCorrectionIndices(i, er, g)              # Base point correction indices
+        epIdx = getCorrectionIndices(i, er, g)              # Endpoint correction indices
+        crIdx = getCorrectionIndices(i, er, g)              # Corner correction indices
+        
+        if real(z) > 0
+            rcrIdx = rotCorrection(crIdx, 2, g)             # Rotated base point indices
+
+            βt  = (z .- g.z[bpIdx]).^β                      # corner β term in integrand
+            αβt = g.z[rcrIdx].^α * (z .- g.z[rcrfIdx]).^β
+
+            D[eMap(i), bpIdx]  += bpω * (z - g.z[bpIdx]).^β
+            D[eMap(i), rcrIdx] -= crω * αβt
+        else 
+            rbpIdx = rotCorrection(bpIdx, 2, g)             # Rotated base point indices
+
+            βt  = (z .- g.z[rbpIdx]).^β                     # Base point β term in integrand
+            αβt = g.z[crIdx].^α * (z .- g.z[crfIdx]).^β     # Corner α-β term in integrand
+
+            D[eMap(i), bpIdx]  -= bpω * βt                  # Basepoint correction 
+            D[eMap(i), rcrIdx] += crω * αβt                 # Corner left-right corner correction
+        end
+
+        if imag(z) > 0
+            rcrIdx = rotCorrection(crIdx, 1, g)             # Rotated corner indices
+            repIdx = rotCorrection(epIdx, 3, g)             # Rotated endpoint indices
+
+            αβt = g.z[rcrIdx].^α * (z .- g.z[rcfIdx]).^β    # Corner α-β term in integrand
+            αt  = (z .- g.z[repIdx]).^α                     # Endpoint α term in integrand
+            
+            D[eMap(i), rcrIdx] += im * crω * αβt            # Corner up-down correction
+            D[eMap(i), repIdx] -= im * epω * αt             # Endpoint correction
+        else
+            rcrIdx = rotCorrection(crIdx, 3, g)             # Rotated corner indices
+            rbpIdx = rotCorrection(epIdx, 1, g)             # Rotated endpoint indices
+
+            αβt = g.z[rcrIdx].^α * (z .- g.z[rcfIdx]).^β    # Corner α-β term in integrand
+            αt  = (z .- g.z[repIdx]).^α                     # Endpoint α term  in integrand 
+            
+            D[eMap(i), rcrIdx] -= im * crω * αβt            # Corner up-down correction
+            D[eMap(i), repIdx] += im * epω * αt             # Endpoint correction
+        end
+    end
 end

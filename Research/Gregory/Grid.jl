@@ -127,18 +127,39 @@ end
 """
     getReducedGridMap(g)
 
-Compute index map from internal and external node indices to non-padded grid.
+Compute index map from internal and external node indices to the non-padded grid.
 """
 function getReducedGridMap(g)
-    iMap = Array{Int64}
-    eMap = Array{Int64}
+    iMap = similar(g.i)             # Interior index map
+    eMap = similar(g.e)             # External index map
 
-    for i ∈ eachindex(g.t)
-        
+    iIdx = 1                        # Current internal node index
+    eIdx = 1                        # Current external node index
+    tIdx = 1                        # Non padded total index
+
+    # Construct the index map
+    while iIdx <= length(g.i) && eIdx < length(g.e)
+        if g.i[iIdx] < g.e[eIdx]
+            iMap[iIdx] = tIdx       # Internal index is next in line
+            iIdx += 1               # Move to next internal index
+        else
+            eMap[eIdx] = tIdx       # External index is next in line
+            eIdx += 1               # Move to next external index
+        end
+
+        tIdx += 1                   # Move to next index in non-padded grid
+    end
+
+    # Populate remaining index maps 
+    if iIdx <= length(g.i)
+        iMap[iIdx : end] = [tIdx : length(g.i) + length(g.e)...]
+    else
+        eMap[eIdx : end] = [tIdx : length(g.i) + length(g.e)...]
     end
     
     return(iMap, eMap)
 end
+
 """
     getIdx(z, g)
 
@@ -166,26 +187,26 @@ end
 
 Get indices to traverse the complex grid from 0 to z with index `zIdx`. The indices are returned as a tuple (horizontal, vertical)
 """
-function getLinearIndices(zIdx::Int64, g::Grid)
-    Nx = round(Int64, real(g.z[zIdx]) / g.h)
-    Ny = round(Int64, imag(g.z[zIdx]) / g.h)
+function getPathIndices(zIdx::Int64, g::Grid)
+    Nx = round(Int64, real(g.z[zIdx]) / g.h)                        # Number of horizontal nodes
+    Ny = round(Int64, imag(g.z[zIdx]) / g.h)                        # Number of vertical nodes
     
     if Nx != 0
-        horiz = g.c .+ g.dx * [0 : sign(Nx) : Nx...]            # March horizontally to z
+        horiz = g.c .+ g.dx * [1 : sign(Nx) : Nx - 1...]            # March horizontally to z ignoring endpoint
     else
-        horiz = []
+        horiz = []                                                  # No horizontal nodes
     end
 
     if Ny != 0
-        vert = g.c + Nx * g.dx .+ g.dy * [0 : sign(Ny) : Ny...] # March vertically to z
+        vert = g.c + Nx * g.dx .+ g.dy * [1 : sign(Ny) : Ny - 1...] # March vertically to z ignoring endpoints
     else
-        vert = []
+        vert = []                                                   # No vertical nodes
     end
 
     return (horiz, vert)
 end
 
-function getLinearIndices(z::ComplexF64, g::Grid)
+function getPathIndices(z::ComplexF64, g::Grid)
     return getLinearIndices(getIdx(z, g), g)
 end
 
