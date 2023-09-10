@@ -5,7 +5,7 @@
 # DLM: September 8, 2023
 =#
 
-using Plots
+# using Plots
 
 "Complex grid for use with grid based quadratures."
 struct Grid
@@ -40,44 +40,44 @@ struct Grid
     r::Float64            
 end
 
-"""
-    plotPath(idx, g)
-Display the path defined by idx through the grid g.
-"""
-function plotPath(idx::Vector{Int64}, g::Grid)
-    plt = plot(g.z, st = :scatter, c = :red, ratio = 1, legend = false,
-          mα = 0.9, msw = 0)
-    
-    plot!(g.z[idx], st = :scatter, mz = 1 : length(idx), c = :viridis,
-          mα = 0.9, msw = 0)
-
-    return plt
-end
-function plotPath(idx::Tuple{Vector, Vector}, g::Grid)
-    plt = plot(g.z, st = :scatter, c = :red, ratio = 1, legend = false,
-               mα = 0.9, msw = 0)
-    
-    for i ∈ idx
-        if !isempty(i)
-            plot!(g.z[i], st = :scatter, mz = 1 : length(i), c = :viridis,
-                  mα = 0.9, msw = 0)
-        end
-    end
-
-    return plt
-end
-
-"""
-    plotGrid(g)
-
-Plot grid `g` highlighting internal nodes, external nodes, and padding nodes.
-"""
-function plotGrid(g::Grid)
-    plt = plot(g.z[g.i], st = scatter, c = :green, mα = 0.75, msw = 0, label = "Internal")
-    plot!(g.z[g.e], st = scatter, c = :blue, mα = 0.75, msw = 0, label = "External")
-    plot!(g.z[g.p], st = scatter, c = :red,  mα = 0.75, msw = 0, label = "Padding")
-    plot!(ratio = 1)
-end
+# """
+#     plotPath(idx, g)
+# Display the path defined by idx through the grid g.
+# """
+# function plotPath(idx::Vector{Int64}, g::Grid)
+#     plt = plot(g.z, st = :scatter, c = :red, ratio = 1, legend = false,
+#           mα = 0.9, msw = 0)
+#     
+#     plot!(g.z[idx], st = :scatter, mz = 1 : length(idx), c = :viridis,
+#           mα = 0.9, msw = 0)
+# 
+#     return plt
+# end
+# function plotPath(idx::Tuple{Vector, Vector}, g::Grid)
+#     plt = plot(g.z, st = :scatter, c = :red, ratio = 1, legend = false,
+#                mα = 0.9, msw = 0)
+#     
+#     for i ∈ idx
+#         if !isempty(i)
+#             plot!(g.z[i], st = :scatter, mz = 1 : length(i), c = :viridis,
+#                   mα = 0.9, msw = 0)
+#         end
+#     end
+# 
+#     return plt
+# end
+# 
+# """
+#     plotGrid(g)
+# 
+# Plot grid `g` highlighting internal nodes, external nodes, and padding nodes.
+# """
+# function plotGrid(g::Grid)
+#     plt = plot(g.z[g.i], st = scatter, c = :green, mα = 0.75, msw = 0, label = "Internal")
+#     plot!(g.z[g.e], st = scatter, c = :blue, mα = 0.75, msw = 0, label = "External")
+#     plot!(g.z[g.p], st = scatter, c = :red,  mα = 0.75, msw = 0, label = "Padding")
+#     plot!(ratio = 1)
+# end
 
 """
     getGrid(n, r; ir = 0.5, p = 0)
@@ -92,8 +92,8 @@ function getGrid(n, r; ir = 0.5, p = 0)::Grid
     h  = abs(x⃗[2] - x⃗[1])                               # Grid spacing
 
     pad = r .+ h * [1:p...]                             # Padded nodes
-    xp = [-pad; -x⃗[end: -1: 2]; x⃗; pad]                 # Padded x vector
-    yp = [-pad; -y⃗[end: -1: 2]; y⃗; pad]                 # Padded y vector
+    xp = [-pad[end : -1 : 1]; -x⃗[end: -1: 2]; x⃗; pad]   # Padded x vector
+    yp = [-pad[end : -1 : 1]; -y⃗[end: -1: 2]; y⃗; pad]   # Padded y vector
 
     grid = xp' .+ im * yp                               # Padded grid matrix
 

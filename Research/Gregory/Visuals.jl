@@ -95,7 +95,7 @@ function complexPlot(z⃗, f⃗)
             x = x⃗,
             y = y⃗,
             z = args,
-            zsmooth = "fast",
+            zsmooth = "best",
             zmin = 0, zmax = 2π,
             colorscale = colors.hsv,
             colorbar = attr(
