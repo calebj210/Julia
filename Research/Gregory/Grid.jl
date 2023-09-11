@@ -192,13 +192,13 @@ function getPathIndices(zIdx::Int64, g::Grid)
     Ny = round(Int64, imag(g.z[zIdx]) / g.h)                        # Number of vertical nodes
     
     if Nx != 0
-        horiz = g.c .+ g.dx * [1 : sign(Nx) : Nx - 1...]            # March horizontally to z ignoring endpoint
+        horiz = g.c .+ sign(Nx) * g.dx * [1 : abs(Nx) - 1...]       # March horizontally to z ignoring endpoint
     else
         horiz = []                                                  # No horizontal nodes
     end
 
     if Ny != 0
-        vert = g.c + Nx * g.dx .+ g.dy * [1 : sign(Ny) : Ny - 1...] # March vertically to z ignoring endpoints
+        vert = g.c + Nx * g.dx .+ sign(Ny) * g.dy * [1 : abs(Ny) - 1...] # March vertically to z ignoring endpoints
     else
         vert = []                                                   # No vertical nodes
     end
@@ -239,10 +239,10 @@ end
 
 """
     rotCorrection(idx, dir, g::Grid)
-Rotate square correction stencil to point in direction of dir
+Rotate square correction stencil to point in direction of dir (clockwise)
 """
-function rotCorrection(idx::Vector{Int64}, dir::Int64, g::Grid)
+function rotCorrection(idx::Vector{Int64}, dir::Int64)
     r = length(idx) / 8
 
-    return circshift(idx, -2r * (dir % 4))
+    return circshift(idx, 2r * (dir % 4))
 end
