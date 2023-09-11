@@ -2,7 +2,7 @@
 # Constructors and routines for working with complex grids for quadrature.
 #
 # Author: Caleb Jacobs
-# DLM: September 8, 2023
+# DLM: September 11, 2023
 =#
 
 # using Plots
@@ -192,18 +192,22 @@ function getPathIndices(zIdx::Int64, g::Grid)
     Ny = round(Int64, imag(g.z[zIdx]) / g.h)                        # Number of vertical nodes
     
     if Nx != 0
-        horiz = g.c .+ sign(Nx) * g.dx * [1 : abs(Nx) - 1...]       # March horizontally to z ignoring endpoint
+#         horiz = g.c .+ sign(Nx) * g.dx * [1 : abs(Nx) - 1...]       # March horizontally to z ignoring endpoint
+        horiz = g.c + Ny * g.dy .+ sign(Nx) * g.dx * [1 : abs(Nx) - 1...]       # March horizontally to z ignoring endpoint
     else
         horiz = []                                                  # No horizontal nodes
     end
 
     if Ny != 0
-        vert = g.c + Nx * g.dx .+ sign(Ny) * g.dy * [1 : abs(Ny) - 1...] # March vertically to z ignoring endpoints
+#         vert = g.c + Nx * g.dx .+ sign(Ny) * g.dy * [1 : abs(Ny) - 1...] # March vertically to z ignoring endpoints
+        vert = g.c .+ sign(Ny) * g.dy * [1 : abs(Ny) - 1...] # March vertically to z ignoring endpoints
     else
         vert = []                                                   # No vertical nodes
     end
 
-    return (horiz, vert)
+    corner = g.c + Ny * g.dy                                        # Index of corner
+
+    return (horiz, vert, corner)
 end
 
 function getPathIndices(z::ComplexF64, g::Grid)

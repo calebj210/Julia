@@ -2,7 +2,7 @@
 # Generalized, grid-based Gregory quadrature for computing hypergeometric pFq
 #
 # Author: Caleb Jacobs
-# DLM: September 10, 2023
+# DLM: September 11, 2023
 =#
 
 using SpecialFunctions
@@ -76,34 +76,36 @@ function getDiffMat(n, r, α, β; ir = 0.5, er = 3)
     end
 
     # Populate external weights using trapezoidal rule and end corrections
-    bpω = getCorrectionWeights(er, g, α)                    # Base point correction
-    crω = getCorrectionWeights(er, g, 0.0)                  # Corner correction
-    epω = getCorrectionWeights(er, g, β)                    # End point correction
+    bpω = getCorrectionWeights(er, g, α)                        # Base point correction
+    crω = getCorrectionWeights(er, g, 0.0)                      # Corner correction
+    epω = getCorrectionWeights(er, g, β)                        # End point correction
+
+    crω = 0
 
     for (i, eIdx) ∈ pairs(g.e)
-        z = g.z[eIdx]                                       # Current z value
+        z = g.z[eIdx]                                           # Current z value
 
         # Populate trapezoidal weights
-        (hIdx, vIdx) = getPathIndices(eIdx, g)              # Indices along path of integration
+        (hIdx, vIdx, cIdx) = getPathIndices(eIdx, g)            # Indices along path of integration
 
-        αβt = g.z[hIdx].^α .* (z .- g.z[hIdx]).^β           # Horizontal α-β term in integrand
+        αβt = g.z[hIdx].^α .* (z .- g.z[hIdx]).^β               # Horizontal α-β term in integrand
         if real(z) > 0
-            D[eMap[i], hIdx] =  g.h * αβt                   # Set trapezoidal weights moving right
+            D[eMap[i], hIdx] .=  g.h * αβt                      # Set trapezoidal weights moving right
         else
-            D[eMap[i], hIdx] = -g.h * αβt                   # Set trapezoidal weights moving left
+            D[eMap[i], hIdx] .= -g.h * αβt                      # Set trapezoidal weights moving left
         end
 
-        αβt = g.z[vIdx].^α .* (z .- g.z[vIdx]).^β           # Vertical α-β term in integrand
+        αβt = g.z[vIdx].^α .* (z .- g.z[vIdx]).^β               # Vertical α-β term in integrand
         if imag(z) > 0
-            D[eMap[i], vIdx] .=  im * g.h * αβt             # Set trapezoidal weights moving up
+            D[eMap[i], vIdx] .=  im * g.h * αβt                 # Set trapezoidal weights moving up
         else
-            D[eMap[i], vIdx] .= -im * g.h * αβt             # Set trapezoidal weights moving down
+            D[eMap[i], vIdx] .= -im * g.h * αβt                 # Set trapezoidal weights moving down
         end
 
         # Populate left-right end correction weights
-        bpIdx = getCorrectionIndices(eIdx, er, g)           # Base point correction indices
-        crIdx = getCorrectionIndices(eIdx, er, g)           # Corner correction indices
-        epIdx = getCorrectionIndices(eIdx, er, g)           # Endpoint correction indices
+        bpIdx = getCorrectionIndices(g.c,  er, g)               # Base point correction indices
+        crIdx = getCorrectionIndices(cIdx, er, g)               # Corner correction indices
+        epIdx = getCorrectionIndices(eIdx, er, g)               # Endpoint correction indices
         
         if real(g.z[eIdx]) != 0 #!isempty(hIdx)
             if real(z) > 0
@@ -112,8 +114,8 @@ function getDiffMat(n, r, α, β; ir = 0.5, er = 3)
                 βt  = (z .- g.z[bpIdx]).^β                      # Base point β term in integrand
                 αβt = g.z[rcrIdx].^α .* (z .- g.z[rcrIdx]).^β   # Corner α-β term in integrand
 
-                D[eMap[i], bpIdx]  += bpω .* βt 
-                D[eMap[i], rcrIdx] += crω .* αβt
+                D[eMap[i], bpIdx]  += bpω .* βt                 # Basepoint correction
+                D[eMap[i], rcrIdx] += crω .* αβt                # Corner left-right correction
             else 
                 rbpIdx = rotCorrection(bpIdx, 2)                # Rotated base point indices
 
@@ -123,7 +125,7 @@ function getDiffMat(n, r, α, β; ir = 0.5, er = 3)
                 hcr = -1                                        # Corner  angle correction
 
                 D[eMap[i], rbpIdx] += hbp * bpω .* βt           # Basepoint correction 
-                D[eMap[i], crIdx]  += hcr * crω .* αβt          # Corner left-right corner correction
+                D[eMap[i], crIdx]  += hcr * crω .* αβt          # Corner left-right correction
             end
         end
 
@@ -152,6 +154,8 @@ function getDiffMat(n, r, α, β; ir = 0.5, er = 3)
                 D[eMap[i], repIdx] += hep * epω .* αt           # Endpoint correction
             end
         end
+
+        
     end
 
     return D
