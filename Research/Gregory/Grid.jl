@@ -2,10 +2,8 @@
 # Constructors and routines for working with complex grids for quadrature.
 #
 # Author: Caleb Jacobs
-# DLM: September 11, 2023
+# DLM: September 12, 2023
 =#
-
-# using Plots
 
 "Complex grid for use with grid based quadratures."
 struct Grid
@@ -39,45 +37,6 @@ struct Grid
     "Radius of square grid"
     r::Float64            
 end
-
-# """
-#     plotPath(idx, g)
-# Display the path defined by idx through the grid g.
-# """
-# function plotPath(idx::Vector{Int64}, g::Grid)
-#     plt = plot(g.z, st = :scatter, c = :red, ratio = 1, legend = false,
-#           mα = 0.9, msw = 0)
-#     
-#     plot!(g.z[idx], st = :scatter, mz = 1 : length(idx), c = :viridis,
-#           mα = 0.9, msw = 0)
-# 
-#     return plt
-# end
-# function plotPath(idx::Tuple{Vector, Vector}, g::Grid)
-#     plt = plot(g.z, st = :scatter, c = :red, ratio = 1, legend = false,
-#                mα = 0.9, msw = 0)
-#     
-#     for i ∈ idx
-#         if !isempty(i)
-#             plot!(g.z[i], st = :scatter, mz = 1 : length(i), c = :viridis,
-#                   mα = 0.9, msw = 0)
-#         end
-#     end
-# 
-#     return plt
-# end
-# 
-# """
-#     plotGrid(g)
-# 
-# Plot grid `g` highlighting internal nodes, external nodes, and padding nodes.
-# """
-# function plotGrid(g::Grid)
-#     plt = plot(g.z[g.i], st = scatter, c = :green, mα = 0.75, msw = 0, label = "Internal")
-#     plot!(g.z[g.e], st = scatter, c = :blue, mα = 0.75, msw = 0, label = "External")
-#     plot!(g.z[g.p], st = scatter, c = :red,  mα = 0.75, msw = 0, label = "Padding")
-#     plot!(ratio = 1)
-# end
 
 """
     getGrid(n, r; ir = 0.5, p = 0)
@@ -192,15 +151,16 @@ function getPathIndices(zIdx::Int64, g::Grid)
     Ny = round(Int64, imag(g.z[zIdx]) / g.h)                        # Number of vertical nodes
     
     if Nx != 0
-#         horiz = g.c .+ sign(Nx) * g.dx * [1 : abs(Nx) - 1...]       # March horizontally to z ignoring endpoint
-        horiz = g.c + Ny * g.dy .+ sign(Nx) * g.dx * [1 : abs(Nx) - 1...]       # March horizontally to z ignoring endpoint
+        horiz = g.c + 
+                Ny * g.dy .+ 
+                sign(Nx) * g.dx * [1 : abs(Nx) - 1...]              # March horizontally to z ignoring endpoint
     else
         horiz = []                                                  # No horizontal nodes
     end
 
     if Ny != 0
-#         vert = g.c + Nx * g.dx .+ sign(Ny) * g.dy * [1 : abs(Ny) - 1...] # March vertically to z ignoring endpoints
-        vert = g.c .+ sign(Ny) * g.dy * [1 : abs(Ny) - 1...] # March vertically to z ignoring endpoints
+        vert = g.c .+ 
+               sign(Ny) * g.dy * [1 : abs(Ny) - 1...]               # March vertically to z ignoring endpoints
     else
         vert = []                                                   # No vertical nodes
     end
@@ -248,5 +208,5 @@ Rotate square correction stencil to point in direction of dir (clockwise)
 function rotCorrection(idx::Vector{Int64}, dir::Int64)
     r = length(idx) / 8
 
-    return circshift(idx, 2r * (dir % 4))
+    return circshift(idx, -2r * (dir % 4))
 end
