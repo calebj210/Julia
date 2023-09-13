@@ -151,6 +151,8 @@ function getPathIndices(zIdx::Int64, g::Grid)
     Ny = round(Int64, imag(g.z[zIdx]) / g.h)                        # Number of vertical nodes
     
     if Nx != 0
+#         horiz = g.c .+ 
+#                 sign(Nx) * g.dx * [1 : abs(Nx) - 1...]              # March horizontally to z ignoring endpoint
         horiz = g.c + 
                 Ny * g.dy .+ 
                 sign(Nx) * g.dx * [1 : abs(Nx) - 1...]              # March horizontally to z ignoring endpoint
@@ -159,13 +161,17 @@ function getPathIndices(zIdx::Int64, g::Grid)
     end
 
     if Ny != 0
+#         vert = g.c + 
+#                Nx * g.dx .+
+#                sign(Ny) * g.dy * [1 : abs(Ny) - 1...]               # March vertically to z ignoring endpoints
         vert = g.c .+ 
                sign(Ny) * g.dy * [1 : abs(Ny) - 1...]               # March vertically to z ignoring endpoints
     else
         vert = []                                                   # No vertical nodes
     end
 
-    corner = g.c + Ny * g.dy                                        # Index of corner
+    corner = g.c + Ny * g.dy                                        # Index of corner if up then right
+#     corner = g.c + Nx * g.dx                                        # Index of corner if right then up
 
     return (horiz, vert, corner)
 end
