@@ -16,24 +16,39 @@ using BenchmarkTools
 Display the path defined by idx through the grid g.
 """
 function plotPath(idx::Vector{Int64}, g::Grid)
-    plt = plot(g.z, st = :scatter, c = :red, ratio = 1, legend = false,
-          mα = 0.9, msw = 0)
-    
-    plot!(g.z[idx], st = :scatter, mz = 1 : length(idx), c = :viridis,
-          mα = 0.9, msw = 0)
+    x⃗ = real(g.z)
+    y⃗ = imag(g.z)
+    z⃗ = zeros(length(g.z))
+
+    z⃗[idx] = [1 : length(idx)...]
+
+    plt = plot(heatmap(
+            x = x⃗, y = y⃗, z = z⃗,
+            zsmooth = "none",
+            colorscale = colors.viridis),
+        Layout(width = 800, heights = 800))
 
     return plt
 end
-function plotPath(idx::Tuple{Vector, Vector}, g::Grid)
-    plt = plot(g.z, st = :scatter, c = :red, ratio = 1, legend = false,
-               mα = 0.9, msw = 0)
-    
-    for i ∈ idx
-        if !isempty(i)
-            plot!(g.z[i], st = :scatter, mz = 1 : length(i), c = :viridis,
-                  mα = 0.9, msw = 0)
+
+function plotPath(idx::Tuple{Vector, Vector, Int64}, g::Grid)
+    x⃗ = real(g.z)
+    y⃗ = imag(g.z)
+    z⃗ = zeros(length(g.z))
+
+    for path ∈ idx
+        if typeof(path) <: Vector
+            z⃗[path] = [1 : length(path)...]
+        elseif typeof(path) <: Number
+            z⃗[path] = 1
         end
     end
+
+    plt = plot(heatmap(
+            x = x⃗, y = y⃗, z = z⃗,
+            zsmooth = "none",
+            colorscale = colors.viridis),
+        Layout(width = 800, heights = 800))
 
     return plt
 end
@@ -44,24 +59,19 @@ end
 Plot grid `g` highlighting internal nodes, external nodes, and padding nodes.
 """
 function plotGrid(g::Grid)
-    plt = plot(g.z[g.i], st = :scatter, c = :green, mα = 0.75, msw = 0, ms = 4.5, label = "Taylor")
-    plot!(g.z[g.e], st = :scatter, c = :blue,       mα = 0.75, msw = 0, ms = 4.5, label = "Gregory")
-    plot!(g.z[g.p], st = :scatter, c = :red,        mα = 0.75, msw = 0, ms = 4.5, label = "Padding")
-    plot!(ratio = 1, dpi = 300)
-end
+    x⃗ = real(g.z)
+    y⃗ = imag(g.z)
+    z⃗ = zeros(length(g.z))
+    z⃗[g.e] .= 2
+    z⃗[g.i] .= 1
 
-# function plotComplexErrors(tru, Df, g::Grid)
-#     plt = plot(g.z, st = :scatter, 
-#                c   = :viridis,
-#                mz  = log10.(abs.(tru - Df)),
-#                mα  = 0.75,
-#                msw = 0,
-#                ratio = 1,
-#                clims = (-16, 1),
-#                label = false)
-# 
-#     return plt
-# end
+    plt = plot(heatmap(
+            x = x⃗, y = y⃗, z = z⃗,
+            zsmooth = "none",
+            zmin = 0, zmax = 2,
+            colorscale = colors.viridis),
+        Layout(width = 800, heights = 800))
+end
 
 function complexAbsPlot(z⃗, f⃗)
     x⃗ = real(z⃗[:])
