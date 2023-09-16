@@ -57,6 +57,15 @@ function getCorrectionWeights(r, g::Grid, α)
 end
 
 """
+    populateRow!(row, idx, path, g::Grid)
+
+Populate differentiation entries of `row` corresponding to `g`.z[`idx`] following a `path`.
+"""
+function populateRow!(row, idx, path, g::Grid)
+    
+end
+
+"""
     getDiffMat(n, r, α, β; ir = 0.5, er = 5)
 
 Generate differentiation matrix for ``∫₀ᶻ(u)ᵅ(z-u)ᵝf(u)du`` over a grid of radius `r`.
@@ -84,7 +93,7 @@ function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, er = 3)
         z = g.z[eIdx]                                           # Current z value
 
         # Populate trapezoidal weights
-        (hIdx, vIdx, cIdx) = getPathIndices(eIdx, g)            # Indices along path of integration
+        (hIdx, vIdx, cIdx) = getPath(eIdx, g)                   # Indices along path of integration
 
         αβt = g.z[hIdx].^α .* (z .- g.z[hIdx]).^β               # Horizontal α-β term in integrand
         if real(z) > 0

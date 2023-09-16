@@ -142,11 +142,11 @@ function getIdx(z::ComplexF64, g::Grid)
 end
 
 """ 
-    getLinearIndices(zIdx, g)
+    getPath(zIdx, g)
 
 Get indices to traverse the complex grid from 0 to z with index `zIdx`. The indices are returned as a tuple (horizontal, vertical)
 """
-function getPathIndices(zIdx::Int64, g::Grid)
+function getPath(zIdx::Int64, g::Grid)
     Nx = round(Int64, real(g.z[zIdx]) / g.h)                        # Number of horizontal nodes
     Ny = round(Int64, imag(g.z[zIdx]) / g.h)                        # Number of vertical nodes
     
@@ -174,6 +174,67 @@ function getPathIndices(zIdx::Int64, g::Grid)
 #     corner = g.c + Nx * g.dx                                        # Index of corner if right then up
 
     return (horiz, vert, corner)
+end
+
+function getPath(zIdx::Int64, g::Grid, r)
+    Nx = round(Int64, real(g.z[zIdx]) / g.h)                        # Number of horizontal nodes
+    Ny = round(Int64, imag(g.z[zIdx]) / g.h)                        # Number of vertical nodes
+
+    # Begin cases
+    if Nx > r                                                       # Far right side cases
+        if abs(Ny) > r                                              # L contour
+            v = g.c .+ sign(Ny) * g.dy * [1 : abs(Ny) - 1...]       # Move vertically
+
+            c = v[end] + g.dy                                       # Corner index
+            
+            h = g.c .+ Ny * g.dy .+ g.dx * [1 : Nx - 1...]          # Move horizontally
+            
+            path = [v, c, h]
+        else                                                        # U contour
+            v1 = g.c .+ sign(Ny) * g.dy * [1 : r + abs(Ny) - 1]     # Move past point vertically
+
+            c1 = v1[end] + g.dy * sign(Ny)                          # First corner
+
+            h  = g.c .+ g.dy * sign(Ny) * (abs(Ny) + r) .+          # Move horizontally
+                        g.dx * [1 : Nx - 1...] 
+
+            c2 = h[end] + g.dx                                      # Second corner
+
+            v2 = g.c + g.dy * sign(Ny) * (abs(Ny) + r) +            # Move vertically back to point
+                       g.dx * Nx .-
+                       g.dy * [1 : abs(Ny) - 1...]
+
+            path = [v1, c1, h, c2, v2]           
+        end
+    elseif abs(Nx) <= r                                             # Vertical band case
+        h1 = g.c .- g.dy * [1 : r + abs(Nx) - 1...]                 # Move past point horizontally
+
+        c1 = h1[end] - g.dx                                         # First corner
+
+        v  = g.c - g.dx * (r + abs(Nx)) .+                          # Move vertically
+                   g.dy * sign(Ny) * [1 : abs(Ny) - 1...]
+
+        c2 = v[end] + g.dy * sign(Ny)                               # Second corner
+
+        h2 = g.c - g.dx * (r + abs(Nx)) +                           # Move horizontally back to point
+                   g.dy * Ny .+
+                   g.dx *                           # Needs some more work
+
+    elseif Nx < -r                                                  # Far left side cases
+        if abs(Ny) > r                                              # Branch-cut-following L contour
+            h = g.c - g.dx * [1 : abs(Nx) - 1...]                   # Move left horizontally
+
+            c = h[end] - g.dx                                       # Corner
+
+            v = g.c + g.dx * Nx .+ g.dy * sign(Ny) * [1 : abs(Ny) - 1...]
+
+            path = [h, c, v]
+        else                                                        # Branch-cut-following U contour
+
+        end
+    end
+
+    return path
 end
 
 function getPathIndices(z::ComplexF64, g::Grid)
