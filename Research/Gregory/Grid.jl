@@ -180,57 +180,69 @@ function getPath(zIdx::Int64, g::Grid, r)
     Nx = round(Int64, real(g.z[zIdx]) / g.h)                        # Number of horizontal nodes
     Ny = round(Int64, imag(g.z[zIdx]) / g.h)                        # Number of vertical nodes
 
+    sgn(x) = x >= 0 ? 1 : -1                                        # Modified sign function
+
     # Begin cases
     if Nx > r                                                       # Far right side cases
         if abs(Ny) > r                                              # L contour
-            v = g.c .+ sign(Ny) * g.dy * [1 : abs(Ny) - 1...]       # Move vertically
+            v = g.c .+ sgn(Ny) * g.dy * [1 : abs(Ny) - 1...]        # Move vertically
 
-            c = v[end] + g.dy                                       # Corner index
+            c = v[end] + g.dy * sgn(Ny)                             # Corner index
             
-            h = g.c .+ Ny * g.dy .+ g.dx * [1 : Nx - 1...]          # Move horizontally
+            h = c .+ g.dx * [1 : Nx - 1...]                         # Move horizontally
             
             path = [v, c, h]
         else                                                        # U contour
-            v1 = g.c .+ sign(Ny) * g.dy * [1 : r + abs(Ny) - 1]     # Move past point vertically
+            v1 = g.c .+ sgn(Ny) * g.dy * [1 : r + abs(Ny) - 1...]   # Move past point vertically
 
-            c1 = v1[end] + g.dy * sign(Ny)                          # First corner
+            c1 = v1[end] + g.dy * sgn(Ny)                           # First corner
 
-            h  = g.c .+ g.dy * sign(Ny) * (abs(Ny) + r) .+          # Move horizontally
-                        g.dx * [1 : Nx - 1...] 
+            h  = c1 .+ g.dx * [1 : Nx - 1...]                       # Move horizontally
 
             c2 = h[end] + g.dx                                      # Second corner
 
-            v2 = g.c + g.dy * sign(Ny) * (abs(Ny) + r) +            # Move vertically back to point
-                       g.dx * Nx .-
-                       g.dy * [1 : abs(Ny) - 1...]
+            v2 = c2 .- g.dy * [1 : r - 1...]                        # Move vertically back to point
 
             path = [v1, c1, h, c2, v2]           
         end
     elseif abs(Nx) <= r                                             # Vertical band case
-        h1 = g.c .- g.dy * [1 : r + abs(Nx) - 1...]                 # Move past point horizontally
+        h1 = g.c .- g.dx * [1 : r + abs(Nx) - 1...]                 # Move past point horizontally
 
         c1 = h1[end] - g.dx                                         # First corner
 
-        v  = g.c - g.dx * (r + abs(Nx)) .+                          # Move vertically
-                   g.dy * sign(Ny) * [1 : abs(Ny) - 1...]
+        v  = c1 .+ g.dy * sgn(Ny) * [1 : abs(Ny) - 1...]            # Move vertically
 
-        c2 = v[end] + g.dy * sign(Ny)                               # Second corner
+        c2 = v[end] + g.dy * sgn(Ny)                                # Second corner
 
-        h2 = g.c - g.dx * (r + abs(Nx)) +                           # Move horizontally back to point
-                   g.dy * Ny .+
-                   g.dx *                           # Needs some more work
-
+        h2 = Nx <= 0 ? c2 .+ g.dx * [1 : r +  abs(Nx) - 1...] :     # Move horizontally back to point
+                       c2 .+ g.dx * [1 : r + 2abs(Nx) - 1...]
+        
+        path = [h1, c1, v, c2, h2]
     elseif Nx < -r                                                  # Far left side cases
         if abs(Ny) > r                                              # Branch-cut-following L contour
-            h = g.c - g.dx * [1 : abs(Nx) - 1...]                   # Move left horizontally
+            h = g.c .- g.dx * [1 : abs(Nx) - 1...]                  # Move left horizontally
 
             c = h[end] - g.dx                                       # Corner
 
-            v = g.c + g.dx * Nx .+ g.dy * sign(Ny) * [1 : abs(Ny) - 1...]
+            v = c .+ g.dy * sgn(Ny) * [1 : abs(Ny) - 1...]          # Move vertically to end point
 
             path = [h, c, v]
         else                                                        # Branch-cut-following U contour
+            h1 = g.c .- g.dx * [1 : r + abs(Nx) - 1...]
 
+            c1 = h1[end] - g.dx
+
+            v1 = c1 .+ g.dy * sgn(Ny) * [1 : 2r - 1...]
+
+            c2 = v1[end] + g.dy * sgn(Ny)
+
+            h2 = c2 .+ g.dx * [1 : r - 1...]
+
+            c3 = v2[end] + g.dx
+
+            v2 = c3 .- g.dy * sgn(Ny) * [1 : 2r - abs(Ny) - 1...]
+
+            path = [h1, c1, v1, c2, h2, c3, v2]
         end
     end
 

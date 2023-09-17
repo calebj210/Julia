@@ -31,7 +31,7 @@ function plotPath(idx::Vector{Int64}, g::Grid)
     return plt
 end
 
-function plotPath(idx::Tuple{Vector, Vector, Int64}, g::Grid)
+function plotPath(idx::Vector{Any}, g::Grid)
     x⃗ = real(g.z)
     y⃗ = imag(g.z)
     z⃗ = zeros(length(g.z))
