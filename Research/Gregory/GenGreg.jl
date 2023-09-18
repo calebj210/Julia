@@ -68,7 +68,7 @@ function getCorrectionWeights(r, g::Grid; α = 0, dir = 1 + 0im)
 
     ω = A \ b                                               # Solve for weights
 
-    ω *=  (dir * g.h)^(1 + α)                               # Scale weights by grid spacing factor
+    ω *=  g.h^(1 + α)                                       # Scale weights by grid spacing factor
 
     return ω
 end
@@ -80,60 +80,69 @@ Compute all possible end/corner corrections over a grid `g`.
 """
 function getCorrections(g::Grid; α = 0, β = 0)
     # Basepoint corrections
-    bpu = getCorrectionWeights(g.np, g, α = α, dir =  0 + 1im)  # Up
-    bpd = getCorrectionWeights(g.np, g, α = α, dir =  0 - 1im)  # Down
-    bpl = getCorrectionWeights(g.np, g, α = α, dir = -1 + 0im)  # Left
+#     bpu = getCorrectionWeights(g.np, g, α = α, dir =  0 + 1im)  # Up
+#     bpd = getCorrectionWeights(g.np, g, α = α, dir =  0 - 1im)  # Down
+#     bpl = getCorrectionWeights(g.np, g, α = α, dir = -1 + 0im)  # Left
     bpr = getCorrectionWeights(g.np, g, α = α, dir =  1 + 0im)  # Right
+    bpu = rotCorrection(bpr, -1)
+    bpl = rotCorrection(bpr, -2)
+    bpd = rotCorrection(bpr, -3)
 
     # Corner corrections
-    cru = getCorrectionWeights(g.np, g, dir =  0 + 1im)         # Up
-    crd = getCorrectionWeights(g.np, g, dir =  0 - 1im)         # Down
-    crl = getCorrectionWeights(g.np, g, dir = -1 + 0im)         # Left
+#     cru = getCorrectionWeights(g.np, g, dir =  0 + 1im)         # Up
+#     crd = getCorrectionWeights(g.np, g, dir =  0 - 1im)         # Down
+#     crl = getCorrectionWeights(g.np, g, dir = -1 + 0im)         # Left
     crr = getCorrectionWeights(g.np, g, dir =  1 + 0im)         # Right
+    cru = rotCorrection(crr, -1)
+    crl = rotCorrection(crr, -2)
+    crd = rotCorrection(crr, -3)
 
     # Endpoint corrections
-    epu = getCorrectionWeights(g.np, g, α = β, dir =  0 + 1im)  # Up
-    epd = getCorrectionWeights(g.np, g, α = β, dir =  0 - 1im)  # Down
-    epl = getCorrectionWeights(g.np, g, α = β, dir = -1 + 0im)  # Left
+#     epu = getCorrectionWeights(g.np, g, α = β, dir =  0 + 1im)  # Up
+#     epd = getCorrectionWeights(g.np, g, α = β, dir =  0 - 1im)  # Down
+#     epl = getCorrectionWeights(g.np, g, α = β, dir = -1 + 0im)  # Left
     epr = getCorrectionWeights(g.np, g, α = β, dir =  1 + 0im)  # Right
+    epu = rotCorrection(epr, -1)
+    epl = rotCorrection(epr, -2)
+    epd = rotCorrection(epr, -3)
 
     return Corrections(bpu, bpd, bpl, bpr, cru, crd, crl, crr, epu, epd, epl, epr)
 end
 
 function getCorrection(c::Corrections, dir, type::String)
     if type == "cr"
-        if dir == 0.0 + 1im
+        if     dir ==  0.0 + 1im
             return c.cru
-        elseif dir == 0.0 - 1im
+        elseif dir ==  0.0 - 1im
             return c.crd
-        elseif dir == -1.0 - 0im
+        elseif dir == -1.0 + 0im
             return c.crl
-        elseif dir == 1.0 - 0im
+        elseif dir ==  1.0 + 0im
             return c.crr
         else
             throw(DomainError(dir, "not a valid direction of grid integration"))
         end
     elseif type == "bp"
-        if dir == 0.0 + 1im
+        if     dir ==  0.0 + 1im
             return c.bpu
-        elseif dir == 0.0 - 1im
+        elseif dir ==  0.0 - 1im
             return c.bpd
-        elseif dir == -1.0 - 0im
+        elseif dir == -1.0 + 0im
             return c.bpl
-        elseif dir == 1.0 - 0im
+        elseif dir ==  1.0 + 0im
             return c.bpr
         else
             throw(DomainError(dir, "not a valid direction of grid integration"))
         end
     
     elseif type == "ep"
-        if dir == 0.0 + 1im
+        if     dir ==  0.0 + 1im
             return c.epu
-        elseif dir == 0.0 - 1im
+        elseif dir ==  0.0 - 1im
             return c.epd
-        elseif dir == -1.0 - 0im
+        elseif dir == -1.0 + 0im
             return c.epl
-        elseif dir == 1.0 - 0im
+        elseif dir ==  1.0 + 0im
             return c.epr
         else
             throw(DomainError(dir, "not a valid direction of grid integration"))
@@ -145,45 +154,55 @@ function getCorrection(c::Corrections, dir, type::String)
 end
 
 """
-    populateExternalRow!(row, idx, path, g::Grid, α, β)
+    getExternalWeights(row, zIdx, path, g::Grid, α, β)
 
-Populate differentiation entries of `row` corresponding to `g`.z[`zIdx`].
+Get external differentiation entries corresponding to `g`.z[`zIdx`].
 """
-function populateExternalRow!(row, zIdx, g::Grid, α, β)
-    path = getPath(zIdx, g, g.np)                                   # Get path from origin to node
+function getExternalWeights(zIdx, g::Grid, α, β)
+    path = getPath(zIdx, g, 2g.np)                                  # Get path from origin to node
     N = length(path)                                                # Number of paths to travel
     c = getCorrections(g, α = α, β = β)                             # End/corner corrections
+    z = g.z[zIdx]
+    row = zeros(ComplexF64, length(g.z))
+
+    tmp = 0.0
 
     for (n, p) ∈ pairs(path)
-        dir = sign(p.f - p.i)                                       # Compute direction of travel
+        dir = sign(g.z[p.f] - g.z[p.i])                             # Compute direction of travel
 
-        αβt = g.z[p.p].^α .* (g.z[zIdx] .- g.z[p.p]).^β             # Trapezoidal αβ factor
+        αβt = g.z[p.p].^α .* (z .- g.z[p.p]).^β                     # Trapezoidal αβ factor
 
-        row[p.p] .= dir * g.h * αβt                                 # Compute trapezoidal weights
+        row[p.p] .+= dir * g.h * αβt                                # Compute trapezoidal weights
 
         iIdx = getCorrectionIndices(p.i, g)                         # Initial point correction indices
         fIdx = getCorrectionIndices(p.f, g)                         # Final point correction indices
 
         if n == 1
-            βt = (g.z[zIdx] .- g.z[iIdx]).^β                        # Basepoint β factor
+            βt = (z .- g.z[iIdx]).^β                                # Basepoint β factor
+            h = dir^(1 + α)
 
-            row[iIdx] +=  getCorrection(c, dir, "bp") .* βt         # Basepoint corrections
+            row[iIdx] +=  h * βt .* getCorrection(c, dir, "bp")     # Basepoint corrections
         else
-            αβt = g.z[iIdx].^α .* (g.z[zIdx] .- g.z[iIdx]).^β       # Corner αβ factor
+            αβt = g.z[iIdx].^α .* (z .- g.z[iIdx]).^β               # Corner αβ factor
+            h = dir
 
-            row[iIdx] +=  getCorrection(c, dir, "cr") .* αβt        # Corner corrections
+            row[iIdx] +=  h * αβt .* getCorrection(c, dir, "cr")    # Corner corrections
         end
 
         if n == N
             αt = g.z[fIdx].^α                                       # Endpoint α factor
+            h = dir^(1 + β)
             
-            row[fIdx] += getCorrection(c, -dir, "ep") .* αt         # Endpoint corrections
+            row[fIdx] += h * αt .* getCorrection(c, -dir, "ep")     # Endpoint corrections
         else
-            αβt = g.z[fIdx].^α .* (g.z[zIdx] .- g.z[fIdx]).^β       # Corner αβ factor
+            αβt = g.z[fIdx].^α .* (z .- g.z[fIdx]).^β               # Corner αβ factor
+            h = dir
 
-            row[fIdx] += getCorrection(c, -dir, "cr") .* αβt        # Corner corrections
+            row[fIdx] += h * αβt .* getCorrection(c, -dir, "cr")    # Corner corrections
         end
     end
+
+    return row
 end
 
 """
@@ -207,7 +226,7 @@ function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, er = 3)
 
     # Populate external weights using generalized Gregory quadrature
     for (e, eIdx) ∈ pairs(g.e)
-        populateExternalRow!(D[eMap[e], :], eIdx, g, α, β)
+        D[eMap[e], :] = getExternalWeights(eIdx, g, α, β)
     end
 
     return D

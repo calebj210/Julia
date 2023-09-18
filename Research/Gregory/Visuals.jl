@@ -15,33 +15,15 @@ using BenchmarkTools
     plotPath(idx, g)
 Display the path defined by idx through the grid g.
 """
-function plotPath(idx::Vector{Int64}, g::Grid)
+function plotPath(idx::Vector{Path}, g::Grid)
     x⃗ = real(g.z)
     y⃗ = imag(g.z)
     z⃗ = zeros(length(g.z))
 
-    z⃗[idx] = [1 : length(idx)...]
-
-    plt = plot(heatmap(
-            x = x⃗, y = y⃗, z = z⃗,
-            zsmooth = "none",
-            colorscale = colors.viridis),
-        Layout(width = 800, heights = 800))
-
-    return plt
-end
-
-function plotPath(idx::Vector{Any}, g::Grid)
-    x⃗ = real(g.z)
-    y⃗ = imag(g.z)
-    z⃗ = zeros(length(g.z))
-
-    for path ∈ idx
-        if typeof(path) <: Vector
-            z⃗[path] = [1 : length(path)...]
-        elseif typeof(path) <: Number
-            z⃗[path] = 1
-        end
+    for p ∈ idx
+        z⃗[p.i] = 1
+        z⃗[p.p] = [1 : length(p.p)...]
+        z⃗[p.f] = 1
     end
 
     plt = plot(heatmap(

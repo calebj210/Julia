@@ -220,7 +220,7 @@ function getPath(zIdx::Int64, g::Grid, r)
 
             p2 = Path(c1, h, c2)
 
-            v2 = c2 .- g.dy * [1 : r - 1...]                        # Move vertically back to point
+            v2 = c2 .- g.dy * sgn(Ny) * [1 : r - 1...]              # Move vertically back to point
 
             p3 = Path(c2, v2, zIdx)
 
@@ -246,7 +246,7 @@ function getPath(zIdx::Int64, g::Grid, r)
         
         path = [p1, p2, p3]
     elseif Nx < -r                                                  # Far left side cases
-        if abs(Ny) > r                                              # Branch-cut-following L contour
+        if abs(Ny) > 0                                              # Branch-cut-following L contour
             h = g.c .- g.dx * [1 : abs(Nx) - 1...]                  # Move left horizontally
 
             c = h[end] - g.dx                                       # Corner
@@ -258,32 +258,40 @@ function getPath(zIdx::Int64, g::Grid, r)
             p2 = Path(c, v, zIdx)
 
             path = [p1, p2]
-        else                                                        # Branch-cut-following U contour
-            h1 = g.c .- g.dx * [1 : r + abs(Nx) - 1...]
+        else
+            h = g.c .- g.dx * [1 : abs(Nx) - 1...]
+            c = h[end] - g.dx
+            p = Path(g.c, h, c)
 
-            c1 = h1[end] - g.dx
-
-            p1 = Path(g.c, h1, c1)
-
-            v1 = c1 .+ g.dy * sgn(Ny) * [1 : 2r - 1...]
-
-            c2 = v1[end] + g.dy * sgn(Ny)
-
-            p2 = Path(c1, v1, c2)
-
-            h2 = c2 .+ g.dx * [1 : r - 1...]
-
-            c3 = h2[end] + g.dx
-
-            p3 = Path(c2, h2, c3)
-
-            v2 = c3 .- g.dy * sgn(Ny) * [1 : 2r - abs(Ny) - 1...]
-
-            p4 = Path(c3, v2, zIdx)
-
-            path = [p1, p2, p3, p4]
+            return [p]
         end
     end
+#         else                                                        # Branch-cut-following U contour
+#             h1 = g.c .- g.dx * [1 : r + abs(Nx) - 1...]
+# 
+#             c1 = h1[end] - g.dx
+# 
+#             p1 = Path(g.c, h1, c1)
+# 
+#             v1 = c1 .+ g.dy * sgn(Ny) * [1 : 2r - 1...]
+# 
+#             c2 = v1[end] + g.dy * sgn(Ny)
+# 
+#             p2 = Path(c1, v1, c2)
+# 
+#             h2 = c2 .+ g.dx * [1 : r - 1...]
+# 
+#             c3 = h2[end] + g.dx
+# 
+#             p3 = Path(c2, h2, c3)
+# 
+#             v2 = c3 .- g.dy * sgn(Ny) * [1 : 2r - abs(Ny) - 1...]
+# 
+#             p4 = Path(c3, v2, zIdx)
+# 
+#             path = [p1, p2, p3, p4]
+#         end
+#     end
 
     return path
 end
@@ -325,7 +333,7 @@ end
     rotCorrection(idx, dir, g::Grid)
 Rotate square correction stencil to point in direction of dir (clockwise)
 """
-function rotCorrection(idx::Vector{Int64}, dir::Int64)
+function rotCorrection(idx::Vector, dir::Int64)
     r = length(idx) / 8
 
     return circshift(idx, -2r * (dir % 4))
