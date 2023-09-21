@@ -2,7 +2,7 @@
 # Generalized, grid-based Gregory quadrature for computing hypergeometric pFq
 #
 # Author: Caleb Jacobs
-# DLM: September 12, 2023
+# DLM: September 20, 2023
 =#
 
 using SpecialFunctions
@@ -25,7 +25,19 @@ struct Corrections
     epr::Vector{ComplexF64}
 end
 
-" Generate vandermond type matrix from nodes in the grid `g` with indices `idx`."
+"Compute roots given a power α and a branch cut rotation of θ."
+function zα(z, α; θ = 0)
+    if θ >= 0
+        return angle(z) >= θ - π ? z^α : z^α * cispi( 2 * (α % 1))
+    else
+        return angle(z) <  θ + π ? z^α : z^α * cispi(-2 * (α % 1))
+    end
+end
+
+"Modified sign function to return 1 when z = 0"
+sgn(z) = iszero(z) ? one(z) : sign(z)
+
+"Generate vandermond type matrix from nodes in the grid `g` with indices `idx`."
 function getVand(idx, g::Grid)
     A = [zk^i for i ∈ 0 : length(idx) - 1, zk ∈ g.z[idx]]
 
@@ -159,46 +171,63 @@ end
 Get external differentiation entries corresponding to `g`.z[`zIdx`].
 """
 function getExternalWeights(zIdx, g::Grid, α, β)
-    path = getPath(zIdx, g, 2g.np)                                  # Get path from origin to node
-    N = length(path)                                                # Number of paths to travel
-    c = getCorrections(g, α = α, β = β)                             # End/corner corrections
-    z = g.z[zIdx]
-    row = zeros(ComplexF64, length(g.z))
-
-    tmp = 0.0
+    path = getPath(zIdx, g, 2g.np)                                      # Get path from origin to node
+    N = length(path)                                                    # Number of paths to travel
+    c = getCorrections(g, α = α, β = β)                                 # End/corner corrections
+    z = g.z[zIdx]                                                       # Current z value
+    row = zeros(ComplexF64, length(g.z))                                # Initialize row to populate
 
     for (n, p) ∈ pairs(path)
-        dir = sign(g.z[p.f] - g.z[p.i])                             # Compute direction of travel
+        dir = sign(g.z[p.f] - g.z[p.i])                                 # Compute direction of travel
 
-        αβt = g.z[p.p].^α .* (z .- g.z[p.p]).^β                     # Trapezoidal αβ factor
+        if real(z) >= 2g.h * g.np
+            αβt = g.z[p.p].^α .* (z .- g.z[p.p]).^β                     # Trapezoidal αβ factor
+        else
+            αβt = zα.(     g.z[p.p], α, θ = sgn(imag(z)) * π) .* 
+                  zα.(z .- g.z[p.p], β, θ = sgn(imag(z)) * π/2)        # Trapezoidal αβ factor
+        end
 
-        row[p.p] .+= dir * g.h * αβt                                # Compute trapezoidal weights
+        row[p.p] .+= dir * g.h * αβt                                    # Compute trapezoidal weights
 
-        iIdx = getCorrectionIndices(p.i, g)                         # Initial point correction indices
-        fIdx = getCorrectionIndices(p.f, g)                         # Final point correction indices
+        iIdx = getCorrectionIndices(p.i, g)                             # Initial point correction indices
+        fIdx = getCorrectionIndices(p.f, g)                             # Final point correction indices
 
         if n == 1
-            βt = (z .- g.z[iIdx]).^β                                # Basepoint β factor
+            βt = zα.(z .- g.z[iIdx], β)                                 # Basepoint β factor
             h = dir^(1 + α)
 
-            row[iIdx] +=  h * βt .* getCorrection(c, dir, "bp")     # Basepoint corrections
+            row[iIdx] +=  h * βt .* getCorrection(c, dir, "bp")         # Basepoint corrections
         else
-            αβt = g.z[iIdx].^α .* (z .- g.z[iIdx]).^β               # Corner αβ factor
+            if real(z) <= 2g.h * g.np
+                αβt = zα.(     g.z[iIdx], α, θ = sgn(imag(z)) * π) .* 
+                      zα.(z .- g.z[iIdx], β, θ = sgn(imag(z)) * π/2)   # Corner αβ factor
+            else
+                αβt = g.z[iIdx].^α .* (z .- g.z[iIdx]).^β               # Corner αβ factor
+            end
             h = dir
 
-            row[iIdx] +=  h * αβt .* getCorrection(c, dir, "cr")    # Corner corrections
+            row[iIdx] +=  h * αβt .* getCorrection(c, dir, "cr")        # Corner corrections
         end
 
         if n == N
-            αt = g.z[fIdx].^α                                       # Endpoint α factor
+            if real(z) <= 2g.h * g.np
+                αt = zα.(g.z[fIdx], α, θ = sgn(imag(z)) * π)
+            else
+                αt = g.z[fIdx].^α                                       # Endpoint α factor
+            end
             h = dir^(1 + β)
             
-            row[fIdx] += h * αt .* getCorrection(c, -dir, "ep")     # Endpoint corrections
+            row[fIdx] += h * αt .* getCorrection(c, -dir, "ep")         # Endpoint corrections
         else
-            αβt = g.z[fIdx].^α .* (z .- g.z[fIdx]).^β               # Corner αβ factor
+            if real(z) <= 2g.h * g.np
+                αβt = zα.(     g.z[fIdx], α, θ = sgn(imag(z)) * π) .* 
+                      zα.(z .- g.z[fIdx], β, θ = sgn(imag(z)) * π/2)   # Corner αβ factor
+            else
+                αβt = g.z[fIdx].^α .* (z .- g.z[fIdx]).^β               # Corner αβ factor
+            end
             h = dir
 
-            row[fIdx] += h * αβt .* getCorrection(c, -dir, "cr")    # Corner corrections
+            row[fIdx] += h * αβt .* getCorrection(c, -dir, "cr")        # Corner corrections
         end
     end
 
@@ -231,125 +260,3 @@ function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, er = 3)
 
     return D
 end
-
-#     # Populate external weights using trapezoidal rule and end corrections
-#     bpω = getCorrectionWeights(er, g, α)                        # Base point correction
-#     crω = getCorrectionWeights(er, g, 0.0)                      # Corner correction
-#     epω = getCorrectionWeights(er, g, β)                        # End point correction
-# 
-#     for (i, eIdx) ∈ pairs(g.e)
-#         z = g.z[eIdx]                                           # Current z value
-# 
-#         # Populate trapezoidal weights
-#         (hIdx, vIdx, cIdx) = getPath(eIdx, g)                   # Indices along path of integration
-# 
-#         αβt = g.z[hIdx].^α .* (z .- g.z[hIdx]).^β               # Horizontal α-β term in integrand
-#         if real(z) > 0
-#             D[eMap[i], hIdx] .=  g.h * αβt                      # Set trapezoidal weights moving right
-#         else
-#             D[eMap[i], hIdx] .= -g.h * αβt                      # Set trapezoidal weights moving left
-#         end
-# 
-#         αβt = g.z[vIdx].^α .* (z .- g.z[vIdx]).^β               # Vertical α-β term in integrand
-#         if imag(z) > 0
-#             D[eMap[i], vIdx] .=  im * g.h * αβt                 # Set trapezoidal weights moving up
-#         else
-#             D[eMap[i], vIdx] .= -im * g.h * αβt                 # Set trapezoidal weights moving down
-#         end
-# 
-#         # Populate left-right end correction weights
-#         bpIdx = getCorrectionIndices(g.c,  er, g)               # Base point correction indices
-#         crIdx = getCorrectionIndices(cIdx, er, g)               # Corner correction indices
-#         epIdx = getCorrectionIndices(eIdx, er, g)               # Endpoint correction indices
-#         
-#         if imag(g.z[eIdx]) != 0
-#             if imag(z) > 0
-#                 rbpIdx = rotCorrection(bpIdx, 1)                # Rotated base point indices
-#                 rcrIdx = rotCorrection(crIdx, 3)                # Rotated base point indices
-# 
-#                 hbp = im^(1 + α)                                # Base point angle correction
-#                 hcr = im                                        # Corner  angle correction
-#             else 
-#                 rbpIdx = rotCorrection(bpIdx, 3)                # Rotated base point indices
-#                 rcrIdx = rotCorrection(crIdx, 1)                # Rotated base point indices
-# 
-#                 hbp = (-im)^(1 + α)                             # Base point angle correction
-#                 hcr = (-im)                                     # Corner  angle correction
-#             end
-# 
-#             βt  = (z .- g.z[rbpIdx]).^β                         # Base point β term in integrand
-#             αβt = g.z[rcrIdx].^α .* (z .- g.z[rcrIdx]).^β       # Corner α-β term in integrand
-# 
-#             D[eMap[i], rbpIdx] += hbp * bpω .* βt               # Basepoint correction
-#             D[eMap[i], rcrIdx] += hcr * crω .* αβt              # Corner left-right correction
-#         end
-# 
-#         if real(g.z[eIdx]) != 0
-#             if real(z) > 0
-#                 rcrIdx = rotCorrection(crIdx, 0)                # Rotated corner indices
-#                 repIdx = rotCorrection(epIdx, 2)                # Rotated endpoint indices
-# 
-#                 hcr = 1.0                                       # Corner angle correction
-#                 hep = 1.0^(1 + β)                               # Endpoint angle correction
-#             else
-#                 rcrIdx = rotCorrection(crIdx, 2)                # Rotated corner indices
-#                 repIdx = rotCorrection(epIdx, 0)                # Rotated endpoint indices
-# 
-#                 hcr = (-1 + 0im)                                # Corner angle correction
-#                 hep = (-1 + 0im)^(1 + β)                        # Endpoint angle correction
-#             end
-# 
-#             αβt = g.z[rcrIdx].^α .* (z .- g.z[rcrIdx]).^β       # Corner α-β term in integrand
-#             αt  = g.z[repIdx].^α                                # Endpoint α term in integrand
-# 
-#             D[eMap[i], rcrIdx] += hcr * crω .* αβt              # Corner up-down correction
-#             D[eMap[i], repIdx] += hep * epω .* αt               # Endpoint correction
-#         end
-
-#         if real(z) != 0
-#             if real(z) > 0
-#                 rbpIdx = rotCorrection(bpIdx, 0)                # Rotated base point indices
-#                 rcrIdx = rotCorrection(crIdx, 2)                # Rotated base point indices
-# 
-#                 hbp = 1^(1 + α)                                 # Base point angle correction
-#                 hcr = 1                                         # Corner  angle correction
-#             else 
-#                 rbpIdx = rotCorrection(bpIdx, 2)                # Rotated base point indices
-#                 rcrIdx = rotCorrection(crIdx, 0)                # Rotated base point indices
-# 
-#                 hbp = (-1 + 0im)^(1 + α)                        # Base point angle correction
-#                 hcr = (-1 + 0im)                                # Corner  angle correction
-#             end
-# 
-#             βt  = (z .- g.z[rbpIdx]).^β                         # Base point β term in integrand
-#             αβt = g.z[rcrIdx].^α .* (z .- g.z[rcrIdx]).^β       # Corner α-β term in integrand
-# 
-#             D[eMap[i], rbpIdx] += hbp * bpω .* βt               # Basepoint correction
-#             D[eMap[i], rcrIdx] += hcr * crω .* αβt              # Corner left-right correction
-#         end
-# 
-#         if imag(z) != 0
-#             if imag(z) > 0
-#                 rcrIdx = rotCorrection(crIdx, 1)                # Rotated corner indices
-#                 repIdx = rotCorrection(epIdx, 3)                # Rotated endpoint indices
-# 
-#                 hcr = im                                        # Corner angle correction
-#                 hep = im^(1 + β)                                # Endpoint angle correction
-#             else
-#                 rcrIdx = rotCorrection(crIdx, 3)                # Rotated corner indices
-#                 repIdx = rotCorrection(epIdx, 1)                # Rotated endpoint indices
-# 
-#                 hcr = (-im)                                     # Corner angle correction
-#                 hep = (-im)^(1 + β)                             # Endpoint angle correction
-#             end
-# 
-#             αβt = g.z[rcrIdx].^α .* (z .- g.z[rcrIdx]).^β       # Corner α-β term in integrand
-#             αt  = g.z[repIdx].^α                                # Endpoint α term in integrand
-# 
-#             D[eMap[i], rcrIdx] += hcr * crω .* αβt              # Corner up-down correction
-#             D[eMap[i], repIdx] += hep * epω .* αt               # Endpoint correction
-#         end
-#     end
-# 
-#     return D
-# end

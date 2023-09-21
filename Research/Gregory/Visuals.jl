@@ -86,13 +86,13 @@ function complexPlot(z⃗, f⃗)
             x = x⃗,
             y = y⃗,
             z = args,
-            zsmooth = "best",
+            zsmooth = "fast",
             zmin = 0, zmax = 2π,
             colorscale = colors.hsv,
             colorbar = attr(
                 tickmode = "array",
                 tickvals = [0, π, 2π],
-                ticktext = ["-π", "0", "π"])),
+                ticktext = ["0", "π", "2π"])),
         Layout(
             width = 800, height = 800))
     
