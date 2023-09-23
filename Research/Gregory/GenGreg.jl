@@ -194,7 +194,7 @@ function getExternalWeights(zIdx, g::Grid, α, β)
 
         if n == 1
             βt = zα.(z .- g.z[iIdx], β)                                 # Basepoint β factor
-            h = dir^(1 + α)
+            h = zα(dir, 1 + α, θ = sgn(imag(z)) * π/2)
 
             row[iIdx] +=  h * βt .* getCorrection(c, dir, "bp")         # Basepoint corrections
         else
