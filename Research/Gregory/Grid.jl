@@ -2,7 +2,7 @@
 # Constructors and routines for working with complex grids for quadrature.
 #
 # Author: Caleb Jacobs
-# DLM: September 12, 2023
+# DLM: September 24, 2023
 =#
 
 "Complex grid for use with grid based quadratures."
@@ -161,107 +161,116 @@ function getPath(zIdx::Int64, g::Grid, r)
     Nx = round(Int64, real(g.z[zIdx]) / g.h)                        # Number of horizontal nodes
     Ny = round(Int64, imag(g.z[zIdx]) / g.h)                        # Number of vertical nodes
 
-    sgn(x) = x >= 0 ? 1 : -1                                        # Modified sign function
+    sgn(x) = x >= 0 ? 1 : -1                                        # Nonzero returning sign function
 
-    # Begin cases
-    if Nx > r                                                       # Far right side cases
-        if abs(Ny) > r                                              # L contour
-            v = g.c .+ sgn(Ny) * g.dy * [1 : abs(Ny) - 1...]        # Move vertically
-
-            c = v[end] + g.dy * sgn(Ny)                             # Corner index
-
-            p1 = Path(g.c, v, c)
-            
-            h = c .+ g.dx * [1 : Nx - 1...]                         # Move horizontally
-
-            p2 = Path(c, h, zIdx)
-            
-            path = [p1, p2]
-        else                                                        # U contour
-            v1 = g.c .+ sgn(Ny) * g.dy * [1 : 3r - 1...]            # Move past point vertically
-
-            c1 = v1[end] + g.dy * sgn(Ny)                           # First corner
-
-            p1 = Path(g.c, v1, c1)
-
-            h  = c1 .+ g.dx * [1 : Nx - 1...]                       # Move horizontally
-
-            c2 = h[end] + g.dx                                      # Second corner
-
-            p2 = Path(c1, h, c2)
-
-            v2 = c2 .- g.dy * sgn(Ny) * [1 : 3r - abs(Ny) - 1...]   # Move vertically back to point
-
-            p3 = Path(c2, v2, zIdx)
-
-            path = [p1, p2, p3]           
-        end
-    elseif abs(Nx) <= r                                             # Vertical band case
-        h1 = g.c .- g.dx * [1 : 3r - 1...]                          # Move past point horizontally
-
-        c1 = h1[end] - g.dx                                         # First corner
-
-        p1 = Path(g.c, h1, c1)
-
-        v  = c1 .+ g.dy * sgn(Ny) * [1 : abs(Ny) - 1...]            # Move vertically
-
-        c2 = v[end] + g.dy * sgn(Ny)                                # Second corner
-
-        p2 = Path(c1, v, c2)
-
-        h2 = Nx <= 0 ? c2 .+ g.dx * [1 : 3r - abs(Nx) - 1...] :    # Move horizontally back to point
-                       c2 .+ g.dx * [1 : 3r + abs(Nx) - 1...]
-
-        p3 = Path(c2, h2, zIdx)
-        
-        path = [p1, p2, p3]
-    elseif Nx < -r                                                  # Far left side cases
-        if abs(Ny) > 0                                              # Branch-cut-following L contour
-            h = g.c .- g.dx * [1 : abs(Nx) - 1...]                  # Move left horizontally
-
-            c = h[end] - g.dx                                       # Corner
-
-            p1 = Path(g.c, h, c)
-
-            v = c .+ g.dy * sgn(Ny) * [1 : abs(Ny) - 1...]          # Move vertically to end point
-
-            p2 = Path(c, v, zIdx)
-
-            path = [p1, p2]
-        else
-            h = g.c .- g.dx * [1 : abs(Nx) - 1...]
-            c = h[end] - g.dx
-            p = Path(g.c, h, c)
-
-            return [p]
-        end
-    end
-#         else                                                        # Branch-cut-following U contour
-#             h1 = g.c .- g.dx * [1 : r + abs(Nx) - 1...]
+#     # Begin cases
+#     if Nx > r                                                       # Far right side cases
+#         if abs(Ny) > r                                              # L contour
+#             v = g.c .+ sgn(Ny) * g.dy * [1 : abs(Ny) - 1...]        # Move vertically
 # 
-#             c1 = h1[end] - g.dx
+#             c = v[end] + g.dy * sgn(Ny)                             # Corner index
 # 
-#             p1 = Path(g.c, h1, c1)
+#             p1 = Path(g.c, v, c)
+#             
+#             h = c .+ g.dx * [1 : Nx - 1...]                         # Move horizontally
 # 
-#             v1 = c1 .+ g.dy * sgn(Ny) * [1 : 2r - 1...]
+#             p2 = Path(c, h, zIdx)
+#             
+#             path = [p1, p2]
+#         else                                                        # U contour
+#             v1 = g.c .+ sgn(Ny) * g.dy * [1 : 3r - 1...]            # Move past point vertically
 # 
-#             c2 = v1[end] + g.dy * sgn(Ny)
+#             c1 = v1[end] + g.dy * sgn(Ny)                           # First corner
 # 
-#             p2 = Path(c1, v1, c2)
+#             p1 = Path(g.c, v1, c1)
 # 
-#             h2 = c2 .+ g.dx * [1 : r - 1...]
+#             h  = c1 .+ g.dx * [1 : Nx - 1...]                       # Move horizontally
 # 
-#             c3 = h2[end] + g.dx
+#             c2 = h[end] + g.dx                                      # Second corner
 # 
-#             p3 = Path(c2, h2, c3)
+#             p2 = Path(c1, h, c2)
 # 
-#             v2 = c3 .- g.dy * sgn(Ny) * [1 : 2r - abs(Ny) - 1...]
+#             v2 = c2 .- g.dy * sgn(Ny) * [1 : 3r - abs(Ny) - 1...]   # Move vertically back to point
 # 
-#             p4 = Path(c3, v2, zIdx)
+#             p3 = Path(c2, v2, zIdx)
 # 
-#             path = [p1, p2, p3, p4]
+#             path = [p1, p2, p3]           
+#         end
+#     elseif abs(Nx) <= r                                             # Vertical band case
+#         h1 = g.c .- g.dx * [1 : 3r - 1...]                          # Move past point horizontally
+# 
+#         c1 = h1[end] - g.dx                                         # First corner
+# 
+#         p1 = Path(g.c, h1, c1)
+# 
+#         v  = c1 .+ g.dy * sgn(Ny) * [1 : abs(Ny) - 1...]            # Move vertically
+# 
+#         c2 = v[end] + g.dy * sgn(Ny)                                # Second corner
+# 
+#         p2 = Path(c1, v, c2)
+# 
+#         h2 = Nx <= 0 ? c2 .+ g.dx * [1 : 3r - abs(Nx) - 1...] :    # Move horizontally back to point
+#                        c2 .+ g.dx * [1 : 3r + abs(Nx) - 1...]
+# 
+#         p3 = Path(c2, h2, zIdx)
+#         
+#         path = [p1, p2, p3]
+#     elseif Nx < -r                                                  # Far left side cases
+#         if abs(Ny) > 0                                              # Branch-cut-following L contour
+#             h = g.c .- g.dx * [1 : abs(Nx) - 1...]                  # Move left horizontally
+# 
+#             c = h[end] - g.dx                                       # Corner
+# 
+#             p1 = Path(g.c, h, c)
+# 
+#             v = c .+ g.dy * sgn(Ny) * [1 : abs(Ny) - 1...]          # Move vertically to end point
+# 
+#             p2 = Path(c, v, zIdx)
+# 
+#             path = [p1, p2]
+#         else
+#             h = g.c .- g.dx * [1 : abs(Nx) - 1...]
+#             c = h[end] - g.dx
+#             p = Path(g.c, h, c)
+# 
+#             return [p]
 #         end
 #     end
+#
+    # Better pathing
+    if abs(Nx) >= abs(Ny)
+        v1 = g.c .- g.dy * sgn(Ny) * [1 : 2r - 1...]
+
+        c1 = v1[end] - g.dy * sgn(Ny)
+
+        h  = c1 .+ g.dx * sgn(Nx) * [1 : abs(Nx) - 1...]
+
+        c2 = h[end] + g.dx * sgn(Nx)
+
+        v2 = c2 .+ g.dy * sgn(Ny) * [1 : 2r + abs(Ny) - 1...]
+
+        p1 = Path(g.c, v1, c1)
+        p2 = Path(c1,  h,  c2)
+        p3 = Path(c2,  v2, zIdx)
+
+        return [p1, p2, p3]
+    else
+        h1 = g.c .- g.dx * sgn(Nx) * [1 : 2r - 1...]
+
+        c1 = h1[end] - g.dx * sgn(Nx)
+
+        v  = c1 .+ g.dy * sgn(Ny) * [1 : abs(Ny) - 1...]
+
+        c2 = v[end] + g.dy * sgn(Ny)
+
+        h2 = c2 .+ g.dx * sgn(Nx) * [1 : 2r + abs(Nx) - 1...]
+
+        p1 = Path(g.c, h1, c1)
+        p2 = Path(c1,  v,  c2)
+        p3 = Path(c2,  h2, zIdx)
+
+        return [p1, p2, p3]
+    end
 
     return path
 end

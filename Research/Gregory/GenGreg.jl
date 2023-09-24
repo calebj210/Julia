@@ -184,7 +184,7 @@ function getExternalWeights(zIdx, g::Grid, α, β)
             αβt = g.z[p.p].^α .* (z .- g.z[p.p]).^β                     # Trapezoidal αβ factor
         else
             αβt = zα.(     g.z[p.p], α, θ = sgn(imag(z)) * π) .* 
-                  zα.(z .- g.z[p.p], β, θ = sgn(imag(z)) * π/2)        # Trapezoidal αβ factor
+                  zα.(z .- g.z[p.p], β, θ = sgn(imag(z)) * π/2)         # Trapezoidal αβ factor
         end
 
         row[p.p] .+= dir * g.h * αβt                                    # Compute trapezoidal weights
