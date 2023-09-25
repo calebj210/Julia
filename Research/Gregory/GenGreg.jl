@@ -178,56 +178,121 @@ function getExternalWeights(zIdx, g::Grid, α, β)
     row = zeros(ComplexF64, length(g.z))                                # Initialize row to populate
 
     for (n, p) ∈ pairs(path)
+#         dir = sign(g.z[p.f] - g.z[p.i])                                 # Compute direction of travel
+# 
+#         if real(z) >= 2g.h * g.np
+#             αβt = g.z[p.p].^α .* (z .- g.z[p.p]).^β                     # Trapezoidal αβ factor
+#         else
+#             αβt = zα.(     g.z[p.p], α, θ = sgn(imag(z)) * π) .* 
+#                   zα.(z .- g.z[p.p], β, θ = sgn(imag(z)) * π/2)         # Trapezoidal αβ factor
+#         end
+# 
+#         row[p.p] .+= dir * g.h * αβt                                    # Compute trapezoidal weights
+# 
+#         iIdx = getCorrectionIndices(p.i, g)                             # Initial point correction indices
+#         fIdx = getCorrectionIndices(p.f, g)                             # Final point correction indices
+# 
+#         if n == 1
+#             βt = zα.(z .- g.z[iIdx], β)                                 # Basepoint β factor
+#             h = zα(dir, 1 + α, θ = sgn(imag(z)) * π/2)
+# 
+#             row[iIdx] +=  h * βt .* getCorrection(c, dir, "bp")         # Basepoint corrections
+#         else
+#             if real(z) <= 2g.h * g.np
+#                 αβt = zα.(     g.z[iIdx], α, θ = sgn(imag(z)) * π) .* 
+#                       zα.(z .- g.z[iIdx], β, θ = sgn(imag(z)) * π/2)   # Corner αβ factor
+#             else
+#                 αβt = g.z[iIdx].^α .* (z .- g.z[iIdx]).^β               # Corner αβ factor
+#             end
+#             h = dir
+# 
+#             row[iIdx] +=  h * αβt .* getCorrection(c, dir, "cr")        # Corner corrections
+#         end
+# 
+#         if n == N
+#             if real(z) <= 2g.h * g.np
+#                 αt = zα.(g.z[fIdx], α, θ = sgn(imag(z)) * π)
+#             else
+#                 αt = g.z[fIdx].^α                                       # Endpoint α factor
+#             end
+#             h = dir^(1 + β)
+#             
+#             row[fIdx] += h * αt .* getCorrection(c, -dir, "ep")         # Endpoint corrections
+#         else
+#             if real(z) <= 2g.h * g.np
+#                 αβt = zα.(     g.z[fIdx], α, θ = sgn(imag(z)) * π) .* 
+#                       zα.(z .- g.z[fIdx], β, θ = sgn(imag(z)) * π/2)   # Corner αβ factor
+#             else
+#                 αβt = g.z[fIdx].^α .* (z .- g.z[fIdx]).^β               # Corner αβ factor
+#             end
+#             h = dir
+# 
+#             row[fIdx] += h * αβt .* getCorrection(c, -dir, "cr")        # Corner corrections
+#         end
+
         dir = sign(g.z[p.f] - g.z[p.i])                                 # Compute direction of travel
-
-        if real(z) >= 2g.h * g.np
-            αβt = g.z[p.p].^α .* (z .- g.z[p.p]).^β                     # Trapezoidal αβ factor
-        else
-            αβt = zα.(     g.z[p.p], α, θ = sgn(imag(z)) * π) .* 
-                  zα.(z .- g.z[p.p], β, θ = sgn(imag(z)) * π/2)         # Trapezoidal αβ factor
-        end
-
-        row[p.p] .+= dir * g.h * αβt                                    # Compute trapezoidal weights
 
         iIdx = getCorrectionIndices(p.i, g)                             # Initial point correction indices
         fIdx = getCorrectionIndices(p.f, g)                             # Final point correction indices
 
-        if n == 1
-            βt = zα.(z .- g.z[iIdx], β)                                 # Basepoint β factor
-            h = zα(dir, 1 + α, θ = sgn(imag(z)) * π/2)
+        if abs(real(z)) >= abs(imag(z))
+            # Trapezoidal weights
+            αt = real(z) >= 0 ? g.z[p.p].^α : zα.(g.z[p.p], α, θ = sgn(imag(z)) * π)
+            βt = (z .- g.z[p.p]).^β
 
-            row[iIdx] +=  h * βt .* getCorrection(c, dir, "bp")         # Basepoint corrections
+            row[p.p] .+= dir * g.h .* αt .* βt
+
+            # Initial endpoint correction
+            h  = n == 1 ? dir^(1 + α) : dir
+            αt = n == 1 ? 1 : zα.(g.z[iIdx], α)
+            βt = (z .- g.z[iIdx]).^β
+
+            row[iIdx] += h * αt .* βt .* getCorrection(c, dir, n == 1 ? "bp" : "cr")
+
+            # Final endpoint correction
+            h  = n == N ? dir^(1 + β) : dir
+            αt = real(z) >= 0 ? g.z[fIdx].^α : zα.(g.z[fIdx], α, θ = -sgn(imag(z)) * π)
+            βt = n == N ? 1 : zα.(z .- g.z[fIdx], β)
+
+            row[fIdx] += h * αt .* βt .* getCorrection(c, dir, n == N ? "ep" : "cr")
         else
-            if real(z) <= 2g.h * g.np
-                αβt = zα.(     g.z[iIdx], α, θ = sgn(imag(z)) * π) .* 
-                      zα.(z .- g.z[iIdx], β, θ = sgn(imag(z)) * π/2)   # Corner αβ factor
-            else
-                αβt = g.z[iIdx].^α .* (z .- g.z[iIdx]).^β               # Corner αβ factor
-            end
-            h = dir
+            # Trapezoidal weights
+            αt = real(z) <  0 ?       g.z[p.p] .^α : zα.(g.z[p.p], α, θ = sgn(imag(z)) * π)
+            βt = real(z) >= 0 ? (z .- g.z[p.p]).^β : zα.(g.z[p.p], β, θ = sgn(imag(z)) * π)
 
-            row[iIdx] +=  h * αβt .* getCorrection(c, dir, "cr")        # Corner corrections
-        end
+            row[p.p] .+= dir * g.h .* αt .* βt
 
-        if n == N
-            if real(z) <= 2g.h * g.np
-                αt = zα.(g.z[fIdx], α, θ = sgn(imag(z)) * π)
+            # Initial endpoint correction
+            if imag(z) >= 0
+                h = n == N ? dir^(1 + α) : dir
             else
-                αt = g.z[fIdx].^α                                       # Endpoint α factor
+                h = n == N ? zα.(dir, 1 + α, θ = -π) : dir
             end
-            h = dir^(1 + β)
-            
-            row[fIdx] += h * αt .* getCorrection(c, -dir, "ep")         # Endpoint corrections
-        else
-            if real(z) <= 2g.h * g.np
-                αβt = zα.(     g.z[fIdx], α, θ = sgn(imag(z)) * π) .* 
-                      zα.(z .- g.z[fIdx], β, θ = sgn(imag(z)) * π/2)   # Corner αβ factor
+            if real(z) < 0
+                αt = n == 1 ? 1 : g.z[iIdx].^α
             else
-                αβt = g.z[fIdx].^α .* (z .- g.z[fIdx]).^β               # Corner αβ factor
+                αt = n == 1 ? 1 : zα.(g.z[iIdx], α, θ = sgn(imag(z)) * π)
             end
-            h = dir
+            βt = real(z) >= 0 ? zα.(z .- g.z[iIdx], β) : zα.(z .- g.z[iIdx], β, θ = sgn(imag(z)) * π)
 
-            row[fIdx] += h * αβt .* getCorrection(c, -dir, "cr")        # Corner corrections
+            row[iIdx] += h * αt .* βt .* getCorrection(c, dir, n == 1 ? "bp" : "cr")
+
+            # Final endpoint correction
+            if imag(z) >= 0
+                h = n == N ? dir^(1 + β) : dir
+            else
+                h = n == N ? zα(dir, 1 + β, θ = -π) : dir
+            end
+
+            αt = real(z) >= 0 ? g.z[fIdx].^α : zα.(g.z[fIdx], α, θ = sgn(imag(z)) * π)
+
+            if real(z) < 0
+                βt = n == N ? 1 : zα.(z .- g.z[fIdx], β, θ = sgn(imag(z)) * π)
+            else
+                βt = n == N ? 1 : g.z[fIdx].^β
+            end
+
+            row[fIdx] += h * αt .* βt .* getCorrection(c, dir, n == N ? "ep" : "cr")
         end
     end
 

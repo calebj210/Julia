@@ -236,7 +236,7 @@ function getPath(zIdx::Int64, g::Grid, r)
 #             return [p]
 #         end
 #     end
-#
+
     # Better pathing
     if abs(Nx) >= abs(Ny)
         v1 = g.c .- g.dy * sgn(Ny) * [1 : 2r - 1...]
