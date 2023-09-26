@@ -2,7 +2,7 @@
 # Constructors and routines for working with complex grids for quadrature.
 #
 # Author: Caleb Jacobs
-# DLM: September 24, 2023
+# DLM: September 25, 2023
 =#
 
 "Complex grid for use with grid based quadratures."
@@ -18,9 +18,6 @@ struct Grid
 
     "Padding indices"
     p::Vector{Int64}
-
-    "Type of point, 'i', 'e', 'p'"
-    t::Vector{Char}
 
     "Index spacing in x"
     dx::Int             
@@ -39,6 +36,9 @@ struct Grid
 
     "Number of padded nodes"
     np::Int64
+    
+    "Index radius of Taylor expansion"
+    T::Int64
 end
 
 struct Path
@@ -70,28 +70,25 @@ function getGrid(n, r; ir = 0.5, p = 0)::Grid
     dx = stride(grid, 2)                                # Index distance to move in x
     dy = stride(grid, 1)                                # Index distance to move in y
     c  = 1 + (p + n) * (dx + dy)                        # Index of origin
+    T = round(Int64, ir / h)
 
     z⃗ = vec(grid)                                       # Vectorize matrix grid
     i = Array{Int64}([])                                # Initialize internal index array
     e = Array{Int64}([])                                # Initialize external index array
     p = Array{Int64}([])                                # Initialize padding index array
-    t = similar(z⃗, Char)                                # Initialize type array
 
     # Populate index arrays
     for (idx, z) ∈ pairs(z⃗)
         if abs(z) <= ir
             push!(i, idx)                               # Internal node
-            t[idx] = 'i'
         elseif abs(real(z)) > r || abs(imag(z)) > r
             push!(p, idx)                               # Padding node
-            t[idx] = 'p'
         else
             push!(e, idx)                               # External node
-            t[idx] = 'e'
         end
     end
 
-    return Grid(z⃗, i, e, p, t, dx, dy, c, h, r, np)
+    return Grid(z⃗, i, e, p, dx, dy, c, h, r, np, T)
 end
 
 """
@@ -163,81 +160,7 @@ function getPath(zIdx::Int64, g::Grid, r)
 
     sgn(x) = x >= 0 ? 1 : -1                                        # Nonzero returning sign function
 
-#     # Begin cases
-#     if Nx > r                                                       # Far right side cases
-#         if abs(Ny) > r                                              # L contour
-#             v = g.c .+ sgn(Ny) * g.dy * [1 : abs(Ny) - 1...]        # Move vertically
-# 
-#             c = v[end] + g.dy * sgn(Ny)                             # Corner index
-# 
-#             p1 = Path(g.c, v, c)
-#             
-#             h = c .+ g.dx * [1 : Nx - 1...]                         # Move horizontally
-# 
-#             p2 = Path(c, h, zIdx)
-#             
-#             path = [p1, p2]
-#         else                                                        # U contour
-#             v1 = g.c .+ sgn(Ny) * g.dy * [1 : 3r - 1...]            # Move past point vertically
-# 
-#             c1 = v1[end] + g.dy * sgn(Ny)                           # First corner
-# 
-#             p1 = Path(g.c, v1, c1)
-# 
-#             h  = c1 .+ g.dx * [1 : Nx - 1...]                       # Move horizontally
-# 
-#             c2 = h[end] + g.dx                                      # Second corner
-# 
-#             p2 = Path(c1, h, c2)
-# 
-#             v2 = c2 .- g.dy * sgn(Ny) * [1 : 3r - abs(Ny) - 1...]   # Move vertically back to point
-# 
-#             p3 = Path(c2, v2, zIdx)
-# 
-#             path = [p1, p2, p3]           
-#         end
-#     elseif abs(Nx) <= r                                             # Vertical band case
-#         h1 = g.c .- g.dx * [1 : 3r - 1...]                          # Move past point horizontally
-# 
-#         c1 = h1[end] - g.dx                                         # First corner
-# 
-#         p1 = Path(g.c, h1, c1)
-# 
-#         v  = c1 .+ g.dy * sgn(Ny) * [1 : abs(Ny) - 1...]            # Move vertically
-# 
-#         c2 = v[end] + g.dy * sgn(Ny)                                # Second corner
-# 
-#         p2 = Path(c1, v, c2)
-# 
-#         h2 = Nx <= 0 ? c2 .+ g.dx * [1 : 3r - abs(Nx) - 1...] :    # Move horizontally back to point
-#                        c2 .+ g.dx * [1 : 3r + abs(Nx) - 1...]
-# 
-#         p3 = Path(c2, h2, zIdx)
-#         
-#         path = [p1, p2, p3]
-#     elseif Nx < -r                                                  # Far left side cases
-#         if abs(Ny) > 0                                              # Branch-cut-following L contour
-#             h = g.c .- g.dx * [1 : abs(Nx) - 1...]                  # Move left horizontally
-# 
-#             c = h[end] - g.dx                                       # Corner
-# 
-#             p1 = Path(g.c, h, c)
-# 
-#             v = c .+ g.dy * sgn(Ny) * [1 : abs(Ny) - 1...]          # Move vertically to end point
-# 
-#             p2 = Path(c, v, zIdx)
-# 
-#             path = [p1, p2]
-#         else
-#             h = g.c .- g.dx * [1 : abs(Nx) - 1...]
-#             c = h[end] - g.dx
-#             p = Path(g.c, h, c)
-# 
-#             return [p]
-#         end
-#     end
-
-    # Better pathing
+    # Begin u-pathing
     if abs(Nx) >= abs(Ny)
         v1 = g.c .- g.dy * sgn(Ny) * [1 : 2r - 1...]
 
@@ -280,12 +203,10 @@ function getPathIndices(z::ComplexF64, g::Grid)
 end
 
 """ 
-    getCorrectionIndices(z, r, z⃗)
-Get indices of surrounding correction nodes in z⃗ an adjacent distance of r away from z.
+    getCorrectionIndices(z, r, g)
+Get indices of surrounding correction nodes in grid g an adjacent distance of r away from z.
 """
-function getCorrectionIndices(zIdx::Int64, g::Grid)
-    r = g.np                                                            # Radius of padding nodes
-
+function getCorrectionIndices(zIdx::Int64, r::Int64, g::Grid)
     if r == 0
         return [zIdx]
     end
