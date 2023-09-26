@@ -6,6 +6,7 @@
 =#
 
 using SpecialFunctions
+using LinearAlgebra
 include("Grid.jl")
 
 struct Corrections
@@ -49,12 +50,10 @@ end
 
 Compute internal weights for ``∫₀ᶻ(u)ᵅ(z-u)ᵝf(u)du`` where `idx` are the indices of the internal nodes in the grid `g`.
 """
-function getInternalWeights(zIdx, idx, g::Grid, α, β)
+function getInternalWeights(zIdx, A, g::Grid, α, β)
     z = g.z[zIdx]               # Get z value at index 
 
-    N = length(idx)
-
-    A = getVand(idx, g)
+    N = size(A, 1)
 
     # Right hand side from Taylor expansion of integral
     b = [z^(1 + α + β + k) * gamma(1 + α + k) * gamma(1 + β) / gamma(2 + α + β + k) for k ∈ 0 : N - 1]
@@ -234,9 +233,10 @@ function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, er = 3)
 
     # Populate internal weights using Taylor expansion approximation
     idx = getCorrectionIndices(g.c, g.T, g)                             # Taylor expansion indices
+    A = lu(getVand(idx, g))
 
     for (i, iIdx) ∈ pairs(g.i)
-        D[iMap[i], idx] = getInternalWeights(iIdx, idx, g, α, β)
+        D[iMap[i], idx] = getInternalWeights(iIdx, A, g, α, β)
     end
 
     # Populate external weights using generalized Gregory quadrature
