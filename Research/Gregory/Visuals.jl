@@ -93,13 +93,13 @@ function complexPlot(z⃗, f⃗)
                 tickmode = "array",
                 tickvals = [0, π, 2π],
                 ticktext = ["0", "π", "2π"])),
-        Layout(
-            width = 800, height = 800))
+            Layout(title = "Relative Error",
+                width = 800, height = 800))
     
     return plt
 end
 
-function complexPlot3d(z⃗, f⃗)
+function complexPlot3d(z⃗::Matrix, f⃗::Matrix)
     x⃗ = real(z⃗)
     y⃗ = imag(z⃗)
     z⃗ = abs.(f⃗)
@@ -117,4 +117,11 @@ function complexPlot3d(z⃗, f⃗)
                 ticktext = ["-π", "0", "π"])))
         
     return plt
+end
+
+function complexPlot3d(z::Vector, f::Vector)
+    Z = reshape(z, round(Int64, sqrt(length(z))), :)
+    F = reshape(f, round(Int64, sqrt(length(f))), :)
+
+    return complexPlot3d(Z, F)
 end
