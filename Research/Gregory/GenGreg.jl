@@ -224,8 +224,8 @@ Generate differentiation matrix for ``∫₀ᶻ(u)ᵅ(z-u)ᵝf(u)du`` over a gri
 
 The radius to use the Taylor expansion is given by `ir` while the relative radius of the correction stencils are given by `er`.
 """
-function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, er = 3)
-    g = getGrid(n, r, ir = ir, p = er)                                  # Generate grid
+function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, np = 3, nl = 1)
+    g = getGrid(n, r, ir = ir, np = np, nl = 3)                         # Generate grid
 
     (iMap, eMap) = getReducedGridMap(g)                                 # Index maps to reduced grid for indexing through diff matrix
 
@@ -246,5 +246,5 @@ function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, er = 3)
         D[eMap[e], :] = getExternalWeights(eIdx, c, g, α, β)
     end
 
-    return D
+    return (D, g)
 end
