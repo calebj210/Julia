@@ -59,8 +59,6 @@ function getGrid(n, r; ir = 0.5, np = 0, nl = 1)::Grid
     y⃗ = [range(0, r, length = n + 1)...]                # imaginary parts
     h  = abs(x⃗[2] - x⃗[1])                               # Grid spacing
 
-    np = p                                              # Number of padding nodes
-
     pad = r .+ h * [1 : nl * np...]                      # Padded nodes
     xp = [-pad[end : -1 : 1]; -x⃗[end: -1: 2]; x⃗; pad]   # Padded x vector
     yp = [-pad[end : -1 : 1]; -y⃗[end: -1: 2]; y⃗; pad]   # Padded y vector
@@ -69,10 +67,10 @@ function getGrid(n, r; ir = 0.5, np = 0, nl = 1)::Grid
 
     dx = stride(grid, 2)                                # Index distance to move in x
     dy = stride(grid, 1)                                # Index distance to move in y
-    c  = 1 + (np + n) * (dx + dy)                       # Index of origin
+    c  = 1 + (np * nl + n) * (dx + dy)                  # Index of origin
     T = round(Int64, ir / h)
 
-    pr = r + h * (pl - 1) * p                           # Final Padding layer radius
+    pr = nl == 0 ? r : r + h * (nl - 1) * np            # Final Padding layer radius
 
     z⃗ = vec(grid)                                       # Vectorize matrix grid
     i = Array{Int64}([])                                # Initialize internal index array
@@ -89,7 +87,7 @@ function getGrid(n, r; ir = 0.5, np = 0, nl = 1)::Grid
         end
     end
 
-    return Grid(z⃗, i, e, dx, dy, c, h, r, np, pl, T)
+    return Grid(z⃗, i, e, dx, dy, c, h, r, np, nl, T)
 end
 
 """
