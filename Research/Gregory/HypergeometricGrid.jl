@@ -22,22 +22,36 @@ function _1F0(a, g)
     return f
 end
 
+"0F1 Hypergeomtreic function given by z^(1/2 - b/2) Γ(b) I_(b-1)(2√z)"
+function _0F1(b, g)
+    f = g.z.^((1 - b) / 2) .* gamma(b) .* besseli.(b - 1, 2sqrt.(g.z))
+
+    return f
+end
+
 function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5)
-    g = getGrid(n, r, ir = Tr, np = np, nl = length(b))     # Initial grid
+    o = min(length(a), length(b))                           # Order of pFq
+
+    g = getGrid(n, r, ir = Tr, np = np, nl = o)             # Initial grid
 
     aIdx = length(a)                                        # Index for a
     bIdx = length(b)                                        # Index for b
 
     if length(a) == length(b)
-        f = _0F0(g)                                         # Initial function is 0F0
+        f = _0F0(g)                                         # 0F0 base function case
     elseif length(a) == length(b) + 1
-        f = _1F0(a[aIdx], g)                                # Initial funciton is 1F0
+        f = _1F0(a[aIdx], g)                                # 1F0 base function case
         aIdx -= 1                                           # Move a index to next layer
+    elseif length(a) == length(b) - 1
+        f = _0F1(b[bIdx], g)                                # 0F1 base function case
+        f[g.c] = 1                                          # Fix origin singularity
+
+        bIdx -= 1                                           # Move b index to next layer
     else
         throw(error("Non-supported pFq order"))
     end
 
-    for nl = length(b) : -1 : 1
+    for nl = o : -1 : 1
         α = a[aIdx] - 1                                     # Base point singularity order
         β = b[bIdx] - a[aIdx] - 1                           # Evaluation point singularity order
 

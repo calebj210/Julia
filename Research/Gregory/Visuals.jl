@@ -2,7 +2,7 @@
 # Collection of functions for visuallizing properties of integrators
 #
 # Author: Caleb Jacobs
-# DLM: September 12, 2023
+# DLM: October 3, 2023
 =#
 
 include("GenGreg.jl")
@@ -55,23 +55,38 @@ function plotGrid(g::Grid)
         Layout(width = 800, heights = 800))
 end
 
-function complexAbsPlot(z⃗, f⃗)
+function complexAbsPlot(z⃗, f⃗; logscale = false)
     x⃗ = real(z⃗[:])
     y⃗ = imag(z⃗[:])
-    z⃗ = log10.(abs.(f⃗))
-    z⃗[isinf.(z⃗)] .= -17
+    if logscale
+        z⃗ = log10.(abs.(f⃗))
+        z⃗[isinf.(z⃗)] .= -17
+    else
+        z⃗ = abs.(f⃗)
+    end
 
     display(findall(isnan.(z⃗)))
     
-    plt = plot(heatmap(
-            x = x⃗,
-            y = y⃗,
-            z = z⃗,
-            zsmooth = "none",
-            zmin = -16, zmax = 1,
-            colorscale = colors.viridis),
-        Layout(
-            width = 800, height = 800))
+    if logscale
+        plt = plot(heatmap(
+                x = x⃗,
+                y = y⃗,
+                z = z⃗,
+                zsmooth = "none",
+                zmin = -16, zmax = 1,
+                colorscale = colors.viridis),
+            Layout(
+                width = 800, height = 800))
+    else
+        plt = plot(heatmap(
+                x = x⃗,
+                y = y⃗,
+                z = z⃗,
+                zsmooth = "none",
+                colorscale = colors.viridis),
+            Layout(
+                width = 800, height = 800))
+    end
     
     return plt
 end
@@ -93,8 +108,7 @@ function complexPlot(z⃗, f⃗)
                 tickmode = "array",
                 tickvals = [0, π, 2π],
                 ticktext = ["0", "π", "2π"])),
-            Layout(title = "Relative Error",
-                width = 800, height = 800))
+            Layout(width = 800, height = 800))
     
     return plt
 end

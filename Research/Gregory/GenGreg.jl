@@ -2,11 +2,12 @@
 # Generalized, grid-based Gregory quadrature for computing hypergeometric pFq
 #
 # Author: Caleb Jacobs
-# DLM: September 25, 2023
+# DLM: October 3, 2023
 =#
 
 using SpecialFunctions
 using LinearAlgebra
+
 include("Grid.jl")
 
 struct Corrections
@@ -27,11 +28,20 @@ struct Corrections
 end
 
 "Compute roots given a power α and a branch cut rotation of θ."
-function zα(z, α; θ = 0)
+function zα(z, α::Real; θ = 0)
     if θ >= 0
         return angle(z) >= θ - π ? z^α : z^α * cispi( 2 * (α % 1))
     else
         return angle(z) <  θ + π ? z^α : z^α * cispi(-2 * (α % 1))
+    end
+end
+
+"Rotate branch of complex power"
+function zα(z, α::Complex; θ = 0)
+    if θ >= 0
+        return angle(z) >= θ - π ? z^α : z^α * cispi( 2 * (α.re % 1)) * exp(-2π * α.im)
+    else
+        return angle(z) <  θ + π ? z^α : z^α * cispi(-2 * (α.re % 1)) * exp( 2π * α.im)
     end
 end
 
