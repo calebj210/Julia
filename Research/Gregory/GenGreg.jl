@@ -6,6 +6,7 @@
 =#
 
 using SpecialFunctions
+using SparseArrays
 using LinearAlgebra
 
 include("Grid.jl")

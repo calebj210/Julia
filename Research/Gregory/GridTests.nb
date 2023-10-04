@@ -1,0 +1,110 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 13.3' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[      3694,        102]
+NotebookOptionsPosition[      3214,         85]
+NotebookOutlinePosition[      3614,        101]
+CellTagsIndexPosition[      3571,         98]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"tmp", " ", "=", 
+   RowBox[{"ToExpression", "/@", " ", 
+    RowBox[{
+    "Import", "[", 
+     "\"\</home/merlin/Documents/Julia/Research/Gregory/Data/grid_40_2.csv\>\"\
+", "]"}]}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"vals", "=", 
+   RowBox[{
+    RowBox[{"tmp", "[", 
+     RowBox[{"[", 
+      RowBox[{";;", ",", "1"}], "]"}], "]"}], "+", 
+    RowBox[{"\[ImaginaryI]", " ", 
+     RowBox[{"tmp", "[", 
+      RowBox[{"[", 
+       RowBox[{";;", ",", "2"}], "]"}], "]"}]}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"pfq", "=", 
+   RowBox[{"HypergeometricPFQ", "[", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{".1", ",", 
+       RowBox[{
+        RowBox[{"-", ".2"}], "\[ImaginaryI]"}]}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", ".3"}], "\[ImaginaryI]"}], "}"}], ",", "vals"}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Export", "[", 
+  RowBox[{
+  "\"\</home/merlin/Documents/Julia/Research/Gregory/Data/pfp110.csv\>\"", 
+   ",", 
+   RowBox[{"ReIm", "[", "pfq", "]"}]}], "]"}]}], "Input",
+ CellChangeTimes->{{3.905439342271557*^9, 3.905439404682473*^9}, {
+   3.9054396179693832`*^9, 3.905439774372663*^9}, {3.905440107216487*^9, 
+   3.905440127493299*^9}, {3.9054427808400373`*^9, 3.9054427831104383`*^9}, {
+   3.905443081509585*^9, 3.905443081965686*^9}, {3.9054431322648897`*^9, 
+   3.9054432790905943`*^9}, {3.9054442513931313`*^9, 3.90544425503442*^9}, {
+   3.9054443091808357`*^9, 3.90544430937398*^9}, {3.905444921325333*^9, 
+   3.905444921465102*^9}, {3.905444965162292*^9, 3.905444967131483*^9}, {
+   3.905447919793146*^9, 3.905447929200652*^9}, 3.905448016243947*^9, {
+   3.9054483420656557`*^9, 3.905448349181719*^9}, {3.9054485200307703`*^9, 
+   3.905448531996461*^9}, {3.905448610070702*^9, 3.9054486175870113`*^9}, {
+   3.905448903152959*^9, 3.905448903532104*^9}},
+ CellLabel->
+  "In[173]:=",ExpressionUUID->"43afef9b-6fb8-44ce-b107-13fb40cf4d53"],
+
+Cell[BoxData["\<\"/home/merlin/Documents/Julia/Research/Gregory/Data/pfp110.\
+csv\"\>"], "Output",
+ CellChangeTimes->{{3.905443213173603*^9, 3.905443283544244*^9}, 
+   3.905443803528432*^9, 3.9054441056582727`*^9, 3.905444259553349*^9, 
+   3.9054444348371*^9, 3.905444968486124*^9, 3.905447192287768*^9, {
+   3.905447924776334*^9, 3.905447931036611*^9}, 3.905448017088111*^9, 
+   3.905448351541562*^9, 3.905448535117867*^9, 3.905448619176162*^9, {
+   3.905448878796049*^9, 3.905448905083788*^9}, 3.905448987327548*^9, 
+   3.9054496844967327`*^9, 3.90544975253153*^9},
+ CellLabel->
+  "Out[176]=",ExpressionUUID->"2d700a52-ceac-4a0e-9c12-88efe05d71d7"]
+}, Open  ]]
+},
+WindowSize->{2280, 1382.25},
+WindowMargins->{{11.25, Automatic}, {11.25, Automatic}},
+FrontEndVersion->"13.3 for Linux x86 (64-bit) (June 3, 2023)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"09a7744d-05c3-433f-aebf-9151f2e1a5b6"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[580, 22, 1965, 48, 140, "Input",ExpressionUUID->"43afef9b-6fb8-44ce-b107-13fb40cf4d53"],
+Cell[2548, 72, 650, 10, 50, "Output",ExpressionUUID->"2d700a52-ceac-4a0e-9c12-88efe05d71d7"]
+}, Open  ]]
+}
+]
+*)
+
