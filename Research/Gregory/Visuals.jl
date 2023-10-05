@@ -2,14 +2,12 @@
 # Collection of functions for visuallizing properties of integrators
 #
 # Author: Caleb Jacobs
-# DLM: October 3, 2023
+# DLM: October 5, 2023
 =#
 
 include("GenGreg.jl")
 using PlotlyJS
-# using Plots
 using Colors
-using BenchmarkTools
 
 """
     plotPath(idx, g)
@@ -55,7 +53,7 @@ function plotGrid(g::Grid)
         Layout(width = 800, heights = 800))
 end
 
-function complexAbsPlot(z⃗, f⃗; logscale = false)
+function complexAbsPlot(z⃗, f⃗; logscale = false, title = "")
     x⃗ = real(z⃗[:])
     y⃗ = imag(z⃗[:])
     if logscale
@@ -65,8 +63,30 @@ function complexAbsPlot(z⃗, f⃗; logscale = false)
         z⃗ = abs.(f⃗)
     end
 
-    display(findall(isnan.(z⃗)))
-    
+    layout = Layout(
+        width = 800, height = 800,
+        xaxis = attr(
+            title = attr(
+                text = "Re(z)",
+                font_size = 20
+            )
+        ),
+        yaxis = attr(
+            title = attr(
+                text = "Im(z)",
+                font_size = 20
+            )
+        ),
+        title = attr(
+            text = title,
+            font_size = 25,
+            y = 0.96,
+            x = 0.5,
+            xanchor = "center",
+            yanchor = "top"
+        )
+    )
+
     if logscale
         plt = plot(heatmap(
                 x = x⃗,
@@ -75,8 +95,7 @@ function complexAbsPlot(z⃗, f⃗; logscale = false)
                 zsmooth = "none",
                 zmin = -16, zmax = 1,
                 colorscale = colors.viridis),
-            Layout(
-                width = 800, height = 800))
+               layout)
     else
         plt = plot(heatmap(
                 x = x⃗,
@@ -84,8 +103,7 @@ function complexAbsPlot(z⃗, f⃗; logscale = false)
                 z = z⃗,
                 zsmooth = "none",
                 colorscale = colors.viridis),
-            Layout(
-                width = 800, height = 800))
+               layout)
     end
     
     return plt
