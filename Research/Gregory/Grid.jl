@@ -2,7 +2,7 @@
 # Constructors and routines for working with complex grids for quadrature.
 #
 # Author: Caleb Jacobs
-# DLM: October 2, 2023
+# DLM: October 10, 2023
 =#
 
 "Complex grid for use with grid based quadratures."
@@ -94,6 +94,9 @@ function getGrid(n, r; ir = 0.5, np = 0, nl = 1)::Grid
             push!(e, idx)                               # External node
         end
     end
+
+    # Sort internal boundary nodes
+    sort!(ib, by = i -> angle(z⃗[i]))
 
     return Grid(z⃗, i, e, ib, dx, dy, c, h, r, np, nl, T)
 end

@@ -2,7 +2,7 @@
 # Test suite for grid based hypergeometric calculations
 #
 # Author: Caleb Jacobs
-# DLM: October 5, 2023
+# DLM: October 10, 2023
 =#
 
 using CSV, Tables
@@ -42,22 +42,22 @@ function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5)
 end
 
 # pFp Tests
-pFp12(; r = 1.5, n = 40, np = 3, Tr = 0.4) = pFqTest([.1], [.2], r = r, n = n, np = np, Tr = Tr) 
-pFp1122(; r = 1.5, n = 40, np = 3, Tr = 0.4) = pFqTest([.1,.1], [.2,.2], r = r, n = n, np = np, Tr = Tr) 
-pFp111222(; r = 1.5, n = 40, np = 3, Tr = 0.4) = pFqTest([.1,.1,.1], [.2,.2,.2], r = r, n = n, np = np, Tr = Tr) 
-pFp11112222(; r = 1.5, n = 40, np = 3, Tr = 0.4) = pFqTest([.1,.1,.1,.1], [.2,.2,.2,.2], r = r, n = n, np = np, Tr = Tr) 
-pFp1111122222(; r = 1.5, n = 40, np = 3, Tr = 0.4) = pFqTest([.1,.1,.1,.1,.1], [.2,.2,.2,.2,.2], r = r, n = n, np = np, Tr = Tr) 
+pFp12(; r = 1.5, n = 40, np = 3, Tr = 0.75) = pFqTest([.1], [.2], r = r, n = n, np = np, Tr = Tr) 
+pFp1122(; r = 1.5, n = 40, np = 3, Tr = 0.75) = pFqTest([.1,.1], [.2,.2], r = r, n = n, np = np, Tr = Tr) 
+pFp111222(; r = 1.5, n = 40, np = 3, Tr = 0.75) = pFqTest([.1,.1,.1], [.2,.2,.2], r = r, n = n, np = np, Tr = Tr) 
+pFp11112222(; r = 1.5, n = 40, np = 3, Tr = 0.75) = pFqTest([.1,.1,.1,.1], [.2,.2,.2,.2], r = r, n = n, np = np, Tr = Tr) 
+pFp1111122222(; r = 1.5, n = 40, np = 3, Tr = 0.75) = pFqTest([.1,.1,.1,.1,.1], [.2,.2,.2,.2,.2], r = r, n = n, np = np, Tr = Tr) 
 
 # pFp+1 Tests
-pFpp122(; r = 1.5, n = 40, np = 3, Tr = 0.3) = pFqTest([1], [2,2], r = r, n = n, np = np, Tr = Tr) 
-pFpp11222(; r = 1.5, n = 40, np = 3, Tr = 0.3) = pFqTest([1,1], [2,2,2], r = r, n = n, np = np, Tr = Tr) 
-pFpp1112222(; r = 1.5, n = 40, np = 3, Tr = 0.3) = pFqTest([1,1,1], [2,2,2,2], r = r, n = n, np = np, Tr = Tr) 
-pFpp111122222(; r = 1.5, n = 40, np = 3, Tr = 0.3) = pFqTest([1,1,1,1], [2,2,2,2,2], r = r, n = n, np = np, Tr = Tr) 
-pFpp11111222222(; r = 1.5, n = 40, np = 3, Tr = 0.3) = pFqTest([1,1,1,1,1], [2,2,2,2,2,2], r = r, n = n, np = np, Tr = Tr) 
+pFpp122(; r = 1.5, n = 40, np = 3, Tr = 0.5) = pFqTest([1], [2,2], r = r, n = n, np = np, Tr = Tr) 
+pFpp11222(; r = 1.5, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1], [2,2,2], r = r, n = n, np = np, Tr = Tr) 
+pFpp1112222(; r = 1.5, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1,1], [2,2,2,2], r = r, n = n, np = np, Tr = Tr) 
+pFpp111122222(; r = 1.5, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1,1,1], [2,2,2,2,2], r = r, n = n, np = np, Tr = Tr) 
+pFpp11111222222(; r = 1.5, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1,1,1,1], [2,2,2,2,2,2], r = r, n = n, np = np, Tr = Tr) 
 
 # ppFp Tests
-ppFp112(; r = 1.2, n = 40, np = 3, Tr = 0.25) = pFqTest([1,1], [2], r = r, n = n, np = np, Tr = Tr) 
-ppFp11122(; r = 1.2, n = 40, np = 3, Tr = 0.25) = pFqTest([1,1,1], [2,2], r = r, n = n, np = np, Tr = Tr) 
-ppFp1111222(; r = 1.2, n = 40, np = 3, Tr = 0.25) = pFqTest([1,1,1,1], [2,2,2], r = r, n = n, np = np, Tr = Tr) 
-ppFp111112222(; r = 1.2, n = 40, np = 3, Tr = 0.25) = pFqTest([1,1,1,1,1], [2,2,2,2], r = r, n = n, np = np, Tr = Tr) 
-ppFp11111122222(; r = 1.2, n = 40, np = 3, Tr = 0.25) = pFqTest([1,1,1,1,1,1], [2,2,2,2,2], r = r, n = n, np = np, Tr = Tr) 
+ppFp112(; r = 1.2, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1], [2], r = r, n = n, np = np, Tr = Tr) 
+ppFp11122(; r = 1.2, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1,1], [2,2], r = r, n = n, np = np, Tr = Tr) 
+ppFp1111222(; r = 1.2, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1,1,1], [2,2,2], r = r, n = n, np = np, Tr = Tr) 
+ppFp111112222(; r = 1.2, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1,1,1,1], [2,2,2,2], r = r, n = n, np = np, Tr = Tr) 
+ppFp11111122222(; r = 1.2, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1,1,1,1,1], [2,2,2,2,2], r = r, n = n, np = np, Tr = Tr) 

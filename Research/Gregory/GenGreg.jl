@@ -2,7 +2,7 @@
 # Generalized, grid-based Gregory quadrature for computing hypergeometric pFq
 #
 # Author: Caleb Jacobs
-# DLM: October 3, 2023
+# DLM: October 10, 2023
 =#
 
 using SpecialFunctions
@@ -243,11 +243,10 @@ function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, np = 3, nl = 1)
     D = zeros(ComplexF64, length(g.i) + length(g.e), length(g.z))       # Initialize differentiation matrix
 
     # Populate internal weights using Taylor expansion approximation
-    idx = getCorrectionIndices(g.c, g.T, g)                             # Taylor expansion indices
-    A = lu(getVand(idx, g))
+    A = lu(getVand(g.ib, g))                                            # Compute vandermonde of internal boundary nodes
 
     for (i, iIdx) ∈ pairs(g.i)
-        D[iMap[i], idx] = getInternalWeights(iIdx, A, g, α, β)
+        D[iMap[i], g.ib] = getInternalWeights(iIdx, A, g, α, β)
     end
 
     # Populate external weights using generalized Gregory quadrature

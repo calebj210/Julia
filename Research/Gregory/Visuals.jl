@@ -44,6 +44,7 @@ function plotGrid(g::Grid)
     z⃗ = zeros(length(g.z))
     z⃗[g.e] .= 1
     z⃗[g.i] .= 2
+    z⃗[g.ib] = 2 * [0 : (length(g.ib) - 1)...] / length(g.ib)
 
     plt = plot(heatmap(
             x = x⃗, y = y⃗, z = z⃗,
