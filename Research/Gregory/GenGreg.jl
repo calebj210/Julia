@@ -167,6 +167,36 @@ function getCorrection(c::Corrections, dir, type::String)
 end
 
 """
+    getBranchAngles(z)
+
+Compute appropriate branch cut rotation angles based on the path to `z`.
+"""
+function getBranchAngle(z, g::Grid)
+    if abs(real(z)) < abs(imag(z)) || real(z) >= 0 && abs(imag(z)) >= 2g.np
+        # Right and left moving cuts
+        if real(z) >= 0
+            θα = sgn(imag(z)) * π
+            θβ = 0
+        else
+            θα = 0
+            θβ = sgn(imag(z)) * π
+        end
+    else
+        # Up and down moving cuts
+        if real(z) >= 0
+            θα =  sgn(imag(z)) * π / 2
+#             θα = 0
+            θβ = -sgn(imag(z)) * π / 2
+        else
+            θα =  sgn(imag(z)) * π
+            θβ =  sgn(imag(z)) * π / 2
+        end
+    end
+
+    return (θα, θβ)
+end
+
+"""
     getExternalWeights(row, zIdx, path, g::Grid, α, β)
 
 Get external differentiation entries corresponding to `g`.z[`zIdx`].
@@ -184,25 +214,7 @@ function getExternalWeights(zIdx, c::Corrections, g::Grid, α, β)
         fIdx = getCorrectionIndices(p.f, g.np, g)                       # Final point correction indices
 
         # Choose appropriate branch cuts
-        if abs(real(z)) >= abs(imag(z))
-            # Up and down moving cuts
-            if real(z) >= 0
-                θα = -sgn(imag(z)) * π / 2
-                θβ =  sgn(imag(z)) * π / 2
-            else
-                θα = sgn(imag(z)) * π
-                θβ = sgn(imag(z)) * π / 2
-            end
-        else
-            # Right and left moving cuts
-            if real(z) >= 0
-                θα = sgn(imag(z)) * π
-                θβ = 0
-            else
-                θα = 0
-                θβ = sgn(imag(z)) * π
-            end
-        end
+        θα, θβ = getBranchAngle(z, g)
 
         # Trapezoidal weights
         αt = zα.(     g.z[p.p], α, θ = θα)

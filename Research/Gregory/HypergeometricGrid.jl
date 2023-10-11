@@ -2,7 +2,7 @@
 # Generalized Gregory quadrature for computing high order hypergeometric pFq over a grid
 #
 # Author: Caleb Jacobs
-# DLM: October 3, 2023
+# DLM: October 11, 2023
 =#
 
 using SpecialFunctions
@@ -36,6 +36,9 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5)
 
     aIdx = length(a)                                        # Index for a
     bIdx = length(b)                                        # Index for b
+
+    a = sort(a, by = abs, rev = true)                       # Sort a by modulus to help with stability
+    b = sort(b, by = abs, rev = true)                       # Sort b by modulus to help with stability
 
     if length(a) == length(b)
         f = _0F0(g)                                         # 0F0 base function case
