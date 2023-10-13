@@ -2,7 +2,7 @@
 # Generalized Gregory quadrature for computing high order hypergeometric pFq over a grid
 #
 # Author: Caleb Jacobs
-# DLM: October 11, 2023
+# DLM: October 13, 2023
 =#
 
 using SpecialFunctions
@@ -40,10 +40,14 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5)
     a = sort(a, by = abs, rev = true)                       # Sort a by modulus to help with stability
     b = sort(b, by = abs, rev = true)                       # Sort b by modulus to help with stability
 
+    γ = 0                                                   # Initialize extra branch cut correction
     if length(a) == length(b)
         f = _0F0(g)                                         # 0F0 base function case
     elseif length(a) == length(b) + 1
-        f = _1F0(a[aIdx], g)                                # 1F0 base function case
+        γ = -a[end]                                         # Set extra branch cut correction
+
+        f = _1F0(a[end], g)                                 # 1F0 base function case
+
         aIdx -= 1                                           # Move a index to next layer
     elseif length(a) == length(b) - 1
         f = _0F1(b[bIdx], g)                                # 0F1 base function case
@@ -58,7 +62,7 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5)
         α = a[aIdx] - 1                                     # Base point singularity order
         β = b[bIdx] - a[aIdx] - 1                           # Evaluation point singularity order
 
-        D = getDiffMat(n, r, α = α, β = β,                  # Generate differentiation matrix
+        D = getDiffMat(n, r, α = α, β = β, γ = γ,           # Generate differentiation matrix
                        ir = Tr, np = np, nl= nl)
         
         g = getGrid(n, r, ir = Tr, np = np, nl = nl - 1)    # Get next computation grid

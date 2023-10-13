@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[      6316,        134]
-NotebookOptionsPosition[      5835,        117]
-NotebookOutlinePosition[      6236,        133]
-CellTagsIndexPosition[      6193,        130]
+NotebookDataLength[      7066,        143]
+NotebookOptionsPosition[      6585,        126]
+NotebookOutlinePosition[      6985,        142]
+CellTagsIndexPosition[      6942,        139]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -43,8 +43,9 @@ Cell[BoxData[{
   RowBox[{"pfq", "=", 
    RowBox[{"HypergeometricPFQ", "[", 
     RowBox[{
-     RowBox[{"{", "1", "}"}], ",", 
-     RowBox[{"{", "2", "}"}], ",", "vals"}], "]"}]}], 
+     RowBox[{"{", 
+      RowBox[{".46", ",", ".1"}], "}"}], ",", 
+     RowBox[{"{", ".65", "}"}], ",", "vals"}], "]"}]}], 
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"Export", "[", 
   RowBox[{
@@ -84,9 +85,13 @@ Cell[BoxData[{
    3.90597802134837*^9}, {3.90597809442208*^9, 3.905978126862754*^9}, {
    3.9059781596707373`*^9, 3.905978231902767*^9}, {3.905978284312592*^9, 
    3.905978350968885*^9}, {3.905978434827661*^9, 3.905978436818448*^9}, {
-   3.9059844699160013`*^9, 3.905984470091241*^9}},
- CellLabel->
-  "In[104]:=",ExpressionUUID->"43afef9b-6fb8-44ce-b107-13fb40cf4d53"],
+   3.9059844699160013`*^9, 3.905984470091241*^9}, {3.90620151841963*^9, 
+   3.9062015234844933`*^9}, {3.9062046069264193`*^9, 3.906204609786339*^9}, 
+   3.906205242677362*^9, {3.9062074487945147`*^9, 3.9062074498998404`*^9}, 
+   3.90620773389565*^9, 3.906207765414194*^9, {3.906212006730887*^9, 
+   3.906212014368428*^9}, 3.90621205267509*^9, {3.906212205458262*^9, 
+   3.906212236523398*^9}, {3.906212922043475*^9, 3.906212957157098*^9}},
+ CellLabel->"In[88]:=",ExpressionUUID->"43afef9b-6fb8-44ce-b107-13fb40cf4d53"],
 
 Cell[BoxData["\<\"/home/merlin/Documents/Julia/Research/Gregory/Data/pfq.csv\"\
 \>"], "Output",
@@ -110,13 +115,17 @@ Cell[BoxData["\<\"/home/merlin/Documents/Julia/Research/Gregory/Data/pfq.csv\"\
    3.905977916579171*^9, 3.90597795930011*^9, 3.905978024894424*^9, 
    3.9059780981289997`*^9, 3.905978129079674*^9, {3.9059781627511587`*^9, 
    3.905978251114416*^9}, {3.905978287190905*^9, 3.905978353527697*^9}, 
-   3.905978438530095*^9, 3.90598447170977*^9},
- CellLabel->
-  "Out[107]=",ExpressionUUID->"95b43c1b-1099-4026-be92-745a1f7d56db"]
+   3.905978438530095*^9, 3.90598447170977*^9, 3.9062021645651283`*^9, 
+   3.906204610949863*^9, 3.9062052436969967`*^9, 3.906207451125404*^9, 
+   3.906207654080701*^9, 3.906207735201475*^9, {3.90620776674197*^9, 
+   3.9062077753702173`*^9}, 3.906212015193145*^9, 3.906212053707106*^9, 
+   3.9062122065120077`*^9, 3.906212237848246*^9, {3.90621294089567*^9, 
+   3.90621295844214*^9}},
+ CellLabel->"Out[91]=",ExpressionUUID->"001a0e17-c323-482d-bd52-6b2d5ace3001"]
 }, Open  ]]
 },
-WindowSize->{963.75, 1033.5},
-WindowMargins->{{Automatic, 11.25}, {11.25, Automatic}},
+WindowSize->{2280, 1382.25},
+WindowMargins->{{11.25, Automatic}, {11.25, Automatic}},
 FrontEndVersion->"13.3 for Linux x86 (64-bit) (June 3, 2023)",
 StyleDefinitions->"Default.nb",
 ExpressionUUID->"09a7744d-05c3-433f-aebf-9151f2e1a5b6"
@@ -133,8 +142,8 @@ CellTagsIndex->{}
 (*NotebookFileOutline
 Notebook[{
 Cell[CellGroupData[{
-Cell[580, 22, 3587, 66, 90, "Input",ExpressionUUID->"43afef9b-6fb8-44ce-b107-13fb40cf4d53"],
-Cell[4170, 90, 1649, 24, 33, "Output",ExpressionUUID->"95b43c1b-1099-4026-be92-745a1f7d56db"]
+Cell[580, 22, 4004, 71, 136, "Input",ExpressionUUID->"43afef9b-6fb8-44ce-b107-13fb40cf4d53"],
+Cell[4587, 95, 1982, 28, 50, "Output",ExpressionUUID->"001a0e17-c323-482d-bd52-6b2d5ace3001"]
 }, Open  ]]
 }
 ]

@@ -2,7 +2,7 @@
 # Generalized, grid-based Gregory quadrature for computing hypergeometric pFq
 #
 # Author: Caleb Jacobs
-# DLM: October 10, 2023
+# DLM: October 13, 2023
 =#
 
 using SpecialFunctions
@@ -28,12 +28,15 @@ struct Corrections
     epr::Vector{ComplexF64}
 end
 
+"Modified sign function to return 1 when z = 0"
+sgn(z) = iszero(z) ? one(z) : sign(z)
+
 "Compute roots given a power α and a branch cut rotation of θ."
 function zα(z, α::Real; θ = 0)
     if θ >= 0
-        return angle(z) >= θ - π ? z^α : z^α * cispi( 2 * (α % 1))
+        return angle(z) >= θ - π ? z^α : z^α * cispi( 2(α % 1))
     else
-        return angle(z) <  θ + π ? z^α : z^α * cispi(-2 * (α % 1))
+        return angle(z) <  θ + π ? z^α : z^α * cispi(-2(α % 1))
     end
 end
 
@@ -46,8 +49,16 @@ function zα(z, α::Complex; θ = 0)
     end
 end
 
-"Modified sign function to return 1 when z = 0"
-sgn(z) = iszero(z) ? one(z) : sign(z)
+"Get extra branch rotation correction"
+function θγ(z, ze, γ::Real)
+    if imag(z) == 0
+        return imag(ze) <= 0 ? 1 : cispi(2(γ % 1))
+    elseif sgn(imag(z)) == sgn(imag(ze))
+        return 1
+    else
+        return cispi(-2sgn(imag(z)) * (γ % 1))
+    end
+end
 
 "Generate vandermond type matrix from nodes in the grid `g` with indices `idx`."
 function getVand(idx, g::Grid)
@@ -185,7 +196,6 @@ function getBranchAngle(z, g::Grid)
         # Up and down moving cuts
         if real(z) >= 0
             θα =  sgn(imag(z)) * π / 2
-#             θα = 0
             θβ = -sgn(imag(z)) * π / 2
         else
             θα =  sgn(imag(z)) * π
@@ -201,7 +211,7 @@ end
 
 Get external differentiation entries corresponding to `g`.z[`zIdx`].
 """
-function getExternalWeights(zIdx, c::Corrections, g::Grid, α, β)
+function getExternalWeights(zIdx, c::Corrections, g::Grid, α, β, γ = 0.0)
     path = getPath(zIdx, g, 2g.np)                                      # Get path from origin to node
     N = length(path)                                                    # Number of paths to travel
     z = g.z[zIdx]                                                       # Current z value
@@ -233,8 +243,9 @@ function getExternalWeights(zIdx, c::Corrections, g::Grid, α, β)
         h  = n == N ? zα(dir, 1 + β, θ = θβ) : dir
         αt = zα.(g.z[fIdx], α, θ = θα)
         βt = n == N ? 1 : zα.(z .- g.z[fIdx], β, θ = θβ)
+        γt = n == N && real(z) >= 1 ? θγ.(z, g.z[fIdx], γ) : 1
 
-        row[fIdx] += h * αt .* βt .* getCorrection(c, -dir, n == N ? "ep" : "cr")
+        row[fIdx] += h * αt .* βt .* γt .* getCorrection(c, -dir, n == N ? "ep" : "cr")
     end
 
     return row
@@ -247,7 +258,7 @@ Generate differentiation matrix for ``∫₀ᶻ(u)ᵅ(z-u)ᵝf(u)du`` over a gri
 
 The radius to use the Taylor expansion is given by `ir` while the relative radius of the correction stencils are given by `er`.
 """
-function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, np = 3, nl = 1)
+function getDiffMat(n, r; α = 0.0, β = 0.0, γ = 0.0, ir = 0.5, np = 3, nl = 1)
     g = getGrid(n, r, ir = ir, np = np, nl = nl)                        # Generate grid
 
     (iMap, eMap) = getReducedGridMap(g)                                 # Index maps to reduced grid for indexing through diff matrix
@@ -265,7 +276,7 @@ function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, np = 3, nl = 1)
     c = getCorrections(g, α = α, β = β)                                 # End/corner corrections
 
     for (e, eIdx) ∈ pairs(g.e)
-        D[eMap[e], :] = getExternalWeights(eIdx, c, g, α, β)
+        D[eMap[e], :] = getExternalWeights(eIdx, c, g, α, β, γ)
     end
 
     return D
