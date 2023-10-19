@@ -188,15 +188,21 @@ function getPath(zIdx::Int64, g::Grid, r)
 
         return [p1, p2, p3]
     elseif Nx >= 0                                                  # Shortened U-contour
-        v1 = g.c .+ g.dy * sgn(Ny) * [1 : 4r - 1...]
+        if iszero(Ny)
+            dir = -1
+        else
+            dir = sgn(Ny)
+        end
 
-        c1 = v1[end] + g.dy * sgn(Ny)
+        v1 = g.c .+ g.dy * dir * [1 : 4r - 1...]
+
+        c1 = v1[end] + g.dy * dir
 
         h  = c1 .+ g.dx * [1 : abs(Nx) - 1...]
 
         c2 = h[end] + g.dx
 
-        v2 = c2 .- g.dy * sgn(Ny) * [1 : 4r - abs(Ny) - 1...]
+        v2 = c2 .- g.dy * dir * [1 : 4r - abs(Ny) - 1...]
 
         p1 = Path(g.c, v1, c1)
         p2 = Path(c1,  h,  c2)

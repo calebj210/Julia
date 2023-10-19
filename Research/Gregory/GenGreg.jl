@@ -52,7 +52,7 @@ end
 "Get extra branch rotation correction"
 function θγ(z, ze, γ::Real)
     if imag(z) == 0
-        return imag(ze) <= 0 ? 1 : cispi(2(γ % 1))
+        return imag(ze) >= 0 ? cispi(2(γ % 1)) : 1
     elseif sgn(imag(z)) == sgn(imag(ze))
         return 1
     else
@@ -183,7 +183,7 @@ end
 Compute appropriate branch cut rotation angles based on the path to `z`.
 """
 function getBranchAngle(z, g::Grid)
-    if abs(real(z)) < abs(imag(z)) || real(z) >= 0 && abs(imag(z)) >= 2g.np
+    if abs(real(z)) < abs(imag(z)) || real(z) >= 0 && abs(imag(z)) >= 2g.np * g.h
         # Right and left moving cuts
         if real(z) >= 0
             θα = sgn(imag(z)) * π
@@ -195,11 +195,16 @@ function getBranchAngle(z, g::Grid)
     else
         # Up and down moving cuts
         if real(z) >= 0
-            θα =  sgn(imag(z)) * π / 2
-            θβ = -sgn(imag(z)) * π / 2
+            if iszero(imag(z))
+                θα = 0 
+                θβ = π / 2
+            else
+                θα = 0
+                θβ = -sgn(imag(z)) * π / 2
+            end
         else
-            θα =  sgn(imag(z)) * π
-            θβ =  sgn(imag(z)) * π / 2
+            θα = sgn(imag(z)) * π
+            θβ = sgn(imag(z)) * π / 2
         end
     end
 
