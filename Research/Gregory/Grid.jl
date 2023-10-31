@@ -171,23 +171,7 @@ function getPath(zIdx::Int64, g::Grid, r)
     sgn(x) = x >= 0 ? 1 : -1                                        # Nonzero returning sign function
 
     # Begin u-pathing
-    if abs(Nx) >= abs(Ny)
-        v1 = g.c .- g.dy * sgn(Ny) * [1 : 2r - 1...]
-
-        c1 = v1[end] - g.dy * sgn(Ny)
-
-        h  = c1 .+ g.dx * sgn(Nx) * [1 : abs(Nx) - 1...]
-
-        c2 = h[end] + g.dx * sgn(Nx)
-
-        v2 = c2 .+ g.dy * sgn(Ny) * [1 : 2r + abs(Ny) - 1...]
-
-        p1 = Path(g.c, v1, c1)
-        p2 = Path(c1,  h,  c2)
-        p3 = Path(c2,  v2, zIdx)
-
-        return [p1, p2, p3]
-    else
+    if abs(Nx) < abs(Ny) || Nx >= 0 && abs(Ny) >= 2g.np             # Standard left-right U-contour
         h1 = g.c .- g.dx * sgn(Nx) * [1 : 2r - 1...]
 
         c1 = h1[end] - g.dx * sgn(Nx)
@@ -203,6 +187,45 @@ function getPath(zIdx::Int64, g::Grid, r)
         p3 = Path(c2,  h2, zIdx)
 
         return [p1, p2, p3]
+    elseif Nx >= 0                                                  # Shortened U-contour
+        if iszero(Ny)
+            dir = -1
+        else
+            dir = sgn(Ny)
+        end
+
+        v1 = g.c .+ g.dy * dir * [1 : 4r - 1...]
+
+        c1 = v1[end] + g.dy * dir
+
+        h  = c1 .+ g.dx * [1 : abs(Nx) - 1...]
+
+        c2 = h[end] + g.dx
+
+        v2 = c2 .- g.dy * dir * [1 : 4r - abs(Ny) - 1...]
+
+        p1 = Path(g.c, v1, c1)
+        p2 = Path(c1,  h,  c2)
+        p3 = Path(c2,  v2, zIdx)
+
+        return [p1, p2, p3]
+    else                                                            # Standard up-down U-contour
+        v1 = g.c .- g.dy * sgn(Ny) * [1 : 2r - 1...]
+
+        c1 = v1[end] - g.dy * sgn(Ny)
+
+        h  = c1 .+ g.dx * sgn(Nx) * [1 : abs(Nx) - 1...]
+
+        c2 = h[end] + g.dx * sgn(Nx)
+
+        v2 = c2 .+ g.dy * sgn(Ny) * [1 : 2r + abs(Ny) - 1...]
+
+        p1 = Path(g.c, v1, c1)
+        p2 = Path(c1,  h,  c2)
+        p3 = Path(c2,  v2, zIdx)
+
+        return [p1, p2, p3]
+
     end
 
     return path

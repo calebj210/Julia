@@ -132,12 +132,36 @@ function complexPlot(z⃗, f⃗)
     return plt
 end
 
-function complexPlot3d(z⃗::Matrix, f⃗::Matrix)
+function complexPlot3d(z⃗::Matrix, f⃗::Matrix; T = 1)
     x⃗ = real(z⃗)
     y⃗ = imag(z⃗)
-    z⃗ = abs.(f⃗)
-    args = angle.(f⃗)
-    args[args .< 0] .+= 2π
+    if T == 2
+        z⃗ = real(f⃗)
+        args = zeros(length(z⃗))
+        title = "Re(f)"
+    elseif T == 3
+        z⃗ = imag(f⃗)
+        args = zeros(length(z⃗))
+        title = "Im(f)"
+    else
+        z⃗ = abs.(f⃗)
+        args = angle.(f⃗)
+        args[args .< 0] .+= 2π
+        title = "Abs-Arg(f)"
+    end
+
+
+    layout = Layout(
+        width = 800, height = 800,
+        title = attr(
+            text = title,
+            font_size = 25,
+            y = 0.96,
+            x = 0.5,
+            xanchor = "center",
+            yanchor = "top"
+        )
+    )
 
     plt = plot(surface(
             x = x⃗, y = y⃗, z = z⃗,
@@ -147,14 +171,15 @@ function complexPlot3d(z⃗::Matrix, f⃗::Matrix)
             colorbar = attr(
                 tickmode = "array",
                 tickvals = [0, π, 2π],
-                ticktext = ["-π", "0", "π"])))
+                ticktext = ["-π", "0", "π"])),
+            layout)
         
     return plt
 end
 
-function complexPlot3d(z::Vector, f::Vector)
+function complexPlot3d(z::Vector, f::Vector; T = 1)
     Z = reshape(z, round(Int64, sqrt(length(z))), :)
     F = reshape(f, round(Int64, sqrt(length(f))), :)
 
-    return complexPlot3d(Z, F)
+    return complexPlot3d(Z, F, T = T)
 end
