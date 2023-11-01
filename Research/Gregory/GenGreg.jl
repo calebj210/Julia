@@ -216,7 +216,7 @@ end
 
 Get external differentiation entries corresponding to `g`.z[`zIdx`].
 """
-function getExternalWeights(zIdx, c::Corrections, g::Grid, α, β, γ = 0.0)
+function getExternalWeights(zIdx, c::Corrections, g::Grid, α, β)
     path = getPath(zIdx, g, 2g.np)                                      # Get path from origin to node
     N = length(path)                                                    # Number of paths to travel
     z = g.z[zIdx]                                                       # Current z value
@@ -248,12 +248,91 @@ function getExternalWeights(zIdx, c::Corrections, g::Grid, α, β, γ = 0.0)
         h  = n == N ? zα(dir, 1 + β, θ = θβ) : dir
         αt = zα.(g.z[fIdx], α, θ = θα)
         βt = n == N ? 1 : zα.(z .- g.z[fIdx], β, θ = θβ)
-        γt = n == N && real(z) >= 1 ? θγ.(z, g.z[fIdx], γ) : 1
 
-        row[fIdx] += h * αt .* βt .* γt .* getCorrection(c, -dir, n == N ? "ep" : "cr")
+        row[fIdx] += h * αt .* βt .* getCorrection(c, -dir, n == N ? "ep" : "cr")
     end
 
     return row
+end
+
+function sortPath(idx, g, z, branch = false)
+    pIdx = Vector{Int64}()
+    bIdx = Vector{Int64}()
+
+    # No need for branching
+    if real(z) < 1
+        return ([1:length(idx)...], bIdx)
+    end
+
+    # Decide whether the index is on on sheet or the other
+    for (i, v) ∈ pairs(idx)
+        if sgn(imag(g.z[v])) == sgn(imag(v)) ⊻ branch
+            push!(pIdx, i)
+        else
+            push!(bIdx, i)
+        end
+    end
+
+    return (pIdx, bIdx)
+end
+
+function getExternalWeightsAlt(zIdx, c::Corrections, g::Grid, α, β, branch = false)
+    path = getPath(zIdx, g, 2g.np)                                      # Get path from origin to node
+    N = length(path)                                                    # Number of paths to travel
+    z = g.z[zIdx]                                                       # Current z value
+
+    rowf = spzeros(ComplexF64, length(g.z))                             # Initialize main   row to populate
+    rowh = spzeros(ComplexF64, length(g.z))                             # Initialize branch row to populate
+
+    for (n, p) ∈ pairs(path)
+        dir = sign(g.z[p.f] - g.z[p.i])                                 # Compute direction of travel
+
+        iIdx = getCorrectionIndices(p.i, g.np, g)                       # Initial point correction indices
+        fIdx = getCorrectionIndices(p.f, g.np, g)                       # Final point correction indices
+
+        # Fix indices if needed
+        if real(z) > 1 && n == N
+            ppIdx, bpIdx = sortPath(p.p,  g, z)
+            piIdx, biIdx = sortPath(iIdx, g, z)
+            pfIdx, bfIdx = sortPath(fIdx, g, z)
+        else
+            ppIdx, bpIdx = [1 : length(p.p)...],  []
+            piIdx, biIdx = [1 : length(iIdx)...], []
+            pfIdx, bfIdx = [1 : length(fIdx)...], []
+        end
+
+        # Choose appropriate branch cuts
+        θα, θβ = getBranchAngle(z, g)
+
+        # Trapezoidal weights
+        αt = zα.(     g.z[p.p], α, θ = θα)
+        βt = zα.(z .- g.z[p.p], β, θ = θβ)
+
+        rowf[p.p[ppIdx]] .+= dir * g.h .* αt[ppIdx] .* βt[ppIdx]
+        rowh[p.p[bpIdx]] .+= dir * g.h .* αt[bpIdx] .* βt[bpIdx]
+
+        # Initial endpoint correction
+        h  = n == 1 ? zα(dir, 1 + α, θ = θα) : dir
+        αt = n == 1 ? ones(length(iIdx)) : zα.(g.z[iIdx], α, θ = θα)
+        βt = zα.(z .- g.z[iIdx], β, θ = θβ)
+        
+        tmp = getCorrection(c, dir, n == 1 ? "bp" : "cr")
+
+        rowf[iIdx[piIdx]] += h * αt[piIdx] .* βt[piIdx] .* tmp[piIdx]
+        rowh[iIdx[biIdx]] += h * αt[biIdx] .* βt[biIdx] .* tmp[biIdx]
+        
+        # Final endpoint correction
+        h  = n == N ? zα(dir, 1 + β, θ = θβ) : dir
+        αt = zα.(g.z[fIdx], α, θ = θα)
+        βt = n == N ? ones(length(fIdx)) : zα.(z .- g.z[fIdx], β, θ = θβ)
+
+        tmp = getCorrection(c, -dir, n == N ? "ep" : "cr")
+
+        rowf[fIdx[pfIdx]] += h * αt[pfIdx] .* βt[pfIdx] .* tmp[pfIdx]
+        rowh[fIdx[bfIdx]] += h * αt[bfIdx] .* βt[bfIdx] .* tmp[bfIdx]
+    end
+
+    return (rowf, rowh)
 end
 
 """
@@ -263,26 +342,41 @@ Generate differentiation matrix for ``∫₀ᶻ(u)ᵅ(z-u)ᵝf(u)du`` over a gri
 
 The radius to use the Taylor expansion is given by `ir` while the relative radius of the correction stencils are given by `er`.
 """
-function getDiffMat(n, r; α = 0.0, β = 0.0, γ = 0.0, ir = 0.5, np = 3, nl = 1)
-    g = getGrid(n, r, ir = ir, np = np, nl = nl)                        # Generate grid
+function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, np = 3, nl = 1, branch = false)
+    g = getGrid(n, r, ir = ir, np = np, nl = nl)                            # Generate grid
 
-    (iMap, eMap) = getReducedGridMap(g)                                 # Index maps to reduced grid for indexing through diff matrix
+    (iMap, eMap) = getReducedGridMap(g)                                     # Index maps to reduced grid for indexing through diff matrix
 
-    D = zeros(ComplexF64, length(g.i) + length(g.e), length(g.z))       # Initialize differentiation matrix
+    if !branch
+        D0 = zeros(ComplexF64, length(g.i) + length(g.e), length(g.z))      # Initialize differentiation matrix
+    else
+        D0 = spzeros(ComplexF64, length(g.i) + length(g.e), length(g.z))    # Initialize differentiation matrix
+        D1 = spzeros(ComplexF64, length(g.i) + length(g.e), length(g.z))    # Initialize differentiation matrix
+        D2 = spzeros(ComplexF64, length(g.i) + length(g.e), length(g.z))    # Initialize differentiation matrix
+        D3 = spzeros(ComplexF64, length(g.i) + length(g.e), length(g.z))    # Initialize differentiation matrix
+    end
 
     # Populate internal weights using Taylor expansion approximation
-    A = lu(getVand(g.ib, g))                                            # Compute vandermonde of internal boundary nodes
+    A = lu(getVand(g.ib, g))                                                # Compute vandermonde of internal boundary nodes
 
     for (i, iIdx) ∈ pairs(g.i)
-        D[iMap[i], g.ib] = getInternalWeights(iIdx, A, g, α, β)
+        D0[iMap[i], g.ib] = getInternalWeights(iIdx, A, g, α, β)
     end
 
     # Populate external weights using generalized Gregory quadrature
-    c = getCorrections(g, α = α, β = β)                                 # End/corner corrections
+    c = getCorrections(g, α = α, β = β)                                     # End/corner corrections
 
     for (e, eIdx) ∈ pairs(g.e)
-        D[eMap[e], :] = getExternalWeights(eIdx, c, g, α, β, γ)
+        if !branch
+            D0[eMap[e], :] = getExternalWeights(eIdx, c, g, α, β)
+        else
+            D0[eMap[e], :], D1[eMap[e], :] = getExternalWeightsAlt(eIdx, c, g, α, β)
+        end
     end
 
-    return D
+    if !branch
+        return D0
+    else
+        return (D0, D1, D2, D3)
+    end
 end
