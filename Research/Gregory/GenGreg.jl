@@ -266,7 +266,7 @@ function sortPath(idx, g, z, branch = false)
 
     # Decide whether the index is on on sheet or the other
     for (i, v) ∈ pairs(idx)
-        if sgn(imag(g.z[v])) == sgn(imag(v)) ⊻ branch
+        if (sgn(imag(g.z[v])) == sgn(imag(z))) ⊻ branch
             push!(pIdx, i)
         else
             push!(bIdx, i)

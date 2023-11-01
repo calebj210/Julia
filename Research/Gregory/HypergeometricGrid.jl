@@ -12,7 +12,17 @@ include("GenGreg.jl")
 sgn(z) = iszero(z) ? one(z) : sign(z)
 
 "Compute roots given a power α and a branch cut rotation of θ."
-function zα(z, α::Real; θ::Real = 0)
+function zα(z, α::Real, branch; θ::Real = 0 )
+    if !branch
+        if imag(z) == 0 && real(z) < 0
+            return z^α * cispi(2(α % 1))
+        else
+            return z^α
+        end
+    elseif imag(z) == 0 && real(z) < 0
+        return z^α * cispi(-2(α % 1))
+    end
+
     if θ >= 0
         return angle(z) >= θ - π ? z^α : z^α * cispi( 2(α % 1))
     else
@@ -29,7 +39,7 @@ end
 
 "1F0 Hypergeometric function given by (1 - z)^(-a)."
 function _1F0(a, g; branch = false)
-    f = branch ? (z -> zα(1 - z, -a, θ = sgn.(imag(z)))).(g.z) : (1 .- g.z).^(-a)
+    f = (z -> zα(1 - z, -a, branch, θ = sgn.(imag(z)) * π)).(g.z)
 
     return f
 end
@@ -76,7 +86,7 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5)
         β = b[bIdx] - a[aIdx] - 1                                   # Evaluation point singularity order
 
         if !branch
-            D = getDiffMat(n, r, α = α, β = β, γ = γ,               # Generate differentiation matrix
+            D = getDiffMat(n, r, α = α, β = β,                      # Generate differentiation matrix
                        ir = Tr, np = np, nl= nl)
         else
             D0,D1,D2,D3 = getDiffMat(n, r, α = α, β = β,            # Generate differentiation matrices with alternate branch
