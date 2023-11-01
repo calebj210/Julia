@@ -164,68 +164,86 @@ end
 
 Get indices to traverse the complex grid from 0 to z with index `zIdx`. The indices are returned as a tuple (horizontal, vertical)
 """
-function getPath(zIdx::Int64, g::Grid, r)
+function getPath(zIdx::Int64, g::Grid, r; branch = false)
     Nx = round(Int64, real(g.z[zIdx]) / g.h)                        # Number of horizontal nodes
     Ny = round(Int64, imag(g.z[zIdx]) / g.h)                        # Number of vertical nodes
 
-    sgn(x) = x >= 0 ? 1 : -1                                        # Nonzero returning sign function
+    sgn(x)  = x >= 0 ? 1 : -1                                       # Nonzero returning sign function
+    nsgn(x) = x >  0 ? 1 : -1                                       # Nonzero returning sign function
 
     # Begin u-pathing
-    if abs(Nx) < abs(Ny) || Nx >= 0 && abs(Ny) >= 2g.np             # Standard left-right U-contour
-        h1 = g.c .- g.dx * sgn(Nx) * [1 : 2r - 1...]
+    if !branch
+        if abs(Nx) < abs(Ny) || Nx >= 0 && abs(Ny) >= 2g.np             # Standard left-right U-contour
+            h1 = g.c .- g.dx * sgn(Nx) * [1 : 2r - 1...]
 
-        c1 = h1[end] - g.dx * sgn(Nx)
+            c1 = h1[end] - g.dx * sgn(Nx)
 
-        v  = c1 .+ g.dy * sgn(Ny) * [1 : abs(Ny) - 1...]
+            v  = c1 .+ g.dy * sgn(Ny) * [1 : abs(Ny) - 1...]
 
-        c2 = v[end] + g.dy * sgn(Ny)
+            c2 = v[end] + g.dy * sgn(Ny)
 
-        h2 = c2 .+ g.dx * sgn(Nx) * [1 : 2r + abs(Nx) - 1...]
+            h2 = c2 .+ g.dx * sgn(Nx) * [1 : 2r + abs(Nx) - 1...]
 
-        p1 = Path(g.c, h1, c1)
-        p2 = Path(c1,  v,  c2)
-        p3 = Path(c2,  h2, zIdx)
+            p1 = Path(g.c, h1, c1)
+            p2 = Path(c1,  v,  c2)
+            p3 = Path(c2,  h2, zIdx)
 
-        return [p1, p2, p3]
-    elseif Nx >= 0                                                  # Shortened U-contour
-        if iszero(Ny)
-            dir = -1
-        else
-            dir = sgn(Ny)
+            return [p1, p2, p3]
+        elseif Nx >= 0                                                  # Shortened U-contour
+            if iszero(Ny)
+                dir = -1
+            else
+                dir = sgn(Ny)
+            end
+
+            v1 = g.c .+ g.dy * dir * [1 : 4r - 1...]
+
+            c1 = v1[end] + g.dy * dir
+
+            h  = c1 .+ g.dx * [1 : abs(Nx) - 1...]
+
+            c2 = h[end] + g.dx
+
+            v2 = c2 .- g.dy * dir * [1 : 4r - abs(Ny) - 1...]
+
+            p1 = Path(g.c, v1, c1)
+            p2 = Path(c1,  h,  c2)
+            p3 = Path(c2,  v2, zIdx)
+
+            return [p1, p2, p3]
+        else                                                            # Standard up-down U-contour
+            v1 = g.c .- g.dy * sgn(Ny) * [1 : 2r - 1...]
+
+            c1 = v1[end] - g.dy * sgn(Ny)
+
+            h  = c1 .+ g.dx * sgn(Nx) * [1 : abs(Nx) - 1...]
+
+            c2 = h[end] + g.dx * sgn(Nx)
+
+            v2 = c2 .+ g.dy * sgn(Ny) * [1 : 2r + abs(Ny) - 1...]
+
+            p1 = Path(g.c, v1, c1)
+            p2 = Path(c1,  h,  c2)
+            p3 = Path(c2,  v2, zIdx)
+
+            return [p1, p2, p3]
         end
+    else                                                                # Up-down U-contour passing principle branch cut
+        v1 = g.c .- g.dy * nsgn(Ny) * [1 : 4r - 1...]
 
-        v1 = g.c .+ g.dy * dir * [1 : 4r - 1...]
-
-        c1 = v1[end] + g.dy * dir
-
-        h  = c1 .+ g.dx * [1 : abs(Nx) - 1...]
-
-        c2 = h[end] + g.dx
-
-        v2 = c2 .- g.dy * dir * [1 : 4r - abs(Ny) - 1...]
-
-        p1 = Path(g.c, v1, c1)
-        p2 = Path(c1,  h,  c2)
-        p3 = Path(c2,  v2, zIdx)
-
-        return [p1, p2, p3]
-    else                                                            # Standard up-down U-contour
-        v1 = g.c .- g.dy * sgn(Ny) * [1 : 2r - 1...]
-
-        c1 = v1[end] - g.dy * sgn(Ny)
+        c1 = v1[end] - g.dy * nsgn(Ny)
 
         h  = c1 .+ g.dx * sgn(Nx) * [1 : abs(Nx) - 1...]
 
         c2 = h[end] + g.dx * sgn(Nx)
 
-        v2 = c2 .+ g.dy * sgn(Ny) * [1 : 2r + abs(Ny) - 1...]
+        v2 = c2 .+ g.dy * nsgn(Ny) * [1 : 4r + abs(Ny) - 1...]
 
         p1 = Path(g.c, v1, c1)
         p2 = Path(c1,  h,  c2)
         p3 = Path(c2,  v2, zIdx)
 
         return [p1, p2, p3]
-
     end
 
     return path

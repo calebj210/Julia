@@ -31,7 +31,7 @@ function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5)
     println("Press enter after running Mathematica to update values!")
     readline()
 
-    (z, f) = pFq(a, b, r = r, n = n, np = np, Tr = Tr)
+    (z, f, h) = pFq(a, b, r = r, n = n, np = np, Tr = Tr)
     tru = getComplexVals("Data/pfq.csv")
 
     title = string("(p + 1)Fp (", a, "; ", b, "; z)") 
@@ -50,7 +50,7 @@ function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5)
 
     display([p1 p2; p3 p4])
 
-    return (z, f, tru, p1, p2, p3, p4)
+    return (z, f, h, tru, p1, p2, p3, p4)
 end
 
 # pFp Tests

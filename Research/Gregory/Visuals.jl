@@ -2,7 +2,7 @@
 # Collection of functions for visuallizing properties of integrators
 #
 # Author: Caleb Jacobs
-# DLM: October 5, 2023
+# DLM: November 1, 2023
 =#
 
 include("GenGreg.jl")
@@ -132,24 +132,45 @@ function complexPlot(z⃗, f⃗)
     return plt
 end
 
-function complexPlot3d(z⃗::Matrix, f⃗::Matrix; T = 1)
+function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1)
     x⃗ = real(z⃗)
     y⃗ = imag(z⃗)
-    if T == 2
-        z⃗ = real(f⃗)
-        args = zeros(length(z⃗))
-        title = "Re(f)"
-    elseif T == 3
-        z⃗ = imag(f⃗)
-        args = zeros(length(z⃗))
-        title = "Im(f)"
-    else
-        z⃗ = abs.(f⃗)
-        args = angle.(f⃗)
-        args[args .< 0] .+= 2π
-        title = "Abs-Arg(f)"
+        
+    plts = Vector{GenericTrace}()
+
+    for p ∈ f⃗
+        if T == 2
+            z⃗ = real(p)
+            args = angle.(p)
+            args[args .< 0] .+= 2π
+        elseif T == 3
+            z⃗ = imag(p)
+            args = angle.(p)
+            args[args .< 0] .+= 2π
+        else
+            z⃗ = abs.(p)
+            args = angle.(p)
+            args[args .< 0] .+= 2π
+        end
+
+        push!(plts, surface(
+                        x = x⃗, y = y⃗, z = z⃗,
+                        surfacecolor = args,
+                        cmin = 0, cmax = 2π,
+                        colorscale = colors.hsv,
+                        colorbar = attr(
+                            tickmode = "array",
+                            tickvals = [0, π, 2π],
+                            ticktext = ["-π", "0", "π"])))
     end
 
+    if T == 2
+        title = "Re(f)"
+    elseif T == 3
+        title = "Im(f)"
+    else
+        title = "Abs-Arg(f)"
+    end
 
     layout = Layout(
         width = 800, height = 800,
@@ -163,23 +184,17 @@ function complexPlot3d(z⃗::Matrix, f⃗::Matrix; T = 1)
         )
     )
 
-    plt = plot(surface(
-            x = x⃗, y = y⃗, z = z⃗,
-            surfacecolor = args,
-            cmin = 0, cmax = 2π,
-            colorscale = colors.hsv,
-            colorbar = attr(
-                tickmode = "array",
-                tickvals = [0, π, 2π],
-                ticktext = ["-π", "0", "π"])),
-            layout)
-        
+    plt = plot(plts, layout)
+
     return plt
 end
 
-function complexPlot3d(z::Vector, f::Vector; T = 1)
+function complexPlot3d(z::Vector, f::Vector...; T = 1)
     Z = reshape(z, round(Int64, sqrt(length(z))), :)
-    F = reshape(f, round(Int64, sqrt(length(f))), :)
 
-    return complexPlot3d(Z, F, T = T)
+    N = round(Int64, sqrt(length(f[1])))
+
+    F = reshape.(f, N , :)
+
+    return complexPlot3d(Z, F..., T = T)
 end

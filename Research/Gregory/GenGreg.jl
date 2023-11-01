@@ -31,6 +31,9 @@ end
 "Modified sign function to return 1 when z = 0"
 sgn(z) = iszero(z) ? one(z) : sign(z)
 
+"Modified sign function to return -1 when z = 0"
+nsgn(z) = iszero(z) ? -one(z) : sign(z)
+
 "Compute roots given a power α and a branch cut rotation of θ."
 function zα(z, α::Real; θ = 0)
     if θ >= 0
@@ -182,29 +185,39 @@ end
 
 Compute appropriate branch cut rotation angles based on the path to `z`.
 """
-function getBranchAngle(z, g::Grid)
-    if abs(real(z)) < abs(imag(z)) || real(z) >= 0 && abs(imag(z)) >= 2g.np * g.h
-        # Right and left moving cuts
-        if real(z) >= 0
-            θα = sgn(imag(z)) * π
-            θβ = 0
-        else
-            θα = 0
-            θβ = sgn(imag(z)) * π
-        end
-    else
-        # Up and down moving cuts
-        if real(z) >= 0
-            if iszero(imag(z))
-                θα = 0 
-                θβ = π / 2
+function getBranchAngle(z, g::Grid; branch = false)
+    if !branch
+        if abs(real(z)) < abs(imag(z)) || real(z) >= 0 && abs(imag(z)) >= 2g.np * g.h
+            # Right and left moving cuts
+            if real(z) >= 0
+                θα = sgn(imag(z)) * π
+                θβ = 0
             else
                 θα = 0
-                θβ = -sgn(imag(z)) * π / 2
+                θβ = sgn(imag(z)) * π
             end
         else
-            θα = sgn(imag(z)) * π
-            θβ = sgn(imag(z)) * π / 2
+            # Up and down moving cuts
+            if real(z) >= 0
+                if iszero(imag(z))
+                    θα = 0 
+                    θβ = π / 2
+                else
+                    θα = 0
+                    θβ = -sgn(imag(z)) * π / 2
+                end
+            else
+                θα = sgn(imag(z)) * π
+                θβ = sgn(imag(z)) * π / 2
+            end
+        end
+    else
+        if iszero(imag(z))
+            θα = 0 
+            θβ = -π / 2
+        else
+            θα = 0
+            θβ = nsgn(imag(z)) * π / 2
         end
     end
 
@@ -255,7 +268,7 @@ function getExternalWeights(zIdx, c::Corrections, g::Grid, α, β)
     return row
 end
 
-function sortPath(idx, g, z, branch = false)
+function sortPath(idx, g, z; branch = false)
     pIdx = Vector{Int64}()
     bIdx = Vector{Int64}()
 
@@ -264,20 +277,48 @@ function sortPath(idx, g, z, branch = false)
         return ([1:length(idx)...], bIdx)
     end
 
-    # Decide whether the index is on on sheet or the other
+    # Decide whether the index is one sheet or another
     for (i, v) ∈ pairs(idx)
-        if (sgn(imag(g.z[v])) == sgn(imag(z))) ⊻ branch
-            push!(pIdx, i)
+        if !branch
+            if nsgn(imag(g.z[v])) == nsgn(imag(z))
+                push!(pIdx, i)
+            else
+                push!(bIdx, i)
+            end
         else
-            push!(bIdx, i)
+            if imag(z) == 0
+                if nsgn(imag(g.z[v])) == 1
+                    push!(pIdx, i)
+                else
+                    push!(bIdx, i)
+                end
+            elseif imag(z) > 0
+                if nsgn(imag(g.z[v])) == -1
+                    push!(pIdx, i)
+                else
+                    push!(bIdx, i)
+                end
+            else
+                if nsgn(imag(g.z[v])) == 1
+                    push!(pIdx, i)
+                else
+                    push!(bIdx, i)
+                end
+            end
         end
+
+#         if (nsgn(imag(g.z[v])) == nsgn(imag(z))) ⊻ branch
+#             push!(pIdx, i)
+#         else
+#             push!(bIdx, i)
+#         end
     end
 
     return (pIdx, bIdx)
 end
 
-function getExternalWeightsAlt(zIdx, c::Corrections, g::Grid, α, β, branch = false)
-    path = getPath(zIdx, g, 2g.np)                                      # Get path from origin to node
+function getExternalWeightsAlt(zIdx, c::Corrections, g::Grid, α, β; branch = false)
+    path = getPath(zIdx, g, 2g.np, branch = branch)                     # Get path from origin to node
     N = length(path)                                                    # Number of paths to travel
     z = g.z[zIdx]                                                       # Current z value
 
@@ -291,10 +332,10 @@ function getExternalWeightsAlt(zIdx, c::Corrections, g::Grid, α, β, branch = f
         fIdx = getCorrectionIndices(p.f, g.np, g)                       # Final point correction indices
 
         # Fix indices if needed
-        if real(z) > 1 && n == N
-            ppIdx, bpIdx = sortPath(p.p,  g, z)
-            piIdx, biIdx = sortPath(iIdx, g, z)
-            pfIdx, bfIdx = sortPath(fIdx, g, z)
+        if n == N && real(z) > 1
+            ppIdx, bpIdx = sortPath(p.p,  g, z, branch = branch)
+            piIdx, biIdx = sortPath(iIdx, g, z, branch = branch)
+            pfIdx, bfIdx = sortPath(fIdx, g, z, branch = branch)
         else
             ppIdx, bpIdx = [1 : length(p.p)...],  []
             piIdx, biIdx = [1 : length(iIdx)...], []
@@ -302,7 +343,7 @@ function getExternalWeightsAlt(zIdx, c::Corrections, g::Grid, α, β, branch = f
         end
 
         # Choose appropriate branch cuts
-        θα, θβ = getBranchAngle(z, g)
+        θα, θβ = getBranchAngle(z, g, branch = branch)
 
         # Trapezoidal weights
         αt = zα.(     g.z[p.p], α, θ = θα)
@@ -370,7 +411,10 @@ function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, np = 3, nl = 1, branch =
         if !branch
             D0[eMap[e], :] = getExternalWeights(eIdx, c, g, α, β)
         else
-            D0[eMap[e], :], D1[eMap[e], :] = getExternalWeightsAlt(eIdx, c, g, α, β)
+            D0[eMap[e], :], D1[eMap[e], :]     = getExternalWeightsAlt(eIdx, c, g, α, β, branch = false)
+            if real(g.z[eIdx]) >= 1
+                D2[eMap[e], :], D3[eMap[e], :] = getExternalWeightsAlt(eIdx, c, g, α, β, branch = true)
+            end
         end
     end
 

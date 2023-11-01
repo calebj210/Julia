@@ -12,21 +12,21 @@ include("GenGreg.jl")
 sgn(z) = iszero(z) ? one(z) : sign(z)
 
 "Compute roots given a power α and a branch cut rotation of θ."
-function zα(z, α::Real, branch; θ::Real = 0 )
+function oneMinusZα(z, α::Real, branch)
     if !branch
-        if imag(z) == 0 && real(z) < 0
-            return z^α * cispi(2(α % 1))
+        if imag(z) == 0 && real(z) > 1
+            return (1 - z)^α * cispi(2(α % 1))
         else
-            return z^α
+            return (1 - z)^α
         end
-    elseif imag(z) == 0 && real(z) < 0
-        return z^α * cispi(-2(α % 1))
-    end
-
-    if θ >= 0
-        return angle(z) >= θ - π ? z^α : z^α * cispi( 2(α % 1))
     else
-        return angle(z) <  θ + π ? z^α : z^α * cispi(-2(α % 1))
+        if imag(z) == 0 && real(z) > 1
+            return (1 - z)^α
+        elseif imag(z) > 0
+            return (1 - z)^α * cispi(2(α % 1))
+        else
+            return (1 - z)^α * cispi(-2(α % 1))
+        end
     end
 end
 
@@ -39,7 +39,7 @@ end
 
 "1F0 Hypergeometric function given by (1 - z)^(-a)."
 function _1F0(a, g; branch = false)
-    f = (z -> zα(1 - z, -a, branch, θ = sgn.(imag(z)) * π)).(g.z)
+    f = oneMinusZα.(g.z, -a, branch)
 
     return f
 end
@@ -112,5 +112,9 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5)
         f[g.c] = 1 + 0im
     end
     
-    return (g.z, f)
+    if !branch
+        return (g.z, f)
+    else
+        return (g.z, f, h)
+    end
 end
