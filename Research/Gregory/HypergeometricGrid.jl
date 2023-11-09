@@ -59,8 +59,8 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5)
     aIdx = length(a)                                                # Index for a
     bIdx = length(b)                                                # Index for b
 
-    a = sort(a, by = abs, rev = true)                               # Sort a by modulus to help with stability
-    b = sort(b, by = abs, rev = true)                               # Sort b by modulus to help with stability
+    a = sort(a, by = real, rev = true)                              # Sort a by modulus to help with stability
+    b = sort(b, by = real, rev = true)                              # Sort b by modulus to help with stability
 
     branch = false                                                  # Initialize extra branch cut correction
     if length(a) == length(b)

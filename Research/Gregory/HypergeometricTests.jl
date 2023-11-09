@@ -2,7 +2,7 @@
 # Test suite for grid based hypergeometric calculations
 #
 # Author: Caleb Jacobs
-# DLM: October 10, 2023
+# DLM: November 9, 2023
 =#
 
 using CSV, Tables
@@ -31,10 +31,16 @@ function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5)
     println("Press enter after running Mathematica to update values!")
     readline()
 
-    (z, f, h) = pFq(a, b, r = r, n = n, np = np, Tr = Tr)
+    if length(a) != length(b) + 1
+        (z, f) = pFq(a, b, r = r, n = n, np = np, Tr = Tr)
+        h = []
+    else    
+        (z, f, h) = pFq(a, b, r = r, n = n, np = np, Tr = Tr)
+    end
+
     tru = getComplexVals("Data/pfq.csv")
 
-    title = string("(p + 1)Fp (", a, "; ", b, "; z)") 
+    title = string(length(a), "F", length(b), "(", a, "; ", b, "; z)") 
 
     p1 = complexAbsPlot(z, f - tru, logscale = true, title = title)
     p2 = complexPlot3d(z, f)

@@ -173,7 +173,7 @@ function getPath(zIdx::Int64, g::Grid, r; branch = false)
 
     # Begin u-pathing
     if !branch
-        if abs(Nx) < abs(Ny) || Nx >= 0 && abs(Ny) >= 2g.np             # Standard left-right U-contour
+        if abs(Nx) < abs(Ny) || Nx >= 0 && abs(Ny) >= 4g.np             # Standard left-right U-contour
             h1 = g.c .- g.dx * sgn(Nx) * [1 : 2r - 1...]
 
             c1 = h1[end] - g.dx * sgn(Nx)
@@ -212,7 +212,7 @@ function getPath(zIdx::Int64, g::Grid, r; branch = false)
 
             return [p1, p2, p3]
         else                                                            # Standard up-down U-contour
-            v1 = g.c .- g.dy * sgn(Ny) * [1 : 2r - 1...]
+            v1 = g.c .- g.dy * sgn(Ny) * [1 : 3r - 1...]
 
             c1 = v1[end] - g.dy * sgn(Ny)
 
@@ -220,7 +220,7 @@ function getPath(zIdx::Int64, g::Grid, r; branch = false)
 
             c2 = h[end] + g.dx * sgn(Nx)
 
-            v2 = c2 .+ g.dy * sgn(Ny) * [1 : 2r + abs(Ny) - 1...]
+            v2 = c2 .+ g.dy * sgn(Ny) * [1 : 3r + abs(Ny) - 1...]
 
             p1 = Path(g.c, v1, c1)
             p2 = Path(c1,  h,  c2)

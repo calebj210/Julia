@@ -187,7 +187,7 @@ Compute appropriate branch cut rotation angles based on the path to `z`.
 """
 function getBranchAngle(z, g::Grid; branch = false)
     if !branch
-        if abs(real(z)) < abs(imag(z)) || real(z) >= 0 && abs(imag(z)) >= 2g.np * g.h
+        if abs(real(z)) < abs(imag(z)) || real(z) >= 0 && abs(imag(z)) >= 3g.np * g.h
             # Right and left moving cuts
             if real(z) >= 0
                 θα = sgn(imag(z)) * π
