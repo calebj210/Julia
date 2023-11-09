@@ -16,6 +16,9 @@ struct Grid
     "External indices"
     e::Vector{Int64}
 
+    "Internal-external-padding vector"
+    ie::Vector{Char}
+
     "Internal node boundary"
     ib::Vector{Int64}
 
@@ -78,6 +81,7 @@ function getGrid(n, r; ir = 0.5, np = 0, nl = 1)::Grid
     z⃗  = vec(grid)                                      # Vectorize matrix grid
     i  = Array{Int64}([])                               # Initialize internal index array
     e  = Array{Int64}([])                               # Initialize external index array
+    ie = Array{Char}([])                                # Initialize internal external array
     ib = Array{Int64}([])                               # Initialize internal index array
     p  = Array{Int64}([])                               # Initialize padding index array
 
@@ -86,19 +90,23 @@ function getGrid(n, r; ir = 0.5, np = 0, nl = 1)::Grid
     for (idx, z) ∈ pairs(z⃗)
         if abs(z) <= ir
             push!(i, idx)                               # Internal node
+            push!(ie, 'i')
             
             if abs(z) > ir - h
                 push!(ib, idx)                          # Internal boundary node
             end
         elseif abs(real(z)) <= pr && abs(imag(z)) <= pr
             push!(e, idx)                               # External node
+            push!(ie, 'e')
+        else
+            push!(ie, 'p')
         end
     end
 
     # Sort internal boundary nodes
     sort!(ib, by = i -> angle(z⃗[i]))
 
-    return Grid(z⃗, i, e, ib, dx, dy, c, h, r, np, nl, T)
+    return Grid(z⃗, i, e, ie, ib, dx, dy, c, h, r, np, nl, T)
 end
 
 """

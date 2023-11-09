@@ -386,41 +386,61 @@ The radius to use the Taylor expansion is given by `ir` while the relative radiu
 function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, np = 3, nl = 1, branch = false)
     g = getGrid(n, r, ir = ir, np = np, nl = nl)                            # Generate grid
 
-    (iMap, eMap) = getReducedGridMap(g)                                     # Index maps to reduced grid for indexing through diff matrix
+#     (iMap, eMap) = getReducedGridMap(g)                                     # Index maps to reduced grid for indexing through diff matrix
 
     if !branch
         D0 = zeros(ComplexF64, length(g.i) + length(g.e), length(g.z))      # Initialize differentiation matrix
     else
-        D0 = spzeros(ComplexF64, length(g.i) + length(g.e), length(g.z))    # Initialize differentiation matrix
-        D1 = spzeros(ComplexF64, length(g.i) + length(g.e), length(g.z))    # Initialize differentiation matrix
-        D2 = spzeros(ComplexF64, length(g.i) + length(g.e), length(g.z))    # Initialize differentiation matrix
-        D3 = spzeros(ComplexF64, length(g.i) + length(g.e), length(g.z))    # Initialize differentiation matrix
+        D0 = spzeros(ComplexF64, length(g.z), length(g.i) + length(g.e))    # Initialize differentiation matrix
+        D1 = spzeros(ComplexF64, length(g.z), length(g.i) + length(g.e))    # Initialize differentiation matrix
+        D2 = spzeros(ComplexF64, length(g.z), length(g.i) + length(g.e))    # Initialize differentiation matrix
+        D3 = spzeros(ComplexF64, length(g.z), length(g.i) + length(g.e))    # Initialize differentiation matrix
     end
 
     # Populate internal weights using Taylor expansion approximation
     A = lu(getVand(g.ib, g))                                                # Compute vandermonde of internal boundary nodes
 
-    for (i, iIdx) ∈ pairs(g.i)
-        D0[iMap[i], g.ib] = getInternalWeights(iIdx, A, g, α, β)
-    end
+#     for (i, iIdx) ∈ pairs(g.i)
+#         D0[iMap[i], g.ib] = getInternalWeights(iIdx, A, g, α, β)
+#     end
 
     # Populate external weights using generalized Gregory quadrature
     c = getCorrections(g, α = α, β = β)                                     # End/corner corrections
 
-    for (e, eIdx) ∈ pairs(g.e)
-        if !branch
-            D0[eMap[e], :] = getExternalWeights(eIdx, c, g, α, β)
-        else
-            D0[eMap[e], :], D1[eMap[e], :]     = getExternalWeightsAlt(eIdx, c, g, α, β, branch = false)
-            if real(g.z[eIdx]) >= 1
-                D2[eMap[e], :], D3[eMap[e], :] = getExternalWeightsAlt(eIdx, c, g, α, β, branch = true)
+#     for (e, eIdx) ∈ pairs(g.e)
+#         if !branch
+#             D0[eMap[e], :] = getExternalWeights(eIdx, c, g, α, β)
+#         else
+#             D0[eMap[e], :], D1[eMap[e], :]     = getExternalWeightsAlt(eIdx, c, g, α, β, branch = false)
+#             if real(g.z[eIdx]) >= 1
+#                 D2[eMap[e], :], D3[eMap[e], :] = getExternalWeightsAlt(eIdx, c, g, α, β, branch = true)
+#             end
+#         end
+#     end
+
+    i = 1
+    for (j, t) ∈ pairs(g.ie)
+        if t == 'i'
+            D0[g.ib, i] = getInternalWeights(j, A, g, α, β)
+            
+            i += 1
+        elseif t == 'e'
+            if !branch
+                D0[:, i] = getExternalWeights(j, c, g, α, β)
+            else
+                D0[:, i], D1[:, i] = getExternalWeightsAlt(j, c, g, α, β, branch = false)
+                if real(g.z[i]) >= 1
+                    D2[:, i], D3[:, i] = getExternalWeightsAlt(j, c, g, α, β, branch = true)
+                end
             end
+
+            i += 1
         end
     end
 
     if !branch
         return D0
     else
-        return (D0, D1, D2, D3)
+        return transpose.((D0, D1, D2, D3))
     end
 end
