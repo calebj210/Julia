@@ -2,7 +2,7 @@
 # Generalized, grid-based Gregory quadrature for computing hypergeometric pFq
 #
 # Author: Caleb Jacobs
-# DLM: October 13, 2023
+# DLM: November 9, 2023
 =#
 
 using SpecialFunctions
@@ -264,8 +264,12 @@ function getExternalWeights(zIdx, c::Corrections, g::Grid, α, β)
 
         row[fIdx] += h * αt .* βt .* getCorrection(c, -dir, n == N ? "ep" : "cr")
     end
+    
+    tmp = .!iszero.(row)
+    rowIdx = findall(tmp)
+    row = row[tmp]
 
-    return row
+    return (rowIdx, row)
 end
 
 function sortPath(idx, g, z; branch = false)
@@ -322,8 +326,8 @@ function getExternalWeightsAlt(zIdx, c::Corrections, g::Grid, α, β; branch = f
     N = length(path)                                                    # Number of paths to travel
     z = g.z[zIdx]                                                       # Current z value
 
-    rowf = spzeros(ComplexF64, length(g.z))                             # Initialize main   row to populate
-    rowh = spzeros(ComplexF64, length(g.z))                             # Initialize branch row to populate
+    rowf = zeros(ComplexF64, length(g.z))                               # Initialize main row to populate
+    rowh = zeros(ComplexF64, length(g.z))                               # Initialize branch row to populate
 
     for (n, p) ∈ pairs(path)
         dir = sign(g.z[p.f] - g.z[p.i])                                 # Compute direction of travel
@@ -373,7 +377,15 @@ function getExternalWeightsAlt(zIdx, c::Corrections, g::Grid, α, β; branch = f
         rowh[fIdx[bfIdx]] += h * αt[bfIdx] .* βt[bfIdx] .* tmp[bfIdx]
     end
 
-    return (rowf, rowh)
+    tmp = .!iszero.(rowf)
+    rowfIdx = findall(tmp)
+    rowf = rowf[tmp]
+
+    tmp = .!iszero.(rowh)
+    rowhIdx = findall(tmp)
+    rowh = rowh[tmp]
+
+    return (rowfIdx, rowf, rowhIdx, rowh)
 end
 
 """
@@ -387,50 +399,76 @@ function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, np = 3, nl = 1, branch =
     g = getGrid(n, r, ir = ir, np = np, nl = nl)                            # Generate grid
 
 #     (iMap, eMap) = getReducedGridMap(g)                                     # Index maps to reduced grid for indexing through diff matrix
+    M = length(g.i) + length(g.e)
+    N = length(g.z)
 
     if !branch
-        D0 = zeros(ComplexF64, length(g.i) + length(g.e), length(g.z))      # Initialize differentiation matrix
+        D0 = zeros(ComplexF64, N, M)      # Initialize differentiation matrix
     else
-        D0 = spzeros(ComplexF64, length(g.z), length(g.i) + length(g.e))    # Initialize differentiation matrix
-        D1 = spzeros(ComplexF64, length(g.z), length(g.i) + length(g.e))    # Initialize differentiation matrix
-        D2 = spzeros(ComplexF64, length(g.z), length(g.i) + length(g.e))    # Initialize differentiation matrix
-        D3 = spzeros(ComplexF64, length(g.z), length(g.i) + length(g.e))    # Initialize differentiation matrix
+        # Initialize row vectors
+        row0 = Vector{Int64}()
+        row1 = Vector{Int64}()
+        row2 = Vector{Int64}()
+        row3 = Vector{Int64}()
+
+        # Initialize column vectors
+        col0 = Vector{Int64}()
+        col1 = Vector{Int64}()
+        col2 = Vector{Int64}()
+        col3 = Vector{Int64}()
+
+        # Initialize weight vectors
+        wgt0 = Vector{ComplexF64}()
+        wgt1 = Vector{ComplexF64}()
+        wgt2 = Vector{ComplexF64}()
+        wgt3 = Vector{ComplexF64}()
     end
 
     # Populate internal weights using Taylor expansion approximation
     A = lu(getVand(g.ib, g))                                                # Compute vandermonde of internal boundary nodes
 
-#     for (i, iIdx) ∈ pairs(g.i)
-#         D0[iMap[i], g.ib] = getInternalWeights(iIdx, A, g, α, β)
-#     end
-
     # Populate external weights using generalized Gregory quadrature
     c = getCorrections(g, α = α, β = β)                                     # End/corner corrections
 
-#     for (e, eIdx) ∈ pairs(g.e)
-#         if !branch
-#             D0[eMap[e], :] = getExternalWeights(eIdx, c, g, α, β)
-#         else
-#             D0[eMap[e], :], D1[eMap[e], :]     = getExternalWeightsAlt(eIdx, c, g, α, β, branch = false)
-#             if real(g.z[eIdx]) >= 1
-#                 D2[eMap[e], :], D3[eMap[e], :] = getExternalWeightsAlt(eIdx, c, g, α, β, branch = true)
-#             end
-#         end
-#     end
-
     i = 1
     for (j, t) ∈ pairs(g.ie)
+        if t == 'p'
+            continue
+        end
+
         if t == 'i'
-            D0[g.ib, i] = getInternalWeights(j, A, g, α, β)
+            push!(row0, g.ib...)
+            push!(col0, repeat([i], length(g.ib))...)
+            push!(wgt0, getInternalWeights(j, A, g, α, β)...)
             
             i += 1
         elseif t == 'e'
             if !branch
-                D0[:, i] = getExternalWeights(j, c, g, α, β)
+                idx, wgts = getExternalWeights(j, c, g, α, β)
+
+                push!(row0, idx...)
+                push!(col0, repeat([i], length(idx))...)
+                push!(wgt0, wgts...)
             else
-                D0[:, i], D1[:, i] = getExternalWeightsAlt(j, c, g, α, β, branch = false)
+                idx0, wgts0, idx1, wgts1 = getExternalWeightsAlt(j, c, g, α, β, branch = false)
+
+                push!(row0, idx0...)
+                push!(col0, repeat([i], length(idx0))...)
+                push!(wgt0, wgts0...)
+
+                push!(row1, idx1...)
+                push!(col1, repeat([i], length(idx1))...)
+                push!(wgt1, wgts1...)
                 if real(g.z[i]) >= 1
-                    D2[:, i], D3[:, i] = getExternalWeightsAlt(j, c, g, α, β, branch = true)
+                    idx2, wgts2, idx3, wgts3 = getExternalWeightsAlt(j, c, g, α, β, branch = true)
+
+                    push!(row2, idx2...)
+                    push!(col2, repeat([i], length(idx2))...)
+                    push!(wgt2, wgts2...)
+
+                    push!(row3, idx3...)
+                    push!(col3, repeat([i], length(idx3))...)
+                    push!(wgt3, wgts3...)
                 end
             end
 
@@ -438,9 +476,15 @@ function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, np = 3, nl = 1, branch =
         end
     end
 
+    # Construct sparse arrays
+    D0 = sparse(col0, row0, wgt0, M, N)
+    D1 = sparse(col1, row1, wgt1, M, N)
+    D2 = sparse(col2, row2, wgt2, M, N)
+    D3 = sparse(col3, row3, wgt3, M, N)
+
     if !branch
         return D0
     else
-        return transpose.((D0, D1, D2, D3))
+        return (D0, D1, D2, D3)
     end
 end
