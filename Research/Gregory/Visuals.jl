@@ -2,7 +2,7 @@
 # Collection of functions for visuallizing properties of integrators
 #
 # Author: Caleb Jacobs
-# DLM: November 1, 2023
+# DLM: November 15, 2023
 =#
 
 include("GenGreg.jl")
@@ -54,7 +54,7 @@ function plotGrid(g::Grid)
         Layout(width = 800, heights = 800))
 end
 
-function complexAbsPlot(z⃗, f⃗; logscale = false, title = "")
+function complexAbsPlot(z⃗, f⃗; logscale = false, title = "", smooth = "none")
     x⃗ = real(z⃗[:])
     y⃗ = imag(z⃗[:])
     if logscale
@@ -93,7 +93,7 @@ function complexAbsPlot(z⃗, f⃗; logscale = false, title = "")
                 x = x⃗,
                 y = y⃗,
                 z = z⃗,
-                zsmooth = "none",
+                zsmooth = smooth,
                 zmin = -16, zmax = 1,
                 colorscale = colors.viridis),
                layout)
@@ -102,7 +102,7 @@ function complexAbsPlot(z⃗, f⃗; logscale = false, title = "")
                 x = x⃗,
                 y = y⃗,
                 z = z⃗,
-                zsmooth = "none",
+                zsmooth = smooth,
                 colorscale = colors.viridis),
                layout)
     end
@@ -171,7 +171,7 @@ function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1)
     else
         title = "Abs-Arg(f)"
     end
-
+    
     layout = Layout(
         width = 800, height = 800,
         title = attr(
@@ -180,8 +180,9 @@ function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1)
             y = 0.96,
             x = 0.5,
             xanchor = "center",
-            yanchor = "top"
-        )
+            yanchor = "top",
+        ),
+        scene_aspectratio=attr(x = 1, y = 1, z = 1)
     )
 
     plt = plot(plts, layout)

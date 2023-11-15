@@ -65,6 +65,7 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5)
     branch = false                                                  # Initialize extra branch cut correction
     if length(a) == length(b)
         f = _0F0(g)                                                 # 0F0 base function case
+        h = f
     elseif length(a) == length(b) + 1
         f = _1F0(a[end], g)                                         # 1F0 base function case
         h = _1F0(a[end], g, branch = true)                          # 1F0 base function case alternate branch
@@ -75,6 +76,7 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5)
     elseif length(a) == length(b) - 1
         f = _0F1(b[bIdx], g)                                        # 0F1 base function case
         f[g.c] = 1                                                  # Fix origin singularity
+        h = f
 
         bIdx -= 1                                                   # Move b index to next layer
     else
@@ -86,7 +88,7 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5)
         β = b[bIdx] - a[aIdx] - 1                                   # Evaluation point singularity order
 
         if !branch
-            D = getDiffMat(n, r, α = α, β = β,                      # Generate differentiation matrix
+            D0, D1 = getDiffMat(n, r, α = α, β = β,                 # Generate differentiation matrix
                        ir = Tr, np = np, nl= nl)
         else
             D0,D1,D2,D3 = getDiffMat(n, r, α = α, β = β,            # Generate differentiation matrices with alternate branch
@@ -104,7 +106,8 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5)
         bIdx -= 1                                                   # Move to next layer in b
 
         if !branch
-            f = Γ .* D * f                                          # Compute values for next layer
+            f = Γ .* (D0 * f + D1 * h)                              # Compute values for next layer
+            h = f
         else
             f, h = (Γ .* (D0 * f + D1 * h), Γ .* (D2 * f + D3 * h)) # Compute values for next layer
         end

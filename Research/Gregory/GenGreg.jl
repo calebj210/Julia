@@ -224,53 +224,53 @@ function getBranchAngle(z, g::Grid; branch = false)
     return (θα, θβ)
 end
 
-"""
-    getExternalWeights(row, zIdx, path, g::Grid, α, β)
-
-Get external differentiation entries corresponding to `g`.z[`zIdx`].
-"""
-function getExternalWeights(zIdx, c::Corrections, g::Grid, α, β)
-    path = getPath(zIdx, g, 2g.np)                                      # Get path from origin to node
-    N = length(path)                                                    # Number of paths to travel
-    z = g.z[zIdx]                                                       # Current z value
-    row = zeros(ComplexF64, length(g.z))                                # Initialize row to populate
-
-    for (n, p) ∈ pairs(path)
-        dir = sign(g.z[p.f] - g.z[p.i])                                 # Compute direction of travel
-
-        iIdx = getCorrectionIndices(p.i, g.np, g)                       # Initial point correction indices
-        fIdx = getCorrectionIndices(p.f, g.np, g)                       # Final point correction indices
-
-        # Choose appropriate branch cuts
-        θα, θβ = getBranchAngle(z, g)
-
-        # Trapezoidal weights
-        αt = zα.(     g.z[p.p], α, θ = θα)
-        βt = zα.(z .- g.z[p.p], β, θ = θβ)
-
-        row[p.p] .+= dir * g.h .* αt .* βt
-
-        # Initial endpoint correction
-        h  = n == 1 ? zα(dir, 1 + α, θ = θα) : dir
-        αt = n == 1 ? 1 : zα.(g.z[iIdx], α, θ = θα)
-        βt = zα.(z .- g.z[iIdx], β, θ = θβ)
-
-        row[iIdx] += h * αt .* βt .* getCorrection(c, dir, n == 1 ? "bp" : "cr")
-
-        # Final endpoint correction
-        h  = n == N ? zα(dir, 1 + β, θ = θβ) : dir
-        αt = zα.(g.z[fIdx], α, θ = θα)
-        βt = n == N ? 1 : zα.(z .- g.z[fIdx], β, θ = θβ)
-
-        row[fIdx] += h * αt .* βt .* getCorrection(c, -dir, n == N ? "ep" : "cr")
-    end
-    
-    tmp = .!iszero.(row)
-    rowIdx = findall(tmp)
-    row = row[tmp]
-
-    return (rowIdx, row)
-end
+# """
+#     getExternalWeights(row, zIdx, path, g::Grid, α, β)
+# 
+# Get external differentiation entries corresponding to `g`.z[`zIdx`].
+# """
+# function getExternalWeights(zIdx, c::Corrections, g::Grid, α, β)
+#     path = getPath(zIdx, g, 2g.np)                                      # Get path from origin to node
+#     N = length(path)                                                    # Number of paths to travel
+#     z = g.z[zIdx]                                                       # Current z value
+#     row = zeros(ComplexF64, length(g.z))                                # Initialize row to populate
+# 
+#     for (n, p) ∈ pairs(path)
+#         dir = sign(g.z[p.f] - g.z[p.i])                                 # Compute direction of travel
+# 
+#         iIdx = getCorrectionIndices(p.i, g.np, g)                       # Initial point correction indices
+#         fIdx = getCorrectionIndices(p.f, g.np, g)                       # Final point correction indices
+# 
+#         # Choose appropriate branch cuts
+#         θα, θβ = getBranchAngle(z, g)
+# 
+#         # Trapezoidal weights
+#         αt = zα.(     g.z[p.p], α, θ = θα)
+#         βt = zα.(z .- g.z[p.p], β, θ = θβ)
+# 
+#         row[p.p] .+= dir * g.h .* αt .* βt
+# 
+#         # Initial endpoint correction
+#         h  = n == 1 ? zα(dir, 1 + α, θ = θα) : dir
+#         αt = n == 1 ? 1 : zα.(g.z[iIdx], α, θ = θα)
+#         βt = zα.(z .- g.z[iIdx], β, θ = θβ)
+# 
+#         row[iIdx] += h * αt .* βt .* getCorrection(c, dir, n == 1 ? "bp" : "cr")
+# 
+#         # Final endpoint correction
+#         h  = n == N ? zα(dir, 1 + β, θ = θβ) : dir
+#         αt = zα.(g.z[fIdx], α, θ = θα)
+#         βt = n == N ? 1 : zα.(z .- g.z[fIdx], β, θ = θβ)
+# 
+#         row[fIdx] += h * αt .* βt .* getCorrection(c, -dir, n == N ? "ep" : "cr")
+#     end
+#     
+#     tmp = .!iszero.(row)
+#     rowIdx = findall(tmp)
+#     row = row[tmp]
+# 
+#     return (rowIdx, row)
+# end
 
 function sortPath(idx, g, z; branch = false)
     pIdx = Vector{Int64}()
@@ -321,7 +321,7 @@ function sortPath(idx, g, z; branch = false)
     return (pIdx, bIdx)
 end
 
-function getExternalWeightsAlt(zIdx, c::Corrections, g::Grid, α, β; branch = false)
+function getExternalWeights(zIdx, c::Corrections, g::Grid, α, β; branch = false)
     path = getPath(zIdx, g, 2g.np, branch = branch)                     # Get path from origin to node
     N = length(path)                                                    # Number of paths to travel
     z = g.z[zIdx]                                                       # Current z value
@@ -403,7 +403,14 @@ function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, np = 3, nl = 1, branch =
     N = length(g.z)
 
     if !branch
-        D0 = zeros(ComplexF64, N, M)      # Initialize differentiation matrix
+        row0 = Vector{Int64}()
+        row1 = Vector{Int64}()
+
+        col0 = Vector{Int64}()
+        col1 = Vector{Int64}()
+        
+        wgt0 = Vector{ComplexF64}()
+        wgt1 = Vector{ComplexF64}()
     else
         # Initialize row vectors
         row0 = Vector{Int64}()
@@ -443,33 +450,25 @@ function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, np = 3, nl = 1, branch =
             
             i += 1
         elseif t == 'e'
-            if !branch
-                idx, wgts = getExternalWeights(j, c, g, α, β)
+            idx0, wgts0, idx1, wgts1 = getExternalWeights(j, c, g, α, β, branch = false)
 
-                push!(row0, idx...)
-                push!(col0, repeat([i], length(idx))...)
-                push!(wgt0, wgts...)
-            else
-                idx0, wgts0, idx1, wgts1 = getExternalWeightsAlt(j, c, g, α, β, branch = false)
+            push!(row0, idx0...)
+            push!(col0, repeat([i], length(idx0))...)
+            push!(wgt0, wgts0...)
 
-                push!(row0, idx0...)
-                push!(col0, repeat([i], length(idx0))...)
-                push!(wgt0, wgts0...)
+            push!(row1, idx1...)
+            push!(col1, repeat([i], length(idx1))...)
+            push!(wgt1, wgts1...)
+            if branch && real(g.z[i]) >= 1
+                idx2, wgts2, idx3, wgts3 = getExternalWeights(j, c, g, α, β, branch = true)
 
-                push!(row1, idx1...)
-                push!(col1, repeat([i], length(idx1))...)
-                push!(wgt1, wgts1...)
-                if real(g.z[i]) >= 1
-                    idx2, wgts2, idx3, wgts3 = getExternalWeightsAlt(j, c, g, α, β, branch = true)
+                push!(row2, idx2...)
+                push!(col2, repeat([i], length(idx2))...)
+                push!(wgt2, wgts2...)
 
-                    push!(row2, idx2...)
-                    push!(col2, repeat([i], length(idx2))...)
-                    push!(wgt2, wgts2...)
-
-                    push!(row3, idx3...)
-                    push!(col3, repeat([i], length(idx3))...)
-                    push!(wgt3, wgts3...)
-                end
+                push!(row3, idx3...)
+                push!(col3, repeat([i], length(idx3))...)
+                push!(wgt3, wgts3...)
             end
 
             i += 1
@@ -479,11 +478,13 @@ function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, np = 3, nl = 1, branch =
     # Construct sparse arrays
     D0 = sparse(col0, row0, wgt0, M, N)
     D1 = sparse(col1, row1, wgt1, M, N)
-    D2 = sparse(col2, row2, wgt2, M, N)
-    D3 = sparse(col3, row3, wgt3, M, N)
+    if branch
+        D2 = sparse(col2, row2, wgt2, M, N)
+        D3 = sparse(col3, row3, wgt3, M, N)
+    end
 
     if !branch
-        return D0
+        return (D0, D1)
     else
         return (D0, D1, D2, D3)
     end
