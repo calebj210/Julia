@@ -2,7 +2,7 @@
 # Test suite for grid based hypergeometric calculations
 #
 # Author: Caleb Jacobs
-# DLM: November 9, 2023
+# DLM: November 15, 2023
 =#
 
 using CSV, Tables
@@ -54,28 +54,40 @@ function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5)
     relayout!(p3, scene_camera = camera)
     relayout!(p4, scene_camera = camera)
 
-    display([p1 p2; p3 p4])
-
     return (z, f, h, tru, p1, p2, p3, p4)
 end
 
-# pFp Tests
-pFp12(; r = 1.5, n = 40, np = 3, Tr = 0.75) = pFqTest([.1], [.2], r = r, n = n, np = np, Tr = Tr) 
-pFp1234(; r = 1.5, n = 40, np = 3, Tr = 0.75) = pFqTest([.1,.2], [.3,.4], r = r, n = n, np = np, Tr = Tr) 
-pFp123456(; r = 1.5, n = 40, np = 3, Tr = 0.75) = pFqTest([.1,.2,.3], [.4,.5,.6], r = r, n = n, np = np, Tr = Tr) 
-pFp12345678(; r = 1.5, n = 40, np = 3, Tr = 0.75) = pFqTest([.1,.2,.3,.4], [.5,.6,.7,.8], r = r, n = n, np = np, Tr = Tr) 
-pFp1234567890(; r = 1.5, n = 40, np = 3, Tr = 0.75) = pFqTest([.1,.2,.3,.4,.5], [.6,.7,.8,.9, 1], r = r, n = n, np = np, Tr = Tr) 
 
-# pFp+1 Tests
-pFpp122(; r = 1.5, n = 40, np = 3, Tr = 0.5) = pFqTest([1], [2,2], r = r, n = n, np = np, Tr = Tr) 
-pFpp11222(; r = 1.5, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1], [2,2,2], r = r, n = n, np = np, Tr = Tr) 
-pFpp1112222(; r = 1.5, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1,1], [2,2,2,2], r = r, n = n, np = np, Tr = Tr) 
-pFpp111122222(; r = 1.5, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1,1,1], [2,2,2,2,2], r = r, n = n, np = np, Tr = Tr) 
-pFpp56(; r = 1.5, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1,1,1,1], [2,2,2,2,2,2], r = r, n = n, np = np, Tr = Tr) 
+function runTests(; N::Integer = 0)
+    test = 
+        [
+#                 a             b                        r   n np   Tr
+            ([1.9,1],        [2.9],                   2.49, 80, 3, 0.6),    # Test 1
+            ([1,-1.9],       [2.9],                   2.49, 80, 3, 0.6),    # Test 2
+            ([.9,1.1,-2.1],  [1.2,1.3],               2.49, 80, 3, 0.6),    # Test 3
+            ([1.1,2.1,.9],   [1.2,1.3],               2.49, 80, 3, 0.6),    # Test 4
+            ([.9,1,1.1,1.2], [1.05,1.15,1.25],        2.49, 80, 3, 0.6)     # Test 5
+        ]
 
-# ppFp Tests
-ppFp112(; r = 1.2, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1], [2], r = r, n = n, np = np, Tr = Tr) 
-ppFp11122(; r = 1.2, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1,1], [2,2], r = r, n = n, np = np, Tr = Tr) 
-ppFp1111222(; r = 1.2, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1,1,1], [2,2,2], r = r, n = n, np = np, Tr = Tr) 
-ppFp111112222(; r = 1.2, n = 40, np = 3, Tr = 0.5) = pFqTest([1,1,1,1,1], [2,2,2,2], r = r, n = n, np = np, Tr = Tr) 
-ppFp65(; r = 1.2, n = 40, np = 3, Tr = 0.5) = pFqTest([.1,.2,.3,.4,.5,.6], [.21,.31,.41,.51,.61], r = r, n = n, np = np, Tr = Tr) 
+    if N != 0
+        tests = N
+    end
+
+    for testN ∈ tests
+        (a, b, r, n, np, Tr) = test[testN]
+
+        println("Running test ", testN, " with a = ", a, " and b = ", b, ".")
+
+        (z, f, h, tru, p1, p2, p3, p4) = pFqTest(a, b, r = r, n = n, np = np, Tr = Tr)
+
+        display(p1)
+        display(p2)
+        display(p3)
+        display(p4)
+
+        println("Press enter when ready for next test.")
+        readline()
+    end
+
+    return nothing
+end
