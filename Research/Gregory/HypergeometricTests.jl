@@ -25,7 +25,7 @@ function getComplexVals(path::String)
 end
 
 "Generate pFq test"
-function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5)
+function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, dir = -1)
     generateGrids("grid.csv", n, r)
 
     println("Press enter after running Mathematica to update values!")
@@ -48,7 +48,7 @@ function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5)
     p4 = complexPlot3d(z, f, T = 3)
 
     camera = attr(
-        eye=attr(x = -1.25, y = -1.25, z = 1.25)
+        eye=attr(x = 1.5dir, y = 1.5dir, z = 1.5)
     )
     relayout!(p2, scene_camera = camera)
     relayout!(p3, scene_camera = camera)
@@ -58,27 +58,29 @@ function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5)
 end
 
 
-function runTests(; N::Integer = 0)
+function runTests(; N = 0)
     test = 
         [
-#                 a             b                        r   n np   Tr
-            ([1.9,1],        [2.9],                   2.49, 80, 3, 0.6),    # Test 1
-            ([1,-1.9],       [2.9],                   2.49, 80, 3, 0.6),    # Test 2
-            ([.9,1.1,-2.1],  [1.2,1.3],               2.49, 80, 3, 0.6),    # Test 3
-            ([1.1,2.1,.9],   [1.2,1.3],               2.49, 80, 3, 0.6),    # Test 4
-            ([.9,1,1.1,1.2], [1.05,1.15,1.25],        2.49, 80, 3, 0.6)     # Test 5
+#                 a             b                        r   n np   Tr, cam
+            ([1.9,1],        [2.9],                   2.49, 80, 3, 0.6, -1),    # Test 1
+            ([1,-1.9],       [2.9],                   2.49, 80, 3, 0.6,  1),    # Test 2
+            ([.9,1.1,-2.1],  [1.2,1.3],               2.49, 80, 3, 0.6,  1),    # Test 3
+            ([1.1,2.1,.9],   [1.2,1.3],               2.49, 80, 3, 0.6,  1),    # Test 4
+            ([.9,1,1.1,1.2], [1.05,1.15,1.25],        2.49, 80, 3, 0.6,  1)     # Test 5
         ]
 
     if N != 0
         tests = N
+    else
+        tests = eachindex(a)
     end
 
     for testN ∈ tests
-        (a, b, r, n, np, Tr) = test[testN]
+        (a, b, r, n, np, Tr, dir) = test[testN]
 
         println("Running test ", testN, " with a = ", a, " and b = ", b, ".")
 
-        (z, f, h, tru, p1, p2, p3, p4) = pFqTest(a, b, r = r, n = n, np = np, Tr = Tr)
+        (z, f, h, tru, p1, p2, p3, p4) = pFqTest(a, b, r = r, n = n, np = np, Tr = Tr, dir = dir)
 
         display(p1)
         display(p2)
