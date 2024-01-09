@@ -85,6 +85,9 @@ function complexAbsPlot(z⃗, f⃗; logscale = false, title = "", smooth = "none
             x = 0.5,
             xanchor = "center",
             yanchor = "top"
+        ),
+        font=attr(
+            size = 18
         )
     )
 
@@ -141,12 +144,11 @@ function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1)
     for p ∈ f⃗
         if T == 2
             z⃗ = real(p)
-            args = angle.(p)
-            args[args .< 0] .+= 2π
+            args = zeros(length(z⃗))
         elseif T == 3
             z⃗ = imag(p)
             args = angle.(p)
-            args[args .< 0] .+= 2π
+            args = zeros(length(z⃗))
         else
             z⃗ = abs.(p)
             args = angle.(p)
@@ -161,7 +163,7 @@ function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1)
                         colorbar = attr(
                             tickmode = "array",
                             tickvals = [0, π, 2π],
-                            ticktext = ["-π", "0", "π"])))
+                            ticktext = ["0", "π", "2π"])))
     end
 
     if T == 2
@@ -176,11 +178,19 @@ function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1)
         width = 800, height = 800,
         title = attr(
             text = title,
-            font_size = 25,
+            font_size = 28,
             y = 0.96,
             x = 0.5,
             xanchor = "center",
             yanchor = "top",
+        ),
+        scene = attr(
+            xaxis_title = "Re(z)",
+            yaxis_title = "Im(z)",
+            zaxis_title = "Abs(f)",
+        ),
+        font=attr(
+            size = 15
         ),
         scene_aspectratio=attr(x = 1, y = 1, z = 1)
     )
