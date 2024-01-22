@@ -199,8 +199,8 @@ function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1, exclude = false, me
         else
             xmin, xmax = extrema(x⃗)
             ymin, ymax = extrema(y⃗)
-            hx = (xmax - xmin) / size(z⃗)[1]
-            hy = (ymax - ymin) / size(z⃗)[2]
+            hx = (xmax - xmin) / (size(z⃗)[1] + 1)
+            hy = (ymax - ymin) / (size(z⃗)[2] + 1)
 
             push!(plts, surface(
                         x = x⃗, y = y⃗, z = z⃗,

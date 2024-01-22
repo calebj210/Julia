@@ -2,7 +2,7 @@
 # Constructors and routines for working with complex grids for quadrature.
 #
 # Author: Caleb Jacobs
-# DLM: October 10, 2023
+# DLM: January 22, 2023
 =#
 
 "Complex grid for use with grid based quadratures."
@@ -262,30 +262,30 @@ function getPathIndices(z::ComplexF64, g::Grid)
 end
 
 """ 
-    getCorrectionIndices(z, r, g)
-Get indices of surrounding correction nodes in grid g an adjacent distance of r away from z.
+    getCorrectionIndices(z, bpci, g)
+Get indices of surrounding correction nodes of `zIdx` in grid `g` by translating basepoint correction indices `bpci`.
 """
-function getCorrectionIndices(zIdx::Int64, r::Int64, g::Grid)
-    if r == 0
-        return [zIdx]
-    end
+function getCorrectionIndices(zIdx::Int64, bpci::Vector{Int64}, g::Grid)
+    Nx = round(Int64, real(g.z[zIdx]) / g.h)                        # Number of horizontal nodes
+    Ny = round(Int64, imag(g.z[zIdx]) / g.h)                        # Number of vertical nodes
 
-    idx = zeros(Int64, 8r)                                              # Initialize indices
+    idx = bpci .+ Nx * g.dx .+ Ny * g.dy                            # Translate basepoint corrections
 
-    idx[     1 :  r + 1] = zIdx + r * g.dx .+ [     0 : r...] * g.dy    # Right top wall
-    idx[ r + 2 : 3r + 1] = zIdx + r * g.dy .- [-r + 1 : r...] * g.dx    # Top wall
-    idx[3r + 2 : 5r + 1] = zIdx - r * g.dx .- [-r + 1 : r...] * g.dy    # Left wall
-    idx[5r + 2 : 7r + 1] = zIdx - r * g.dy .+ [-r + 1 : r...] * g.dx    # Bottom wall
-
-    if r > 1
-        idx[7r + 2 : 8r] = zIdx + r * g.dx .+ [-r + 1 : - 1...] * g.dy  # Right bottom wall
-    end
-
-    return idx
+    return idx 
 end
 
-function getCorrectionIndices(z::ComplexF64, r::Int64, g::Grid)
-    return getCorrectionIndices(getIdx(z, g), r, g)
+function getBasepointCorrectionIndices(g::Grid)
+    bpci = Vector{Int64}()
+
+    for i ∈ g.c - g.dx * (g.np + 1) : g.c + g.dx * (g.np + 1)
+        if (g.np - .5) * g.h <= abs(g.z[i]) && abs(g.z[i]) <= (g.np + .5) * g.h
+            push!(bpci, i)
+        end
+    end
+    
+    sort!(bpci, by = (i -> angle(g.z[i])))
+
+    return bpci
 end
 
 """
