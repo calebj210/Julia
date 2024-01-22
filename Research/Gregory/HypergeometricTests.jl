@@ -25,7 +25,7 @@ function getComplexVals(path::String)
 end
 
 "Generate pFq test"
-function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, dir = -1)
+function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, dir = -1, exclude = false)
     generateGrids("grid.csv", n, r)
 
     println("Press enter after running Mathematica to update values!")
@@ -43,16 +43,16 @@ function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, dir = -1)
     title = string(length(a), "F", length(b), "(", a, "; ", b, "; z)") 
 
     p1 = complexAbsPlot(z, f - tru, logscale = true, title = title)
-    p2 = complexPlot3d(z, f)
-    p3 = complexPlot3d(z, f, T = 2)
-    p4 = complexPlot3d(z, f, T = 3)
+    p2 = complexPlot3d(z, f, exclude = exclude)
+    p3 = complexPlot3d(z, f, T = 2, exclude = exclude, mesh = true)
+    p4 = complexPlot3d(z, f, T = 3, exclude = exclude, mesh = true)
 
     camera = attr(
         eye=attr(x = 1.5dir, y = 1.5dir, z = 1.5)
     )
-    relayout!(p2, scene_camera = camera)
-    relayout!(p3, scene_camera = camera)
-    relayout!(p4, scene_camera = camera)
+    relayout!(p2, scene_camera = camera, template = "plotly_white")
+    relayout!(p3, scene_camera = camera, template = "plotly_white")
+    relayout!(p4, scene_camera = camera, template = "plotly_white")
 
     return (z, f, h, tru, p1, p2, p3, p4)
 end
@@ -61,13 +61,13 @@ end
 function runTests(; N = 0)
     test = 
         [
-#                 a                  b                    r   n np   Tr, cam
-            ([1.9,1],            [2.9],                2.49, 80, 3, 0.6, -1),    # Test 1
-            ([1,-1.9],           [2.9],                2.49, 80, 3, 0.6,  1),    # Test 2
-            ([1.0,1.1,0.9],      [1.2,1.3],            1.99, 80, 3, 0.6,  1),    # Test 3
-            ([1.0,1.1,-0.9],     [1.2,1.3],            1.99, 80, 3, 0.6,  1),    # Test 4
-            ([1.0,1.1,1.2,0.9],  [1.3,1.4,1.5],        1.99, 80, 3, 0.6, -1),    # Test 5
-            ([1.0,1.1,1.2,-0.9], [1.3,1.4,1.5],        1.99, 80, 3, 0.6,  1),    # Test 6
+#                 a                  b                    r   n np   Tr, cam  exclusion
+            ([1.9,1],            [2.9],                2.49, 80, 3, 0.6, -1,  true),    # Test 1
+            ([1,-1.9],           [2.9],                2.49, 80, 3, 0.6,  1,  true),    # Test 2
+            ([1.0,1.1,0.9],      [1.2,1.3],            1.99, 80, 3, 0.6, -1,  true),    # Test 3
+            ([1.0,1.1,-0.9],     [1.2,1.3],            1.99, 80, 3, 0.6,  1,  true),    # Test 4
+            ([1.0,1.1,1.2,0.9],  [1.3,1.4,1.5],        1.99, 80, 3, 0.6, -1,  true),    # Test 5
+            ([1.0,1.1,1.2,-0.9], [1.3,1.4,1.5],        1.99, 80, 3, 0.6,  1,  true),    # Test 6
         ]
 
     if N != 0
@@ -77,11 +77,11 @@ function runTests(; N = 0)
     end
 
     for testN ∈ tests
-        (a, b, r, n, np, Tr, dir) = test[testN]
+        (a, b, r, n, np, Tr, dir, ex) = test[testN]
 
         println("Running test ", testN, " with a = ", a, " and b = ", b, ".")
 
-        (z, f, h, tru, p1, p2, p3, p4) = pFqTest(a, b, r = r, n = n, np = np, Tr = Tr, dir = dir)
+        (z, f, h, tru, p1, p2, p3, p4) = pFqTest(a, b, r = r, n = n, np = np, Tr = Tr, dir = dir, exclude = ex)
 
         display(p1)
         display(p2)

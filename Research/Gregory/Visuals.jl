@@ -2,7 +2,7 @@
 # Collection of functions for visuallizing properties of integrators
 #
 # Author: Caleb Jacobs
-# DLM: November 15, 2023
+# DLM: January 17, 2023
 =#
 
 include("GenGreg.jl")
@@ -135,19 +135,52 @@ function complexPlot(z⃗, f⃗)
     return plt
 end
 
-function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1)
-    x⃗ = real(z⃗)
-    y⃗ = imag(z⃗)
+function colorWheel()
+    x = range(-1, 1, length = 501)
+
+    z = [x + im * y for x ∈ x, y ∈ x]
+    f = z
+    f[abs.(z) .> 1] .= NaN
+
+    x⃗ = real(z[:])
+    y⃗ = imag(z[:])
+    args = angle.(f[:])
+    args[args .< 0] .+= 2π
+
+    plt = plot(heatmap(
+            x = x⃗,
+            y = y⃗,
+            z = args,
+            zsmooth = "none",
+            zmin = 0, zmax = 2π,
+            colorscale = colors.hsv,
+            showscale = false),
+            Layout(
+                width  = 1000, 
+                height = 1000,
+                yaxis_visible = false,
+                xaxis_visible = false))
+
+    relayout!(plt, template = "plotly_white")
+
+    return plt
+end
+
+function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1, exclude = false, mesh = false)
+    x⃗, y⃗ = reim(z⃗)
         
     plts = Vector{GenericTrace}()
 
     for p ∈ f⃗
+        if exclude
+            p[y⃗ .== 0 .&& x⃗ .> 1] .= NaN + NaN * im     # Exclude common branch cut
+        end
+
         if T == 2
             z⃗ = real(p)
             args = zeros(length(z⃗))
         elseif T == 3
             z⃗ = imag(p)
-            args = angle.(p)
             args = zeros(length(z⃗))
         else
             z⃗ = abs.(p)
@@ -155,15 +188,44 @@ function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1)
             args[args .< 0] .+= 2π
         end
 
-        push!(plts, surface(
+        if !mesh
+            push!(plts, surface(
                         x = x⃗, y = y⃗, z = z⃗,
+                        connectgaps = false,
                         surfacecolor = args,
                         cmin = 0, cmax = 2π,
                         colorscale = colors.hsv,
-                        colorbar = attr(
-                            tickmode = "array",
-                            tickvals = [0, π, 2π],
-                            ticktext = ["0", "π", "2π"])))
+                        showscale = false))
+        else
+            xmin, xmax = extrema(x⃗)
+            ymin, ymax = extrema(y⃗)
+            hx = (xmax - xmin) / size(z⃗)[1]
+            hy = (ymax - ymin) / size(z⃗)[2]
+
+            push!(plts, surface(
+                        x = x⃗, y = y⃗, z = z⃗,
+                        connectgaps = false,
+                        opacity = 0,
+                        showscale = false,
+                        contours = attr(
+                            x = attr(
+                                show = true,
+                                start = xmin,
+                                size  = hx,
+                                color = "black",
+                                width = 1),
+                            x_end = xmax,
+                            y = attr(
+                                show = true,
+                                start = ymin,
+                                size  = hy, 
+                                color = "black",
+                                width = 1),
+                            y_end = ymax)
+                        )
+            )
+
+        end
     end
 
     if T == 2
@@ -179,7 +241,7 @@ function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1)
         title = attr(
             text = title,
             font_size = 28,
-            y = 0.96,
+            y = 0.86,
             x = 0.5,
             xanchor = "center",
             yanchor = "top",
@@ -200,12 +262,12 @@ function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1)
     return plt
 end
 
-function complexPlot3d(z::Vector, f::Vector...; T = 1)
+function complexPlot3d(z::Vector, f::Vector...; T = 1, exclude = false, mesh = false)
     Z = reshape(z, round(Int64, sqrt(length(z))), :)
 
     N = round(Int64, sqrt(length(f[1])))
 
     F = reshape.(f, N , :)
 
-    return complexPlot3d(Z, F..., T = T)
+    return complexPlot3d(Z, F..., T = T, exclude = exclude, mesh = mesh)
 end
