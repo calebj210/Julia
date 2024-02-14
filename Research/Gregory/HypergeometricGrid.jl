@@ -2,7 +2,7 @@
 # Generalized Gregory quadrature for computing high order hypergeometric pFq over a grid
 #
 # Author: Caleb Jacobs
-# DLM: October 31, 2023
+# DLM: December 2, 2023
 =#
 
 using SpecialFunctions

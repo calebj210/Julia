@@ -86,7 +86,7 @@ function getInternalWeights(zIdx, A, g::Grid, α, β)
     b = [z^(1 + α + β + k) * gamma(1 + α + k) * gamma(1 + β) / gamma(2 + α + β + k) for k ∈ 0 : N - 1]
 
     ω = A \ b   
-    
+
     return ω
 end 
 
@@ -183,13 +183,13 @@ function getCorrection(c::Corrections, dir, type::String)
 end
 
 """
-    getBranchAngles(z)
+    getBranchAngle(z)
 
 Compute appropriate branch cut rotation angles based on the path to `z`.
 """
 function getBranchAngle(z, g::Grid; branch = false)
     if !branch
-        if abs(real(z)) < abs(imag(z)) || real(z) >= 0 && abs(imag(z)) >= 3g.np * g.h
+        if abs(real(z)) < abs(imag(z)) || real(z) >= 0 && abs(imag(z)) >= 4g.np * g.h
             # Right and left moving cuts
             if real(z) >= 0
                 θα = sgn(imag(z)) * π

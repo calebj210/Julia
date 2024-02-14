@@ -2,7 +2,7 @@
 # Constructors and routines for working with complex grids for quadrature.
 #
 # Author: Caleb Jacobs
-# DLM: January 22, 2023
+# DLM: January 30, 2023
 =#
 
 "Complex grid for use with grid based quadratures."
@@ -47,9 +47,15 @@ struct Grid
     T::Int64
 end
 
+"Single path of a trapezoidal rule segment"
 struct Path
+    "Initial node index in path"
     i::Int64
+
+    "Trapezoidal indices"
     p::Vector{Int64}
+
+    "Final node index in path"
     f::Int64
 end
 
@@ -182,7 +188,7 @@ function getPath(zIdx::Int64, g::Grid, r; branch = false)
     # Begin u-pathing
     if !branch
         if abs(Nx) < abs(Ny) || Nx >= 0 && abs(Ny) >= 4g.np             # Standard left-right U-contour
-            h1 = g.c .- g.dx * sgn(Nx) * [1 : 3r - 1...]
+            h1 = g.c .- g.dx * sgn(Nx) * [1 : r - 1...]
 
             c1 = h1[end] - g.dx * sgn(Nx)
 
@@ -190,7 +196,7 @@ function getPath(zIdx::Int64, g::Grid, r; branch = false)
 
             c2 = v[end] + g.dy * sgn(Ny)
 
-            h2 = c2 .+ g.dx * sgn(Nx) * [1 : 3r + abs(Nx) - 1...]
+            h2 = c2 .+ g.dx * sgn(Nx) * [1 : r + abs(Nx) - 1...]
 
             p1 = Path(g.c, h1, c1)
             p2 = Path(c1,  v,  c2)
@@ -277,8 +283,9 @@ end
 function getBasepointCorrectionIndices(g::Grid)
     bpci = Vector{Int64}()
 
+    # Scan over middle slice of nodes that may be in the stencil
     for i ∈ g.c - g.dx * (g.np + 1) : g.c + g.dx * (g.np + 1)
-        if (g.np - .5) * g.h <= abs(g.z[i]) && abs(g.z[i]) <= (g.np + .5) * g.h
+        if (g.np - 1.5) * g.h <= abs(g.z[i]) && abs(g.z[i]) <= (g.np + .0) * g.h
             push!(bpci, i)
         end
     end
@@ -286,14 +293,4 @@ function getBasepointCorrectionIndices(g::Grid)
     sort!(bpci, by = (i -> angle(g.z[i])))
 
     return bpci
-end
-
-"""
-    rotCorrection(idx, dir, g::Grid)
-Rotate square correction stencil to point in direction of dir (clockwise)
-"""
-function rotCorrection(idx::Vector, dir::Int64)
-    r = length(idx) / 8
-
-    return circshift(idx, -2r * (dir % 4))
 end
