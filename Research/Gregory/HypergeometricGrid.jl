@@ -12,7 +12,7 @@ include("GenGreg.jl")
 sgn(z) = iszero(z) ? one(z) : sign(z)
 
 "Compute roots given a power α and a branch cut rotation of θ."
-function oneMinusZα(z, α::Real, branch)
+function oneMinusZα(z, α::Real, branch = false)
     if !branch
         if imag(z) == 0 && real(z) > 1
             return (1 - z)^α * cispi(2(α % 1))
