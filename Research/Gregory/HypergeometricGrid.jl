@@ -2,11 +2,12 @@
 # Generalized Gregory quadrature for computing high order hypergeometric pFq over a grid
 #
 # Author: Caleb Jacobs
-# DLM: December 2, 2023
+# DLM: March 5, 2024
 =#
 
 using SpecialFunctions
 include("GenGreg.jl")
+include("Z1Expansion.jl")
 
 "Modified sign function to return 1 when z = 0"
 sgn(z) = iszero(z) ? one(z) : sign(z)
@@ -51,7 +52,7 @@ function _0F1(b, g)
     return f
 end
 
-function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5)
+function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5, modifyZ1 = true, cr = 9, sr = 10)
     o = min(length(a), length(b))                                   # Order of pFq
 
     g = getGrid(n, r, ir = Tr, np = np, nl = o)                     # Initial grid
@@ -110,6 +111,10 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5)
             h = f
         else
             f, h = (Γ .* (D0 * f + D1 * h), Γ .* (D2 * f + D3 * h)) # Compute values for next layer
+
+            if modifyZ1
+                modifyPFQ!(a[aIdx + 1 : end], b[bIdx + 1 : end], g, f, cr = cr, sr = sr)
+            end
         end
 
         f[g.c] = 1 + 0im
