@@ -503,7 +503,7 @@ function computeΔ(nodes, F, c::Common)
     return ΔF
 end
 
-# Compute hyperviscoisty term
+# Compute hyperviscosity term
 function computeHyperV(nodes, F, c::Common)
     d, N = size(nodes)                          # Dimension and # of nodes
     clusts = c.clusts                           # Rotated node clusters

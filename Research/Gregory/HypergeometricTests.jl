@@ -25,7 +25,7 @@ function getComplexVals(path::String)
 end
 
 "Generate pFq test"
-function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, dir = -1, exclude = false)
+function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, cr = 9, sr = 10, modifyZ1 = true, dir = -1, exclude = false)
     generateGrids("grid.csv", n, r)
 
     println("Press enter after running Mathematica to update values!")
@@ -35,7 +35,7 @@ function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, dir = -1, exclude = false
         (z, f) = pFq(a, b, r = r, n = n, np = np, Tr = Tr)
         h = []
     else    
-        (z, f, h) = pFq(a, b, r = r, n = n, np = np, Tr = Tr)
+        (z, f, h) = pFq(a, b, r = r, n = n, np = np, Tr = Tr, cr = cr, sr = sr, modifyZ1 = modifyZ1)
     end
 
     tru = getComplexVals("Data/pfq.csv")
@@ -46,6 +46,7 @@ function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, dir = -1, exclude = false
     p2 = complexPlot3d(z, f, exclude = exclude)
     p3 = complexPlot3d(z, f, T = 2, exclude = exclude, mesh = true)
     p4 = complexPlot3d(z, f, T = 3, exclude = exclude, mesh = true)
+    p5 = complexAbsPlot(z, (f - tru) ./ abs.(tru), logscale = true, title = title)
 
     camera = attr(
         eye=attr(x = 1.5dir, y = 1.5dir, z = 1.5)
@@ -54,7 +55,7 @@ function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, dir = -1, exclude = false
     relayout!(p3, scene_camera = camera, template = "plotly_white")
     relayout!(p4, scene_camera = camera, template = "plotly_white")
 
-    return (z, f, h, tru, p1, p2, p3, p4)
+    return (z, f, h, tru, p1, p2, p3, p4, p5)
 end
 
 

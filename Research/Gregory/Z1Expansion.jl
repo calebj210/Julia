@@ -28,6 +28,8 @@ Compute z = 1 pFq expansion weights.
 function getZ1ExpansionWeights(a, b, z, f)
     A = getModifiedVand(a, b, z)
 
+    display(cond(A))
+
     ω = A \ f
 
     ωα = ω[1 : round(Int64, length(ω) / 2)]

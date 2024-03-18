@@ -8,7 +8,7 @@
 using LinearAlgebra
 using GenericLinearAlgebra
 using Plots
-using ForwardDiff
+using TaylorDiff
 
 """
     getCenteredStencil(n = 3)
@@ -21,7 +21,7 @@ function getCenteredStencil(n = 3)
     end
 
     nL = floor(Int64, n / 2)                    # Lower bound on stencil
-    Z = [[x, y] for x ∈ -nL : nL, y ∈ -nL : nL] # Stencil nodes
+    Z = [[x, y] for y ∈ -nL : nL, x ∈ -nL : nL] # Stencil nodes
 
     return Z
 end
@@ -56,14 +56,97 @@ Compute stencil weights for 2D laplacian at stencil nodes `Z` up to order 'N' if
 May need to set higher precision via `setprecision()' to get reliable results.
 """
 function getΔWeights(Z, N = 7)
-    tmp = zeros(1, length(Z))
-    tmp[ceil(Int64, length(Z) / 2)] = 1
+    tmp = zeros(1, length(Z))               # Impose central weight is 1
+    tmp[ceil(Int64, length(Z) / 2)] = 1     # 1 constraint
 
-    A = [tmp; getA(Z, N)]
+    A = [tmp; getA(Z, N)]                   # Construct LHS
 
-    b = [1; zeros(size(A, 1) - 1)]
+    b = [1; zeros(size(A, 1) - 1)]          # Construct Laplacian RHS
 
-    ω = A \ b
+    ω = A \ b                               # Compute weights
 
-    return reshape(ω, isqrt(length(ω)), :)
+    return reshape(ω, isqrt(length(ω)), :)  # Return weights in Fornberg stencil form
 end
+
+"""
+    getD1Weights(Z, N = 7)
+
+Compute stencil weights for first x-derivative at stencil nodes `Z` up to order `N` if possible.
+"""
+function getD1Weights(Z, N = 7)
+    cent = ceil(Int64, length(Z) / 2)
+    zrs = zeros(Int64((size(Z, 1) - 1) / 2), length(Z))
+    for i = 0 : size(zrs, 1) - 1
+        zrs[i + 1, cent + i] = 1
+    end
+
+    A = [getA(Z, N); zrs]                   # Construct LHS
+
+    b = zeros(size(A, 1))
+    b[2] = 1
+
+    ω = A \ b                               # Compute weights
+
+    return reshape(ω, isqrt(length(ω)), :)  # Return weights in Fornberg stencil form
+end
+
+"""
+    getD2Weights(Z, N = 7)
+
+Compute stencil weights for second x-derivative at stencil nodes `Z` up to order `N` if possible.
+"""
+function getD2Weights(Z, N = 7)
+    cent = ceil(Int64, length(Z) / 2)
+    zrs = zeros(1, length(Z))
+    zrs[cent] = 1
+
+    A = [getA(Z, N); zrs]                   # Construct LHS
+
+    b = zeros(size(A, 1))
+    b[end] = 1
+    b[3] = 2 
+
+    ω = A \ b                               # Compute weights
+
+    return reshape(ω, isqrt(length(ω)), :)  # Return weights in Fornberg stencil form
+end
+
+"""
+    getD3Weights(Z, N = 7)
+
+Compute stencil weights for first x-derivative at stencil nodes `Z` up to order `N` if possible.
+"""
+function getD3Weights(Z, N = 7)
+    cent = ceil(Int64, length(Z) / 2)
+    zrs = zeros(Int64((size(Z, 1) - 1) / 2), length(Z))
+    for i = 0 : size(zrs, 1) - 1
+        zrs[i + 1, cent + i] = 1
+    end
+
+    A = [getA(Z, N); zrs]                   # Construct LHS
+
+    b = zeros(size(A, 1))
+    b[4] = 6 
+
+    ω = A \ b                               # Compute weights
+
+    return reshape(ω, isqrt(length(ω)), :)  # Return weights in Fornberg stencil form
+end
+
+"""
+    getD4Weights(Z, N = 7)
+
+Compute stencil weights for second x-derivative at stencil nodes `Z` up to order `N` if possible.
+"""
+function getD4Weights(Z, N = 7)
+
+    A = getA(Z, N)                          # Construct LHS
+
+    b = zeros(size(A, 1))
+    b[5] = 24 
+
+    ω = A \ b                               # Compute weights
+
+    return reshape(ω, isqrt(length(ω)), :)  # Return weights in Fornberg stencil form
+end
+
