@@ -2,7 +2,7 @@
 # Linear solver for z = 1 (p + 1)Fp expansion weights
 #
 # Author: Caleb Jacobs
-# DLM: March 5, 2024
+# DLM: April 12, 2024
 =#
 
 include("Grid.jl")
@@ -26,10 +26,12 @@ end
 Compute z = 1 pFq expansion weights.
 """
 function getZ1ExpansionWeights(a, b, z, f)
+#     A = BigFloat.(getModifiedVand(a, b, z))
     A = getModifiedVand(a, b, z)
 
-    display(cond(A))
+#     display(cond(A))
 
+#     ω = A \ BigFloat.(f)
     ω = A \ f
 
     ωα = ω[1 : round(Int64, length(ω) / 2)]

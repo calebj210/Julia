@@ -74,13 +74,14 @@ end
 Compute stencil weights for first x-derivative at stencil nodes `Z` up to order `N` if possible.
 """
 function getD1Weights(Z, N = 7)
-    cent = ceil(Int64, length(Z) / 2)
-    zrs = zeros(Int64((size(Z, 1) - 1) / 2), length(Z))
-    for i = 0 : size(zrs, 1) - 1
-        zrs[i + 1, cent + i] = 1
-    end
+#     cent = ceil(Int64, length(Z) / 2)
+#     zrs = zeros(Int64((size(Z, 1) - 1) / 2), length(Z))
+#     for i = 0 : size(zrs, 1) - 1
+#         zrs[i + 1, cent + i] = 1
+#     end
 
-    A = [getA(Z, N); zrs]                   # Construct LHS
+#     A = [getA(Z, N); zrs]                   # Construct LHS
+    A = getA(Z, N)                          # Construct LHS
 
     b = zeros(size(A, 1))
     b[2] = 1
