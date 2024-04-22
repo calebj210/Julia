@@ -1,11 +1,14 @@
 #=
 # Implementation of hypergeometric methods discussed in 
-#   Pearson, J.W., Olver, S. & Porter, M.A. Numerical methods for the computation of the confluent and Gauss hypergeometric functions. Numer Algor 74, 821–866 (2017).
+#   Pearson, J.W., Olver, S. & Porter, M.A. Numerical methods for the computation 
+#   of the confluent and Gauss hypergeometric functions. Numer Algor 74, 821–866 (2017).
+#
 # Author: Caleb Jacobs
-# DLM: April 15, 2024
+# DLM: April 16, 2024
 =#
 
 using SpecialFunctions
+using FastGaussQuadrature
 
 """
     2F1 Taylor series method (a)
@@ -116,4 +119,70 @@ function singleFraction(a, b, c, z, tol)
     end
 
     return d1[end]
+end
+
+"""
+    2F1 Buhring's expansion formula
+"""
+function buhring(a, b, c, z, z0, tol)
+    d = zeros(ComplexF64, 2)
+    d[1] = (1 + a - b)^(-1) * a * ((a + 1) * (1 - 2z0) + (a + b + 1) * z0 - c)
+    d[2] = (2 * (2 + a - b))^(-1) * (a + 1) * (((a + 2) * (1 - 2z0) + (a + b + 1) * z0 - c) *
+           (1 + a - b)^(-1) * a * ((a + 1) * (1 - 2z0) + (a + b + 1) * z0 - c) + z0 * (1 - z0) * a)
+
+    a1 = 1 + d[1] * (z - z0)^(-1) + d[2] * (z - z0)^(-2)
+    b1 = a1
+    for n ∈ 3 : 500
+        push!(d, (n * (n + a - b))^(-1) * (n + a - 1) *
+               (((n + a) * (1 - 2z0) + (a + b + 1) * z0 - c) * d[n - 1] + z0 * (1 - z0) * (n + a - 2) * d[n - 2]))
+        a1 = d[n] * (z - z0)^(-n)
+        b1 += a1
+
+        if abs(a1) / abs(b1) < tol
+            break
+        end
+
+        if n == 500
+            print("Buhring did not converge to tolerance in 500 iterations")
+            
+            return
+        end
+    end
+
+    e = zeros(ComplexF64, 2)
+    e[1] = (1 - a + b)^(-1) * b * ((b + 1) * (1 - 2z0) + (a + b + 1) * z0 - c)
+    e[2] = (2 * (2 - a + b))^(-1) * (b + 1) * (((b + 2) * (1 - 2z0) + (a + b + 1) * z0 - c) *
+           (1 - a + b)^(-1) * b * ((b + 1) * (1 - 2z0) + (a + b + 1) * z0 - c) + z0 * (1 - z0) * b)
+
+    a2 = 1 + e[1] * (z - z0)^(-1) + e[2] * (z - z0)^(-2)
+    b2 = a2
+    for n ∈ 3 : 500
+        push!(e, (n * (n - a + b))^(-1) * (n + b - 1) * 
+                 (((n + b) * (1 - 2z0) + (a + b + 1) * z0 - c) * e[n - 1] + z0 * (1 - z0) * (n + b - 2) * e[n - 2]))
+        a2 = e[n] * (z - z0)^(-n)
+        b2 += a2
+
+        if abs(a2) / abs(b2) < tol
+            break
+        end
+
+        if n == 500
+            print("Buhring did not converge to tolerance in 500 iterations")
+
+            return 
+        end
+    end
+
+    return gamma(c) * (gamma(b - a) / gamma(b) / gamma(c - a) * (z0 - z)^(-a) * b1 +
+                       gamma(a - b) / gamma(a) / gamma(c - b) * (z0 - z)^(-b) * b2)
+end
+
+"""
+    2F1 Gauss-Jacobi quadrature
+"""
+function gjQuad(a, b, c, z, N)
+    x, w = gaussjacobi(N, c - b - 1, b - 1)
+
+    return gamma(c) / gamma(b) / gamma(c - b) / (2^(c - 1)) *
+           sum(w .* (1 .- z / 2 * (x .+ 1)).^(-a))
 end
