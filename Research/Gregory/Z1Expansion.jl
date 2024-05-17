@@ -2,7 +2,7 @@
 # Linear solver for z = 1 (p + 1)Fp expansion weights
 #
 # Author: Caleb Jacobs
-# DLM: April 12, 2024
+# DLM: April 17, 2024
 =#
 
 include("Grid.jl")
