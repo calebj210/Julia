@@ -35,8 +35,6 @@ classdef Grid
             [X, Y] = meshgrid(xp, yp);
             gr = X + 1i * Y;
 
-            %dx = stride(grid, 2);
-            %dy = stride(grid, 1);
             dx = size(gr,1);
             dy = 1;
 
@@ -89,66 +87,7 @@ classdef Grid
             grid.np = np;
             grid.nl = nl;
             grid.T = T;
-
-            %grid = Grid(z, i, e, ie, ib, dx, dy, c, h, r, np, nl, T);
         end
-
-
-%         %% getGrid function
-%         function grid = getGrid(n, r, ir, np, nl)
-%             x = linspace(0, r, n + 1);
-%             y = linspace(0, r, n + 1);
-%             h = abs(x(2) - x(1));
-% 
-%             pad = r + h * (1:nl*np);
-%             xp = [-pad(end:-1:1), -x(end:-1:2), x, pad];
-%             yp = [-pad(end:-1:1), -y(end:-1:2), y, pad];
-% 
-%             [X, Y] = meshgrid(xp, yp);
-%             grid = X + 1i * Y;
-% 
-%             dx = stride(grid, 2);
-%             dy = stride(grid, 1);
-%             c = 1 + (np * nl + n) * (dx + dy);
-%             T = round(ir / h);
-% 
-%             %pr = nl == 0 ? r : r + h * (nl - 1) * np;
-% 
-%             if nl==0
-%                 pr = r;
-%             else
-%                 pr = r + h * (nl - 1) * np;
-%             end
-% 
-% 
-%             z = grid(:);
-%             i = [];
-%             e = [];
-%             ie = [];
-%             ib = [];
-% 
-%             for idx = 1:length(z)
-%                 if abs(z(idx)) <= ir
-%                     i = [i, idx];
-%                     ie = [ie, 'i'];
-% 
-%                     if abs(z(idx)) > ir - h
-%                         ib = [ib, idx];
-%                     end
-%                 elseif abs(real(z(idx))) <= pr && abs(imag(z(idx))) <= pr
-%                     e = [e, idx];
-%                     ie = [ie, 'e'];
-%                 else
-%                     ie = [ie, 'p'];
-%                 end
-%             end
-% 
-%             [~, order] = sort(angle(z(ib)));
-%             ib = ib(order);
-% 
-%             grid = Grid(z, i, e, ie, ib, dx, dy, c, h, r, np, nl, T);
-%         end
-
     end
 
 end

@@ -1,26 +1,29 @@
 % Generalized Gregory quadrature for computing high order hypergeometric pFq over a grid
 %
 % Author: Caleb Jacobs
-% DLM: December 2, 2023
+% DLM: May 22, 2024
 
 function [z, f, h] = pFq(a, b, varargin)
     % Parse optional inputs
     p = inputParser;
-    addParameter(p, 'r', 1.99);
-    addParameter(p, 'n', 40);
-    addParameter(p, 'np', 3);
-    addParameter(p, 'Tr', 0.6);
+    addParameter(p, 'r', 2.49); % Width/height of grid
+    addParameter(p, 'n', 60);   % Number of nodes for width/height
+    addParameter(p, 'np', 3);   % Number of padding layers
+    addParameter(p, 'Tr', 0.6); % Taylor expansion radius
+    addParameter(p, 'sr', 11);  % z = 1 stencil radius
+    addParameter(p, 'cr', 9);   % z = 1 correction radius
     parse(p, varargin{:});
 
     r  = p.Results.r;
     n  = p.Results.n;
     np = p.Results.np;
     Tr = p.Results.Tr;
+    sr = p.Results.sr;
+    cr = p.Results.cr;
 
     o = min(length(a), length(b)); % Order of pFq
 
     g = Grid(n, r, Tr, np, o); % Initial grid
-    % g = getGrid(n, r, 'ir', Tr, 'np', np, 'nl', o); % Initial grid
 
     aIdx = length(a); % Index for a
     bIdx = length(b); % Index for b
@@ -32,6 +35,8 @@ function [z, f, h] = pFq(a, b, varargin)
     elseif length(a) == length(b) + 1
         f = oneMinusZ_alpha(g.z, -a(end), false); % 1F0 base function case
         h = oneMinusZ_alpha(g.z, -a(end), true);  % 1F0 base function case alternate branch
+
+        wa = [1];        % Set initial singular weight
 
         branch = true;
 
@@ -57,20 +62,30 @@ function [z, f, h] = pFq(a, b, varargin)
                 (gamma(b(bIdx)) / ...
                  gamma(a(aIdx)) / ...
                  gamma(b(bIdx) - a(aIdx)));
-
-        aIdx = aIdx - 1; % Move to the next layer in a
-        bIdx = bIdx - 1; % Move to the next layer in b
         
+        % Compute next set of pFq values
         if ~branch
             f = Gamma .* (D0 * f + D1 * h); % Compute values for the next layer
             h = f;
         else
             fTmp = Gamma .* (D0 * f + D1 * h); % Compute values for the next layer
-            h = Gamma .* (D2 * f + D3 * h); % Compute values for the next layer
+            h = Gamma .* (D2 * f + D3 * h);    % Compute values for the next layer (alternate branch)
             f = fTmp;
+
+            %% Use z = 1 expansion to correct
+            zM1  = abs(g.z - 1);                                % Shift all z values by 1
+            sIdx = ((sr - .5) * g.h < zM1) & (zM1 <= sr * g.h); % Stencil node indices
+            cIdx = zM1 <= cr * g.h;                             % Corrected node indices
+
+            [wa, wb] = getZ1ExpansionWeights(a(aIdx : end), b(bIdx : end), wa, g.z(sIdx), f(sIdx));
+
+            f(cIdx) = z1Correction(a(aIdx : end), b(bIdx : end), wa, wb, g.z(cIdx));
         end
 
-        f(g.c) = 1 + 0i;
+        f(g.c) = 1 + 0i; % Correct origin value
+
+        aIdx = aIdx - 1; % Move to the next layer in a
+        bIdx = bIdx - 1; % Move to the next layer in b
     end
 
     z = g.z;

@@ -117,8 +117,8 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5, modifyZ1 = true, cr = 9, sr 
                 cIdx = zM1 .<= cr * g.h                             # Corrected node indices
 
                 (ωa, ωb) = getZ1ExpansionWeights(a[aIdx : end], 
-                                                 b[bIdx : end], ωa, 
-                                                 g.z[sIdx], f[sIdx])
+                                                 b[bIdx : end], 
+                                                 ωa, g.z[sIdx], f[sIdx])
 
                 f[cIdx] = z1PFQ(a[aIdx : end], b[bIdx : end], ωa, ωb, g.z[cIdx])
             end
