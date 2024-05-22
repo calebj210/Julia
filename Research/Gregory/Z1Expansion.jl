@@ -2,10 +2,11 @@
 # Linear solver for z = 1 (p + 1)Fp expansion weights
 #
 # Author: Caleb Jacobs
-# DLM: April 17, 2024
+# DLM: May 17, 2024
 =#
 
 include("Grid.jl")
+using SpecialFunctions
 
 """
     getModifiedVand(a, b, z)
@@ -21,104 +22,89 @@ function getModifiedVand(a, b, z)
     return [Aα Aβ]
 end
 
+""" 
+    Φ(a, b, ωa, z)
+Compute branch correction given previous correction weights `ωa` at `z`.
+"""
+function Φ(a::Vector, b::Vector, ωa::Vector, z::Number)
+    N = length(ωa)
+
+    c = a[1]                                                    # Current a coefficient
+    d = b[1]                                                    # Current b coefficient
+    α = sum(b) - sum(a) + c - d                                 # Branch exponent
+
+    s = sum([(ωa[k + 1] * (-1)^l * (1 - z)^(k + l) * gamma(1 + k + l + α)) / 
+             (factorial(big(l)) * gamma(c - l) * gamma(1 + d - c + k + l + α))  
+             for l ∈ 0 : 35, k ∈ 0 : N - 1])
+    s = convert(ComplexF64, s)
+
+    return 2im * (-1 + 0im)^(d - c + α) * (1 - z)^(d - c + α) * sinpi(α) * gamma(d) / z^(d - 1) * s 
+
+#     γ = a[2]
+#     return convert(ComplexF64, -2im * sin(π * γ) * (-1 + 0im)^(-c + d - γ) * (1 - z)^(-c + d - γ) * gamma(d) / z^(d - 1) * 
+#             sum([(z - 1)^l * gamma(1 + l - γ) / (factorial(big(l)) * gamma(c - l) * gamma(1 + d - c + l - γ)) for l ∈ 0 : 30]))
+
+end
+Φ(a, b, ωa, z::Vector) = [Φ(a, b, ωa, z) for z ∈ z]
+
 """
     getZ1ExpansionWeights(a, b, z)
 Compute z = 1 pFq expansion weights.
 """
-function getZ1ExpansionWeights(a, b, z, f)
+# function getZ1ExpansionWeights(a, b, z, f)
 #     A = BigFloat.(getModifiedVand(a, b, z))
-    A = getModifiedVand(a, b, z)
-
+#     A = getModifiedVand(a, b, z)
+# 
 #     display(cond(A))
-
+# 
 #     ω = A \ BigFloat.(f)
-    ω = A \ f
+#     ω = A \ f
+# 
+#     ωα = ω[1 : round(Int64, length(ω) / 2)]
+#     ωβ = ω[round(Int64, length(ω) / 2) + 1 : end]
+# 
+#     return (ωα, ωβ)
+# end
+function getZ1ExpansionWeights(a, b, ωa, z, f)
+#     A = lu([(1 - z)^k for z ∈ z, k ∈ 0 : length(z) - 1])
+    A = [(1 - z)^k for z ∈ z, k ∈ 0 : length(z) - 1]
 
-    ωα = ω[1 : round(Int64, length(ω) / 2)]
-    ωβ = ω[round(Int64, length(ω) / 2) + 1 : end]
+    α = sum(b) - sum(a)                                                 # Branch exponent
 
-    return (ωα, ωβ)
+    ϕ = Φ(a, b, ωa, z)                                                  # Branch correction
+
+    ba = ϕ ./ (1 .- z).^α / (cispi(2α) - 1)                             # Singular RHS
+    bb = f - ϕ / (cispi(2α) - 1)                                        # Regular RHS
+
+    ωa = A \ ba                                                         # Singular weights
+    ωb = A \ bb                                                         # Regular weights
+    
+    display(ba)
+    display(ωa)
+
+    display(bb)
+    display(ωb)
+
+    return(ωa, ωb)
 end
 
 """
-    z1PFQ(a, b, ωα, ωβ, z)
+    z1PFQ(a, b, ωa, ωb, z)
 """
-function z1PFQ(a::Vector, b::Vector, ωα::Vector, ωβ::Vector, z::Number)
-    γ = oneMinusZα(z, sum(b) - sum(a))
+function z1PFQ(a::Vector, b::Vector, ωa::Vector, ωb::Vector, z::Number)
+#     γ = oneMinusZα(z, sum(b) - sum(a))
 
-    f = sum((ωα + ωβ * γ) .* (z - 1).^(0 : length(ωα) - 1))
+    α = sum(b) - sum(a)
+
+#     f = sum(((1 - z)^α * ωa + ωb) .* (1 - z).^(0 : length(ωa) - 1))
+    N = length(ωa)
+    f = (1 - z)^α * sum(ωa .* ((1 - z).^(0 : N - 1))) #+ sum(ωb .* ((1 - z).^(0 : N - 1)))
+
+#     reg = ((gamma(α) * gamma(1 + α) * gamma(b[1])) / (gamma(b[1] - a[1]) * gamma(b[1] - a[2]))) * 
+#     (sum([(gamma(a[1] + j) * gamma(a[2] + j) * (1 - z)^j) / (gamma(a[1]) * gamma(a[2]) * factorial(big(j)) * gamma(j + 1 - α)) for j ∈ 0 : 30]))
+
+#     f += reg
 
     return f
 end
-
-"""
-    modifyPFQ!(a, b, g, f; sr, sc)
-
-Correct pFq values `f` about z = 1 in a radius of `cr` using stencil nodes in a radius `sr`.
-"""
-function modifyPFQ!(a, b, g::Grid, f; sr = 10, cr = 9)
-    zMinus1 = abs.(g.z .- 1)                                            # Shift all z values by 1
-
-    sIdx = findall((sr - .5) * g.h .< zMinus1 .&& zMinus1 .<= sr * g.h) # Stencil node indices
-    sIdx = length(sIdx) % 2 == 0 ? sIdx : sIdx[1 : end - 1]             # Remove stencil node if odd # of nodes
-
-    (ωα, ωβ) = getZ1ExpansionWeights(a, b, g.z[sIdx], f[sIdx])          # z = 1 expansion weights
-
-    cIdx = findall(zMinus1 .<= cr * g.h)                                # Corrected node indices
-    f[cIdx] = [z1PFQ(a, b, ωα, ωβ, z) for z ∈ g.z[cIdx]]                # Update values about z = 1
-end
-
-function modifyPFQ(a, b, g::Grid, f; sr, cr)
-    h = copy(f)                                                         # Copy f to h
-
-    modifyPFQ!(a, b, g, h; sr = sr, cr = cr)                            # Update f values
-
-    return h
-end
-
-# """
-#     modified2F1(a, b, c; n, r, cr, mr, np)
-# """
-# function modified2F1(a, b, c; n = 40, r = 1.99, cr = 10, mr = 5, np = 3)
-#     (z, f, fh) = pFq([a,b], [c]; n = n, r = r, np = np)  # Initial 2F1
-# 
-#     h = abs(z[1] - z[2])
-#     zm1 = abs.(z .- 1)
-#     cIdx = findall((cr - .5) * h .< zm1 .&& zm1 .<= cr * h)
-#     cIdx = length(cIdx) % 2 == 0 ? cIdx : cIdx[1 : end - 1]
-# 
-#     z1 = z[cIdx]
-#     f1 = f[cIdx]
-#     (ωα, ωβ) = getZ1ExpansionWeights([a, b], [c], z1, f1)
-# 
-#     mIdx = findall(zm1 .<= mr * h)
-#     for i ∈ mIdx
-#         f[i] = z1Expansion([a, b], [c], ωα, ωβ, z[i])
-#     end
-# 
-#     return (z, f, fh)
-# end
-# 
-# """
-#     modifiedPFQTest
-# """
-# function modifiedPFQTest(a,b,c; r = 1.99, n = 40, cr = 10, mr = 5, np = 3)
-#     generateGrids("grid.csv", n, r)
-# 
-#     println("Press enter after running Mathematica to update values!")
-#     readline()
-#     
-#     (z, fm, hm) = modified2F1(a,b,c, n = n, r = r, np = np, cr = cr, mr = mr)
-#     (z, f, h) = pFq([a,b],[c], n = n, r = r, np = np)
-#     
-# 
-#     tru = getComplexVals("Data/pfq.csv")
-# 
-#     p =  complexAbsPlot(z, (f  - tru) ./ abs.(tru), logscale = true, title = "Default")
-#     pm = complexAbsPlot(z, (fm - tru) ./ abs.(tru), logscale = true, title = "Expansion")
-# 
-#     display(p)
-#     display(pm)
-# 
-#     return (z, f, tru)
-# end
+z1PFQ(a, b, ωa, ωb, z::Vector) = [z1PFQ(a, b, ωa, ωb, z) for z ∈ z]

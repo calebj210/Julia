@@ -2,7 +2,7 @@
 # Generalized Gregory quadrature for computing high order hypergeometric pFq over a grid
 #
 # Author: Caleb Jacobs
-# DLM: March 5, 2024
+# DLM: May 21, 2024
 =#
 
 using SpecialFunctions
@@ -70,6 +70,7 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5, modifyZ1 = true, cr = 9, sr 
     elseif length(a) == length(b) + 1
         f = _1F0(a[end], g)                                         # 1F0 base function case
         h = _1F0(a[end], g, branch = true)                          # 1F0 base function case alternate branch
+        ωa = [1]                                                    # Initial z = 1 expansion coeficient
 
         branch = true
 
@@ -103,18 +104,27 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5, modifyZ1 = true, cr = 9, sr 
                 gamma(a[aIdx]) / 
                 gamma(b[bIdx] - a[aIdx]))
 
-        aIdx -= 1                                                   # Move to next layer in a
-        bIdx -= 1                                                   # Move to next layer in b
-
         if !branch
             f = Γ .* (D0 * f + D1 * h)                              # Compute values for next layer
             h = f
         else
-            f, h = (Γ .* (D0 * f + D1 * h), Γ .* (D2 * f + D3 * h)) # Compute values for next layer
+            f, h = (Γ .* (D0 * f + D1 * h), 
+                    Γ .* (D2 * f + D3 * h))                         # Compute values for next layer
 
             if modifyZ1
-                modifyPFQ!(a[aIdx + 1 : end], b[bIdx + 1 : end], g, f, cr = cr, sr = sr)
+                zM1  = abs.(g.z .- 1)                               # Shift all z values by 1
+                sIdx = (sr - .5) * g.h .< zM1 .&& zM1 .<= sr * g.h  # Stencil node indices
+                cIdx = zM1 .<= cr * g.h                             # Corrected node indices
+
+                (ωa, ωb) = getZ1ExpansionWeights(a[aIdx : end], 
+                                                 b[bIdx : end], ωa, 
+                                                 g.z[sIdx], f[sIdx])
+
+                f[cIdx] = z1PFQ(a[aIdx : end], b[bIdx : end], ωa, ωb, g.z[cIdx])
             end
+        
+        aIdx -= 1                                                   # Move to next layer in a
+        bIdx -= 1                                                   # Move to next layer in b
         end
 
         f[g.c] = 1 + 0im
