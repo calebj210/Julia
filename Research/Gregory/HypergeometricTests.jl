@@ -13,6 +13,8 @@ include("HypergeometricGrid.jl")
 function generateGrids(path::String, n::Int64, r)
     g = getGrid(n, r)
     CSV.write("Data/" * path, Tables.table([real(g.z) imag(g.z)]), writeheader = false)
+
+    return nothing
 end
 
 "Read CSV to complex vector"
@@ -22,6 +24,24 @@ function getComplexVals(path::String)
     vals = vec(reims[:, 1] + im * reims[:, 2])
 
     return vals
+end
+
+"Generate graphics"
+function getGraphics(z, f, tru; title = "", dir = -1, exclude = true)
+    p1 = complexAbsPlot(z, f - tru, logscale = true, title = title)
+    p2 = complexPlot3d(z, f, exclude = exclude)
+    p3 = complexPlot3d(z, f, T = 2, exclude = exclude, mesh = true)
+    p4 = complexPlot3d(z, f, T = 3, exclude = exclude, mesh = true)
+    p5 = complexAbsPlot(z, (f - tru) ./ abs.(tru), logscale = true, title = title)
+
+    camera = attr(
+        eye=attr(x = 1.5dir, y = 1.5dir, z = 1.5)
+    )
+    relayout!(p2, scene_camera = camera, template = "plotly_white")
+    relayout!(p3, scene_camera = camera, template = "plotly_white")
+    relayout!(p4, scene_camera = camera, template = "plotly_white")
+
+    return [p1, p2, p3, p4, p5]
 end
 
 "Generate pFq test"
@@ -42,20 +62,9 @@ function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, cr = 9, sr = 10, modifyZ1
 
     title = string(length(a), "F", length(b), "(", a, "; ", b, "; z)") 
 
-    p1 = complexAbsPlot(z, f - tru, logscale = true, title = title)
-    p2 = complexPlot3d(z, f, exclude = exclude)
-    p3 = complexPlot3d(z, f, T = 2, exclude = exclude, mesh = true)
-    p4 = complexPlot3d(z, f, T = 3, exclude = exclude, mesh = true)
-    p5 = complexAbsPlot(z, (f - tru) ./ abs.(tru), logscale = true, title = title)
+    p = getGraphics(z, f, tru, title = title, dir = dir, exclude = exclude)
 
-    camera = attr(
-        eye=attr(x = 1.5dir, y = 1.5dir, z = 1.5)
-    )
-    relayout!(p2, scene_camera = camera, template = "plotly_white")
-    relayout!(p3, scene_camera = camera, template = "plotly_white")
-    relayout!(p4, scene_camera = camera, template = "plotly_white")
-
-    return (z, f, h, tru, p1, p2, p3, p4, p5)
+    return (z, f, h, tru, p)
 end
 
 
@@ -82,12 +91,12 @@ function runTests(; N = 0)
 
         println("Running test ", testN, " with a = ", a, " and b = ", b, ".")
 
-        (z, f, h, tru, p1, p2, p3, p4) = pFqTest(a, b, r = r, n = n, np = np, Tr = Tr, dir = dir, exclude = ex)
+        (z, f, h, tru, p) = pFqTest(a, b, r = r, n = n, np = np, Tr = Tr, dir = dir, exclude = ex)
 
-        display(p1)
-        display(p2)
-        display(p3)
-        display(p4)
+        display(p[1])
+        display(p[2])
+        display(p[3])
+        display(p[4])
 
         println("Press enter when ready for next test.")
         readline()
@@ -95,8 +104,3 @@ function runTests(; N = 0)
 
     return nothing
 end
-
-
-
-#             ([.9,1.1,-2.1],  [1.2,1.3],               2.00, 60, 3, 0.6,  1),    # Test 3
-#             ([1.1,2.1,.9],   [1.2,1.3],               2.49, 80, 3, 0.6,  1),    # Test 4

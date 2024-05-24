@@ -2,7 +2,7 @@
 # Linear solver for z = 1 (p + 1)Fp expansion weights
 #
 # Author: Caleb Jacobs
-# DLM: May 22, 2024
+# DLM: May 23, 2024
 =#
 
 include("Grid.jl")
@@ -21,7 +21,7 @@ function Φ(a::Vector, b::Vector, ωa::Vector, z::Number)
 
     s = sum([(ωa[k + 1] * (-1)^l * (1 - z)^(k + l) * gamma(1 + k + l + α)) / 
              (factorial(big(l)) * gamma(c - l) * gamma(1 + d - c + k + l + α))  
-             for l ∈ 0 : 35, k ∈ 0 : N - 1])
+             for l ∈ 0 : 60, k ∈ 0 : N - 1])
     s = convert(ComplexF64, s)
 
     return 2im * (-1 + 0im)^(d - c + α) * oneMinusZα(z, d - c + α) * sinpi(α) * gamma(d) / z^(d - 1) * s 
@@ -33,8 +33,7 @@ end
 Compute z = 1 pFq expansion weights.
 """
 function getZ1ExpansionWeights(a, b, ωa, z, f)
-#     A = lu([(1 - z)^k for z ∈ z, k ∈ 0 : length(z) - 1])
-    A = [(1 - z)^k for z ∈ z, k ∈ 0 : length(z) - 1]
+    A = lu([(1 - z)^k for z ∈ z, k ∈ 0 : length(z) - 1])
 
     α = sum(b) - sum(a)                                                 # Branch exponent
 
@@ -47,13 +46,6 @@ function getZ1ExpansionWeights(a, b, ωa, z, f)
     ωa = A \ ba                                                         # Singular weights
     ωb = A \ bb                                                         # Regular weights
     
-    display(ba)
-
-    display(bb)
-
-#     h = [sum(((1 - z)^α * ωa + ωb) .* (1 - z).^(0 : length(ωa) - 1)) for z ∈ z]
-#     display(f - h)
-
     return(ωa, ωb)
 end
 
@@ -65,9 +57,6 @@ function z1PFQ(a::Vector, b::Vector, ωa::Vector, ωb::Vector, z::Number)
     γ = oneMinusZα(z, α)
 
     f = sum((γ * ωa + ωb) .* (1 - z).^(0 : length(ωa) - 1))
-#
-#     N = length(ωa)
-#     f = (1 - z)^α * sum(ωa .* ((1 - z).^(0 : N - 1))) + sum(ωb .* ((1 - z).^(0 : N - 1)))
 
     return f
 end

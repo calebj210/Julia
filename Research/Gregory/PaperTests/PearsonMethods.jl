@@ -29,9 +29,9 @@ function taylorA(a, b, c, z, tol)
 
             # No convergence
             if j == 500
-                print("Taylor A did not converge in 500 terms")
+#                 print("Taylor A did not converge in 500 terms")
 
-                return
+                return complex(NaN)
             end
         end
     else
@@ -46,9 +46,9 @@ function taylorA(a, b, c, z, tol)
             end
 
             if j == 500
-                print("Taylor A did not converge in 500 terms")
+#                 print("Taylor A did not converge in 500 terms")
 
-                return
+                return complex(NaN)
             end
         end
     end
@@ -79,9 +79,9 @@ function taylorB(a, b, c, z, tol)
         end
 
         if j == 500
-            print("Taylor B did not converge in 500 terms")
+#             print("Taylor B did not converge in 500 terms")
 
-            return
+            return complex(NaN)
         end
     end
 
@@ -114,7 +114,9 @@ function singleFraction(a, b, c, z, tol)
         end
 
         if j == 500
-            print("Single fraction did not converge in 500 terms")
+#             print("Single fraction did not converge in 500 terms")
+
+            return complex(NaN)
         end
     end
 
@@ -143,9 +145,9 @@ function buhring(a, b, c, z, z0, tol)
         end
 
         if n == 500
-            print("Buhring did not converge to tolerance in 500 iterations")
+#             print("Buhring did not converge to tolerance in 500 iterations")
             
-            return
+            return complex(NaN)
         end
     end
 
@@ -167,9 +169,9 @@ function buhring(a, b, c, z, z0, tol)
         end
 
         if n == 500
-            print("Buhring did not converge to tolerance in 500 iterations")
+#             print("Buhring did not converge to tolerance in 500 iterations")
 
-            return 
+            return complex(NaN)
         end
     end
 
@@ -183,6 +185,6 @@ end
 function gjQuad(a, b, c, z, N)
     x, w = gaussjacobi(N, c - b - 1, b - 1)
 
-    return gamma(c) / gamma(b) / gamma(c - b) / (2^(c - 1)) *
-           sum(w .* (1 .- z / 2 * (x .+ 1)).^(-a))
+    return [gamma(c) / gamma(b) / gamma(c - b) / (2^(c - 1)) *
+           sum(w .* (1 .- z / 2 * (x .+ 1)).^(-a)) for z ∈ z]
 end
