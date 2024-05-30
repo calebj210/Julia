@@ -167,7 +167,7 @@ function getIdx(z::ComplexF64, g::Grid)
     zIdx = g.c + Nx * g.dx + Ny * g.dy
 
     if abs(z - g.z[zIdx]) ≈ 0
-        return return zIdx
+        return zIdx
     else
         throw(DomainError(z, "argument must be on the complex grid"))
     end

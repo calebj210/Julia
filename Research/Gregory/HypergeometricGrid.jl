@@ -10,7 +10,8 @@ include("GenGreg.jl")
 include("Z1Expansion.jl")
 
 "Modified sign function to return 1 when z = 0"
-sgn(z) = iszero(z) ? one(z) : sign(z)
+sgn(z)  = iszero(z) ?  one(z) : sign(z)
+nsgn(z) = iszero(z) ? -one(z) : sign(z)
 
 "Compute roots given a power α and a branch cut rotation of θ."
 function oneMinusZα(z, α::Real, branch = false)
@@ -113,12 +114,27 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5, modifyZ1 = true, cr = 9, sr 
 
             if modifyZ1
                 zM1  = abs.(g.z .- 1)                               # Shift all z values by 1
-                sIdx = (sr - .5) * g.h .< zM1 .&& zM1 .<= sr * g.h  # Stencil node indices
+#                 sIdx = (sr - .5) * g.h .< zM1 .&& zM1 .<= sr * g.h  # Stencil node indices
                 cIdx = zM1 .<= cr * g.h                             # Corrected node indices
+
+                zCirc = getZVals(r = .8, n = 160)                   # Scaled roots of unity
+                
+                fCirc = Vector{ComplexF64}(undef, 0)                # Interpolated function values
+                ω = barycentricWeights(getInterpolantNodes(g, g.z[g.c], n = 10))
+                for zc ∈ zCirc
+                    zIdx = getInterpolantNodes(g, zc, n = 10)
+                    if real(zc) >= 1.0
+                        fTmp = [nsgn(imag(zc)) == nsgn(imag(g.z[zi])) ? f[zi] : h[zi] for zi ∈ zIdx]
+                    else
+                        fTmp = f[zIdx]
+                    end
+                    push!(fCirc, barycentricInterpolate(g.z[zIdx], ω, fTmp)(zc))
+                end
 
                 (ωa, ωb) = getZ1ExpansionWeights(a[aIdx : end], 
                                                  b[bIdx : end], 
-                                                 ωa, g.z[sIdx], f[sIdx])
+                                                 ωa, zCirc, fCirc)
+#                                                  ωa, g.z[sIdx], f[sIdx])
 
                 f[cIdx] = z1PFQ(a[aIdx : end], b[bIdx : end], ωa, ωb, g.z[cIdx])
             end
