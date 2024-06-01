@@ -53,7 +53,7 @@ function _0F1(b, g)
     return f
 end
 
-function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5, modifyZ1 = true, cr = 9, sr = 10)
+function pFq(a, b; r = 1.99, n = 41, np = 5, Tr = 0.5, modifyZ1 = true, corrR = .25, circR = .8, branchN = 150, circN = 150, interpN = 10)
     o = min(length(a), length(b))                                   # Order of pFq
 
     g = getGrid(n, r, ir = Tr, np = np, nl = o)                     # Initial grid
@@ -113,16 +113,14 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5, modifyZ1 = true, cr = 9, sr 
                     Γ .* (D2 * f + D3 * h))                         # Compute values for next layer
 
             if modifyZ1
-                zM1  = abs.(g.z .- 1)                               # Shift all z values by 1
-#                 sIdx = (sr - .5) * g.h .< zM1 .&& zM1 .<= sr * g.h  # Stencil node indices
-                cIdx = zM1 .<= cr * g.h                             # Corrected node indices
+                cIdx = abs.(g.z .- 1) .<= corrR                     # Corrected node indices
 
-                zCirc = getZVals(r = .8, n = 160)                   # Scaled roots of unity
+                zCirc = getZVals(r = circR, n = circN)              # Scaled roots of unity
                 
                 fCirc = Vector{ComplexF64}(undef, 0)                # Interpolated function values
-                ω = barycentricWeights(getInterpolantNodes(g, g.z[g.c], n = 10))
+                ω = barycentricWeights(getInterpolantNodes(g, g.z[g.c], n = interpN))
                 for zc ∈ zCirc
-                    zIdx = getInterpolantNodes(g, zc, n = 10)
+                    zIdx = getInterpolantNodes(g, zc, n = interpN)
                     if real(zc) >= 1.0
                         fTmp = [nsgn(imag(zc)) == nsgn(imag(g.z[zi])) ? f[zi] : h[zi] for zi ∈ zIdx]
                     else
@@ -131,12 +129,14 @@ function pFq(a, b; r = 1, n = 20, np = 3, Tr = 0.5, modifyZ1 = true, cr = 9, sr 
                     push!(fCirc, barycentricInterpolate(g.z[zIdx], ω, fTmp)(zc))
                 end
 
+                ωaTmp = ωa
                 (ωa, ωb) = getZ1ExpansionWeights(a[aIdx : end], 
                                                  b[bIdx : end], 
-                                                 ωa, zCirc, fCirc)
-#                                                  ωa, g.z[sIdx], f[sIdx])
+                                                 ωa, zCirc, fCirc,
+                                                 n = branchN)
 
                 f[cIdx] = z1PFQ(a[aIdx : end], b[bIdx : end], ωa, ωb, g.z[cIdx])
+                h[cIdx] = f[cIdx] + Φ(a[aIdx : end], b[bIdx : end], ωaTmp, g.z[cIdx], n = branchN)
             end
         
         aIdx -= 1                                                   # Move to next layer in a

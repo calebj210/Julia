@@ -37,6 +37,7 @@ function getGraphics(z, f, tru; title = "", dir = -1, exclude = true)
     camera = attr(
         eye=attr(x = 1.5dir, y = 1.5dir, z = 1.5)
     )
+    relayout!(p1, scene_camera = camera, template = "plotly_white")
     relayout!(p2, scene_camera = camera, template = "plotly_white")
     relayout!(p3, scene_camera = camera, template = "plotly_white")
     relayout!(p4, scene_camera = camera, template = "plotly_white")
@@ -45,7 +46,7 @@ function getGraphics(z, f, tru; title = "", dir = -1, exclude = true)
 end
 
 "Generate pFq test"
-function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, cr = 9, sr = 10, modifyZ1 = true, dir = -1, exclude = false)
+function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, interpN = 10, circR = .8, circN = 150, corrR = .25, branchN = 150, modifyZ1 = true, dir = -1, exclude = false)
     generateGrids("grid.csv", n, r)
 
     println("Press enter after running Mathematica to update values!")
@@ -55,7 +56,7 @@ function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, cr = 9, sr = 10, modifyZ1
         (z, f) = pFq(a, b, r = r, n = n, np = np, Tr = Tr)
         h = []
     else    
-        (z, f, h) = pFq(a, b, r = r, n = n, np = np, Tr = Tr, cr = cr, sr = sr, modifyZ1 = modifyZ1)
+        (z, f, h) = pFq(a, b, r = r, n = n, np = np, Tr = Tr, interpN = interpN, circR = circR, circN = circN, corrR = corrR, branchN = branchN, modifyZ1 = modifyZ1)
     end
 
     tru = getComplexVals("Data/pfq.csv")
@@ -71,13 +72,13 @@ end
 function runTests(; N = 0)
     test = 
         [
-#                 a                  b                    r   n np   Tr, cam  exclusion
-            ([1.9,1],            [2.9],                2.49, 80, 3, 0.6, -1,  true),    # Test 1
-            ([1,-1.9],           [2.9],                2.49, 80, 3, 0.6,  1,  true),    # Test 2
-            ([1.0,1.1,0.9],      [1.2,1.3],            1.99, 80, 3, 0.6, -1,  true),    # Test 3
-            ([1.0,1.1,-0.9],     [1.2,1.3],            1.99, 80, 3, 0.6,  1,  true),    # Test 4
-            ([1.0,1.1,1.2,0.9],  [1.3,1.4,1.5],        1.99, 80, 3, 0.6, -1,  true),    # Test 5
-            ([1.0,1.1,1.2,-0.9], [1.3,1.4,1.5],        1.99, 80, 3, 0.6,  1,  true),    # Test 6
+#                 a                  b                    r   n np   Tr circR circN corrR interpN branchN cam  exclusion
+            ([1.1,1.9],          [2.9],                1.99, 41, 5, 0.5,   .8,  200,   .5,    10,     150, -1,  true),    # Test 1
+            ([1.1,-1.9],         [2.9],                1.99, 41, 5, 0.5,   .8,  200,   .5,    10,     150,  1,  true),    # Test 2
+            ([1.0,1.1,0.9],      [1.2,1.3],            1.99, 41, 5, 0.6,   .8,  200,   .5,    10,     150, -1,  true),    # Test 3
+            ([1.0,1.1,-0.9],     [1.2,1.3],            1.99, 41, 5, 0.6,   .8,  200,   .5,    10,     150,  1,  true),    # Test 4
+            ([1.0,1.1,1.2,0.9],  [1.3,1.4,1.5],        1.99, 41, 5, 0.6,   .8,  200,   .5,    10,     150, -1,  true),    # Test 5
+            ([1.0,1.1,1.2,-0.9], [1.3,1.4,1.5],        1.99, 41, 5, 0.6,   .8,  200,   .5,    10,     150,  1,  true),    # Test 6
         ]
 
     if N != 0
@@ -87,11 +88,11 @@ function runTests(; N = 0)
     end
 
     for testN ∈ tests
-        (a, b, r, n, np, Tr, dir, ex) = test[testN]
+        (a, b, r, n, np, Tr, circR, circN, corrR, interpN, branchN, dir, ex) = test[testN]
 
         println("Running test ", testN, " with a = ", a, " and b = ", b, ".")
 
-        (z, f, h, tru, p) = pFqTest(a, b, r = r, n = n, np = np, Tr = Tr, dir = dir, exclude = ex)
+        (z, f, h, tru, p) = pFqTest(a, b, r = r, n = n, np = np, Tr = Tr, circR = circR, circN = circN, corrR = corrR, interpN = interpN, branchN = branchN, dir = dir, exclude = ex)
 
         display(p[1])
         display(p[2])

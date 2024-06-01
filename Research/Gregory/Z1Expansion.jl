@@ -62,7 +62,7 @@ end
     Φ(a, b, ωa, z)
 Compute branch correction given previous correction weights `ωa` at `z`.
 """
-function Φ(a::Vector, b::Vector, ωa::Vector, z::Number)
+function Φ(a::Vector, b::Vector, ωa::Vector, z::Number; n = 150)
     N = length(ωa)
 
     c = a[1]                                                    # Current a coefficient
@@ -71,43 +71,30 @@ function Φ(a::Vector, b::Vector, ωa::Vector, z::Number)
 
     s = sum([(ωa[k + 1] * (-1)^l * (1 - z)^(k + l) * gamma(1 + k + l + α)) / 
              (factorial(big(l)) * gamma(c - l) * gamma(1 + d - c + k + l + α))  
-             for l ∈ 0 : 170, k ∈ 0 : N - 1])
+             for l ∈ 0 : n, k ∈ 0 : min(19, N - 1)])
     s = convert(ComplexF64, s)
 
     return 2im * (-1 + 0im)^(d - c + α) * oneMinusZα(z, d - c + α) * sinpi(α) * gamma(d) / z^(d - 1) * s 
 end
-Φ(a, b, ωa, z::Vector) = [Φ(a, b, ωa, z) for z ∈ z]
+Φ(a, b, ωa, z::Vector; n = 150) = [Φ(a, b, ωa, z, n = n) for z ∈ z]
 
 """
     getZ1ExpansionWeights(a, b, z)
 Compute z = 1 pFq expansion weights.
 """
-function getZ1ExpansionWeights(a, b, ωa, z, f)
-#     r = abs(1 - z[1])
-#     D = diagm((-r).^(0 : length(z) - 1))
-#     A = [(1 - z)^k for z ∈ z, k ∈ 0 : length(z) - 1] / D
-#     A = [(1 - z)^k for z ∈ z, k ∈ 0 : length(z) - 1]
-#     display(A)
-#     display(cond(A))
-
+function getZ1ExpansionWeights(a, b, ωa, z, f; n = 150)
     α = sum(b) - sum(a)                                                 # Branch exponent
 
-    ϕ = Φ(a, b, ωa, z)                                                  # Branch correction
+    ϕ = Φ(a, b, ωa, z, n = n)                                           # Branch correction
 
     oMz = [oneMinusZα(z, α) for z ∈ z]
     ba = ϕ ./ oMz / (cispi(2α) - 1)                                     # Singular RHS
     bb = f - ϕ / (cispi(2α) - 1)                                        # Regular RHS
 
-#     ωa =  ((-r).^(-(0 : length(z) - 1))).\ (A \ ba)                                                         # Singular weights
-#     ωb = ((-r).^(-(0 : length(z) - 1))) .\ (A \ bb)                                                         # Regular weights
-#     ωa = A \ ba                                                         # Singular weights
-#     ωb = A \ bb                                                         # Regular weights
-    ωa = (-abs(1 - z[1])).^(-(0 : length(z) - 1)) .* ifft(ba)
-    ωb = (-abs(1 - z[1])).^(-(0 : length(z) - 1)) .* ifft(bb)
+    r = -abs(1 - z[1])
+    ωa = r.^(-(0 : length(z) - 1)) .* ifft(ba)
+    ωb = r.^(-(0 : length(z) - 1)) .* ifft(bb)
 
-#     display(ωa - ωa1)
-#     display(ωb - ωb1)
-    
     return(ωa, ωb)
 end
 

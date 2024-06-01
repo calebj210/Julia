@@ -11,16 +11,19 @@ include("../HypergeometricTests.jl")
 
 function runPearsonTests()
     r  = 1.99 
-    n  = 40
+    n  = 41
     Tr = .6
     np = 5
-    cr = 9
-    sr = 10
+    circR = .8 
+    circN = 190
+    corrR = .5
+    interpN = 9
+    branchN = 170
     a = [.9, 1.9]
     b = [1.91]
     
     println("Running test with a = ", a, " and b = ", b, ".")
-    (z, f, h, tru, p) = pFqTest(a, b, r = r, n = n, np = np, Tr = Tr, cr = cr, sr = sr, dir = 1, exclude = true, modifyZ1 = true)
+    (z, f, h, tru, p) = pFqTest(a, b, r = r, n = n, np = np, Tr = Tr, circR = circR, circN = circN, corrR = corrR, interpN = interpN, branchN = branchN, dir = 1, exclude = true, modifyZ1 = true)
 
     testF = Vector{Vector{ComplexF64}}(undef, 5)
     @time testF[1] = [taylorA(a[1], a[2], b[1], z, 1e-15) for z ∈ z]            # Taylor-A test
@@ -29,13 +32,15 @@ function runPearsonTests()
     @time testF[4] = [buhring(a[1], a[2], b[1], z, 0.0 + 0im, 1e-15) for z ∈ z] # Buhring test
     @time testF[5] = gjQuad(  a[1], a[2], b[1], z, 150)                         # Gauss-Jacobi quadrature test
 
-    titles = ["Taylor-A", " Taylor-B", "Single Fraction", "Buhring", "Gauss-Jacobi"]
+    titles = ["Taylor-A", "Taylor-B", "Single Fraction", "Buhring", "Gauss-Jacobi"]
 
     ps = [getGraphics(z, F, tru, title = title, exclude = true) for (F, title) = zip(testF, titles)]
 
     for (img, fileName) ∈ zip(ps, titles)
-        savefig(img[1], string("Images/Pearson/", fileName, ".png"))
+        savefig(img[1], string("Images/Pearson/", fileName, ".png"), width = 700, height = 700)
     end
+    savefig(p[1], string("Images/Pearson/EndCorrectedTrap.png"), width = 700, height = 700)
+    savefig(p[2], string("Images/Pearson/EndCorrectedTrapAbsArg.png"), width = 700, height = 700)
 
     return (p, ps)
 end
