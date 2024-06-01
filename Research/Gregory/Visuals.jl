@@ -98,6 +98,7 @@ function complexAbsPlot(z⃗, f⃗; logscale = false, title = "", smooth = "none
                 z = z⃗,
                 zsmooth = smooth,
                 zmin = -16, zmax = 1,
+#                 zmin = -16, zmax = -10,
                 colorscale = colors.viridis),
 #                 colorscale = colors.gray1),
                layout)

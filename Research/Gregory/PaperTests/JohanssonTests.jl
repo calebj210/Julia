@@ -12,7 +12,7 @@ using Nemo: hypergeometric_1f1, hypergeometric_2f1, ComplexField # Arb/Flint int
 CC = ComplexField()                 # Complex box field
 cc(z::ComplexF64) = CC(z.re, z.im)  # Convert complex floats to complex field elements
 
-function joTest(a, b; title = "")
+function joTest(a, b; dir = 1, title = "")
     r = 2.49
     n = 50
     np = 5
@@ -24,7 +24,7 @@ function joTest(a, b; title = "")
     branchN = 170
 
     println("Running test with a = ", a, " and b = ", b, ".")
-    (z, f, h, tru, p) = pFqTest(a, b, r = r, n = n, np = np, Tr = Tr, circR = circR, circN = circN, corrR = corrR, interpN = interpN, branchN = branchN, dir = 1, exclude = true, modifyZ1 = true)
+    (z, f, h, tru, p) = pFqTest(a, b, r = r, n = n, np = np, Tr = Tr, circR = circR, circN = circN, corrR = corrR, interpN = interpN, branchN = branchN, dir = dir, exclude = true, modifyZ1 = true)
 
     Z = cc.(z)
     A = cc.(complex.(a))
@@ -44,17 +44,26 @@ function runJohanssonTests()
          [.9,1.1]]
     b = [[2.9],
          [1.2]]
+    dirs = [-1, -1]
 
     p  = Vector{Vector{PlotlyJS.SyncPlot}}(undef, length(a))
-    pj = Vector{Vector{PlotlyJS.SyncPlot}}(undef, length(a))
+    ps = Vector{Vector{PlotlyJS.SyncPlot}}(undef, length(a))
     
-    for (c, d, i) ∈ zip(a, b, 1 : length(a))
-        (p[i], pj[i]) = joTest(c, d, title = "Nemo/Arb")
+    for (c, d, v, i) ∈ zip(a, b, dirs, 1 : length(a))
+        (p[i], ps[i]) = joTest(c, d, dir = v, title = "Nemo/Arb")
     end
 
-    savefig(p[1][1], string("Images/Johansson/EndCorrectedTrap1.png"), width = 700, height = 700)
-    savefig(p[2][1], string("Images/Johansson/EndCorrectedTrap2.png"), width = 700, height = 700)
+    savefig(p[1][1], string("Images/Johansson/ECTrap1.png"), width = 700, height = 700)
+    savefig(p[1][2], string("Images/Johansson/ECTrap1AbsArg.png"), width = 700, height = 700)
+    savefig(p[1][3], string("Images/Johansson/ECTrap1Re.png"), width = 700, height = 700)
+    savefig(p[1][4], string("Images/Johansson/ECTrap1Im.png"), width = 700, height = 700)
     savefig(ps[1][1], string("Images/Johansson/Jo1.png"), width = 700, height = 700)
+
+    savefig(p[2][1], string("Images/Johansson/ECTrap2.png"), width = 700, height = 700)
+    savefig(p[2][2], string("Images/Johansson/ECTrap2AbsArg.png"), width = 700, height = 700)
+    savefig(p[2][3], string("Images/Johansson/ECTrap2Re.png"), width = 700, height = 700)
+    savefig(p[2][4], string("Images/Johansson/ECTrap2Im.png"), width = 700, height = 700)
     savefig(ps[2][1], string("Images/Johansson/Jo2.png"), width = 700, height = 700)
-    return (p, pj)
+    
+    return (p, ps)
 end

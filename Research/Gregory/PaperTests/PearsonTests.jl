@@ -23,7 +23,7 @@ function runPearsonTests()
     b = [1.91]
     
     println("Running test with a = ", a, " and b = ", b, ".")
-    (z, f, h, tru, p) = pFqTest(a, b, r = r, n = n, np = np, Tr = Tr, circR = circR, circN = circN, corrR = corrR, interpN = interpN, branchN = branchN, dir = 1, exclude = true, modifyZ1 = true)
+    @time (z, f, h, tru, p) = pFqTest(a, b, r = r, n = n, np = np, Tr = Tr, circR = circR, circN = circN, corrR = corrR, interpN = interpN, branchN = branchN, dir = -1, exclude = true, modifyZ1 = true)
 
     testF = Vector{Vector{ComplexF64}}(undef, 5)
     @time testF[1] = [taylorA(a[1], a[2], b[1], z, 1e-15) for z ∈ z]            # Taylor-A test
@@ -39,8 +39,10 @@ function runPearsonTests()
     for (img, fileName) ∈ zip(ps, titles)
         savefig(img[1], string("Images/Pearson/", fileName, ".png"), width = 700, height = 700)
     end
-    savefig(p[1], string("Images/Pearson/EndCorrectedTrap.png"), width = 700, height = 700)
-    savefig(p[2], string("Images/Pearson/EndCorrectedTrapAbsArg.png"), width = 700, height = 700)
+    savefig(p[1], string("Images/Pearson/ECTrap.png"), width = 700, height = 700)
+    savefig(p[2], string("Images/Pearson/ECTrapAbsArg.png"), width = 700, height = 700)
+    savefig(p[3], string("Images/Pearson/ECTrapRe.png"), width = 700, height = 700)
+    savefig(p[4], string("Images/Pearson/ECTrapIm.png"), width = 700, height = 700)
 
     return (p, ps)
 end
