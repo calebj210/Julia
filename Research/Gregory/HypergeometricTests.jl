@@ -37,10 +37,11 @@ function getGraphics(z, f, tru; title = "", dir = -1, exclude = true)
     camera = attr(
         eye=attr(x = 1.5dir, y = 1.5dir, z = 1.5)
     )
-    relayout!(p1, scene_camera = camera, template = "plotly_white")
+    relayout!(p1, template = "plotly_white")
     relayout!(p2, scene_camera = camera, template = "plotly_white")
     relayout!(p3, scene_camera = camera, template = "plotly_white")
     relayout!(p4, scene_camera = camera, template = "plotly_white")
+    relayout!(p5, template = "plotly_white")
 
     return [p1, p2, p3, p4, p5]
 end

@@ -139,11 +139,11 @@ function pFq(a, b; r = 1.99, n = 41, np = 5, Tr = 0.5, modifyZ1 = true, corrR = 
                 h[cIdx] = f[cIdx] + Φ(a[aIdx : end], b[bIdx : end], ωaTmp, g.z[cIdx], n = branchN)
             end
         
-        aIdx -= 1                                                   # Move to next layer in a
-        bIdx -= 1                                                   # Move to next layer in b
         end
 
-        f[g.c] = 1 + 0im
+        aIdx -= 1                                                   # Move to next layer in a
+        bIdx -= 1                                                   # Move to next layer in b
+        f[g.c] = 1 + 0im                                            # Fix origin
     end
     
     if !branch
