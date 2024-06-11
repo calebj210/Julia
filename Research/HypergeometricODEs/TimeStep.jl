@@ -2,7 +2,7 @@
 # Time stepping algorithms for complex steps in ODEs
 #
 # Author: Caleb Jacobs
-# DLM: June 10, 2024
+# DLM: June 12, 2024
 =#
 
 using Polynomials
@@ -26,46 +26,50 @@ function rk4Step(f, t, y, h)
     return h * (k1 + 2k2 + 2k3 + k4) / 6
 end
 
-function odeSolve(z0, f0, F, z; N = 10)
-    h = (z - z0) / N                    # Step size
+"""
+    taylorStep(z0, y0, f, h; order = 10)
 
-    tn = z0
-    yn = copy(f0)
-    for i ∈ 1 : N
-        f0 += rk4Step(F, tn, yn, h)
-        tn += h
-    end
-
-    return f0
-end
-
-function myExp(z; N = 10, order = 10)
-    h = z / N
-
-    F(x, y) = [y[2], -y[1]]
-
-    yn = [0.0 + 0im, 1.0 + 0im]
-    tn = 0.0 + 0.0im
-    for i ∈ 1 : N
-        yn = taylor(tn, yn, F, h, order = order) 
-        tn += h
-    end
-
-    return yn[1]
-end
-
-function taylor(z0, y0, f, h; order = 10)
-    z = Polynomial([z0, 1], :h)
-    y = Polynomial.(y0, :h)
+Compute Taylor expansion ODE step for the IVP y'(z) = `f`(z, y), y(`z0`) = `y0` given a step size of `h`.
+"""
+function taylorStep(z0, y0, f, h; order = 10)
+    z = Polynomial([z0, 1], :h)                     # Initial time to polynomial
+    y = Polynomial.(y0, :h)                         # Solution polynomial
 
     for i ∈ 1 : order
-        RHS = integrate.(f(z, y))
+        RHS = integrate.(f(z, y))                   # Compute next order of expansion
 
         for j ∈ eachindex(y)
-            mySetindex!(y[j], RHS[j][i], i)
+            mySetindex!(y[j], RHS[j][i], i)         # Store next expansion coefficients
         end
     end
 
 
-    return [p(h) for p ∈ y]
+    return [p(h) for p ∈ y]                         # Evaluate expansion
+end
+
+"""
+    odeSolve(z0, f0, f, z, H; order = 20)
+
+Solve IVP ODE y'(z) = `f`(z, y) with initial conditions y(`z0`) = `f0` using a max step size of `H` and taylor expansions up to degree of `order`.
+"""
+function odeSolve(z0, y0, f, z, H; order = 20)
+    dir = sign(z - z0)                              # Step size
+
+    tn = z0                                         # Time variable
+    yn = copy(y0)                                   # ODE solution
+
+    Z  = [tn] 
+    Y  = [yn]
+
+
+    for i ∈ 1 : ceil(Int64, abs(z - z0) / H)
+        h = dir * min(H, abs(z - tn))                   # Min stepsize allowed
+        yn = taylorStep(tn, yn, f, h, order = order)    # March with taylor series
+        tn += h                                         # Step time     
+
+        push!(Z, tn)                                    # Next z value
+        push!(Y, yn)                                    # Next solution value
+    end
+
+    return (Z, Y) 
 end
