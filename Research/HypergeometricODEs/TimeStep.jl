@@ -2,8 +2,20 @@
 # Time stepping algorithms for complex steps in ODEs
 #
 # Author: Caleb Jacobs
-# DLM: June 5, 2024
+# DLM: June 10, 2024
 =#
+
+using Polynomials
+
+function mySetindex!(p::AbstractPolynomial, value, idx::Int)
+    n = length(coeffs(p))
+    if n ≤ idx
+        resize!(p.coeffs, idx + 1)
+        p.coeffs[n + 1:idx] .= 0
+    end
+    p.coeffs[idx + 1] = value
+    return p
+end
 
 function rk4Step(f, t, y, h)
     k1 = f(t, y)
@@ -27,19 +39,33 @@ function odeSolve(z0, f0, F, z; N = 10)
     return f0
 end
 
-function myExp(z; N = 10)
+function myExp(z; N = 10, order = 10)
     h = z / N
 
-
-    f(x, y) = -y[1] * x
-    F(x, y) = [y[2], f(x, y)]
+    F(x, y) = [y[2], -y[1]]
 
     yn = [0.0 + 0im, 1.0 + 0im]
     tn = 0.0 + 0.0im
     for i ∈ 1 : N
-        yn += rk4Step(F, tn, yn, h) 
+        yn = taylor(tn, yn, F, h, order = order) 
         tn += h
     end
 
     return yn[1]
+end
+
+function taylor(z0, y0, f, h; order = 10)
+    z = Polynomial([z0, 1], :h)
+    y = Polynomial.(y0, :h)
+
+    for i ∈ 1 : order
+        RHS = integrate.(f(z, y))
+
+        for j ∈ eachindex(y)
+            mySetindex!(y[j], RHS[j][i], i)
+        end
+    end
+
+
+    return [p(h) for p ∈ y]
 end

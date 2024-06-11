@@ -7,11 +7,12 @@
 =#
 
 import HypergeometricFunctions: pFqweniger, pFqdrummond
+include("../HypergeometricTests.jl")
 
 function runSlevinskyTests()
     r  = 19.99 
-    n  = 101
-    Tr = 1.3 
+    n  = 81
+    Tr = 1.4 
     np = 5
     a = [1.25]
     b = [1.5]
