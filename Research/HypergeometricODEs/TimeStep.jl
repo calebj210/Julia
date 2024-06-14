@@ -32,7 +32,7 @@ end
 Compute Taylor expansion ODE step for the IVP y'(z) = `f`(z, y), y(`z0`) = `y0` given a step size of `h`.
 """
 function taylorStep(z0, y0, f, h; order = 10)
-    z = Polynomial([z0, 1], :h)                     # Initial time to polynomial
+    z = Polynomial([z0, 1], :h)                     # Time step polynomial
     y = Polynomial.(y0, :h)                         # Solution polynomial
 
     for i ∈ 1 : order
@@ -52,24 +52,31 @@ end
 
 Solve IVP ODE y'(z) = `f`(z, y) with initial conditions y(`z0`) = `f0` using a max step size of `H` and taylor expansions up to degree of `order`.
 """
-function odeSolve(z0, y0, f, z, H; order = 20)
-    dir = sign(z - z0)                              # Step size
+function odeSolve(z0, y0, f, z, H; order = 20, store = true)
+    dir = sign(z - z0)                                  # Step size
 
-    tn = z0                                         # Time variable
-    yn = copy(y0)                                   # ODE solution
+    tn = z0                                             # Time variable
+    yn = copy(y0)                                       # ODE solution
 
-    Z  = [tn] 
-    Y  = [yn]
-
-
-    for i ∈ 1 : ceil(Int64, abs(z - z0) / H)
-        h = dir * min(H, abs(z - tn))                   # Min stepsize allowed
-        yn = taylorStep(tn, yn, f, h, order = order)    # March with taylor series
-        tn += h                                         # Step time     
-
-        push!(Z, tn)                                    # Next z value
-        push!(Y, yn)                                    # Next solution value
+    if store
+        Z  = [tn]                                       # Time vector
+        Y  = [yn]                                       # Solution vector
     end
 
-    return (Z, Y) 
+    for i ∈ 1 : ceil(Int64, abs(z - z0) / H)
+        h = dir * min(H, abs(z - tn))                   # Min step size allowed
+        yn = taylorStep(tn, yn, f, h, order = order)    # March with Taylor series
+        tn += h                                         # Step time     
+
+        if store
+            push!(Z, tn)                                # Next z value
+            push!(Y, yn)                                # Next solution value
+        end
+    end
+
+    if store
+        return (Z, Y) 
+    else
+        return yn
+    end
 end
