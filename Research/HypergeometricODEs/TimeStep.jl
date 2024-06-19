@@ -6,6 +6,18 @@
 =#
 
 using Polynomials
+using DSP  
+import Base./
+
+"""
+    /(p::AbstractPolynomial, q::AbstractPolymomial)
+Compute the polynomial quotient p / q tossing the remainder away.
+"""
+function /(p::AbstractPolynomial, q::AbstractPolynomial)
+    quotient, _ = divrem(p, q)
+    
+    return quotient
+end
 
 function mySetindex!(p::AbstractPolynomial, value, idx::Int)
     n = length(coeffs(p))

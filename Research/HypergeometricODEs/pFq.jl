@@ -24,9 +24,9 @@ function pFqTaylor(a, b, z, N)
 end
 
 function F21(a, b, c, z::Number; h = .1, z0 = .25 + 0im, order = 20, TaylorN = 50)
-    y0, dy0 = pFqTaylor([a,b], [c], z0, TaylorN)
+    y0, dy0 = pFqTaylor([a, b], [c], z0, TaylorN)
 
-    F(zn, fn) = [fn[2], lowest_terms((a * b * fn[1] - (c - (a + b + 1) * zn) * fn[2]) // zn // (1 - zn))]
+    F(zn, fn) = [fn[2], (a * b * fn[1] - (c - (a + b + 1) * zn) * fn[2]) / zn / (1 - zn)]
 
     f = odeSolve(z0, [y0, dy0], F, z, h, order = order, store = false)[1]
 
