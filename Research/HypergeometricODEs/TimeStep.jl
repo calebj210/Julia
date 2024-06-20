@@ -2,17 +2,33 @@
 # Time stepping algorithms for complex steps in ODEs
 #
 # Author: Caleb Jacobs
-# DLM: June 12, 2024
+# DLM: June 20, 2024
 =#
 
 using Polynomials
-# import Base./
 
 """
     /(p::AbstractPolynomial, q::AbstractPolymomial)
 Compute the polynomial quotient p / q tossing the remainder away.
 """
-Base.:/(p::AbstractPolynomial, q::AbstractPolynomial) = div(p, q)
+function Base.:/(a::AbstractPolynomial, b::AbstractPolynomial)
+    n = length(a)                   # Number of coefficients to compute
+    x = variable(a)                 # Base variable
+
+    q, r = divrem(a, b)             # Quotient and remainder
+    
+    d = Polynomial(reverse(b.coeffs))
+    r = Polynomial(reverse(r.coeffs)) * x^(length(d) - length(r))
+
+    # Expand remainder and add it to quotient
+    for i ∈ 0 : n
+        quotient, r = divrem(r, d)
+        r *= x
+        q += quotient * x^(i)
+    end
+
+    return q
+end
 
 function mySetindex!(p::AbstractPolynomial, value, idx::Int)
     n = length(coeffs(p))
@@ -39,20 +55,16 @@ end
 Compute Taylor expansion ODE step for the IVP y'(z) = `f`(z, y), y(`z0`) = `y0` given a step size of `h`.
 """
 function taylorStep(z0, y0, f, h; order = 10)
-    z = Polynomial([z0, 1], :h)                     # Time step polynomial
-    y = Polynomial.(y0, :h)                         # Solution polynomial
-    display(y)
+    z = Polynomial([z0, 1])                         # Time step polynomial
+    y = Polynomial.(y0)                             # Solution polynomial
 
     for i ∈ 1 : order
         RHS = integrate.(f(z, y))                   # Compute next order of expansion
-        display(RHS)
 
         for j ∈ eachindex(y)
             mySetindex!(y[j], RHS[j][i], i)         # Store next expansion coefficients
         end
     end
-
-
 
     return [p(h) for p ∈ y]                         # Evaluate expansion
 end
