@@ -6,18 +6,13 @@
 =#
 
 using Polynomials
-using DSP  
-import Base./
+# import Base./
 
 """
     /(p::AbstractPolynomial, q::AbstractPolymomial)
 Compute the polynomial quotient p / q tossing the remainder away.
 """
-function /(p::AbstractPolynomial, q::AbstractPolynomial)
-    quotient, _ = divrem(p, q)
-    
-    return quotient
-end
+Base.:/(p::AbstractPolynomial, q::AbstractPolynomial) = div(p, q)
 
 function mySetindex!(p::AbstractPolynomial, value, idx::Int)
     n = length(coeffs(p))
@@ -46,14 +41,17 @@ Compute Taylor expansion ODE step for the IVP y'(z) = `f`(z, y), y(`z0`) = `y0` 
 function taylorStep(z0, y0, f, h; order = 10)
     z = Polynomial([z0, 1], :h)                     # Time step polynomial
     y = Polynomial.(y0, :h)                         # Solution polynomial
+    display(y)
 
     for i ∈ 1 : order
         RHS = integrate.(f(z, y))                   # Compute next order of expansion
+        display(RHS)
 
         for j ∈ eachindex(y)
             mySetindex!(y[j], RHS[j][i], i)         # Store next expansion coefficients
         end
     end
+
 
 
     return [p(h) for p ∈ y]                         # Evaluate expansion

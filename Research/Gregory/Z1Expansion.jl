@@ -9,8 +9,10 @@ include("Grid.jl")
 using SpecialFunctions
 using FFTW
 
+binomΓ(n, k) = gamma(n + 1) / gamma(k + 1) / gamma(n - k + 1)
+
 function getZVals(;r = .25, n = 20)
-    z = 1 .+ r * cispi.(-2range(0, 1 - 1 / n, length = n))
+    z = 1 .- r * cispi.(-2range(0, 1 - 1 / n, length = n))
 end
 
 function getInterpolantNodes(g::Grid, z; n = 1)
@@ -83,20 +85,41 @@ end
 Compute z = 1 pFq expansion weights.
 """
 function getZ1ExpansionWeights(a, b, ωa, z, f; n = 150)
-    α = sum(b) - sum(a)                                                 # Branch exponent
+    c = a[1]                                                    # Current a coefficient
+    d = b[1]                                                    # Current b coefficient
+    γ = sum(b) - sum(a) + c - d                                 # Branch exponent
 
-    ϕ = Φ(a, b, ωa, z, n = n)                                           # Branch correction
+    
+    Ak = [π * csc(π * (c - γ - d)) * (d - c) * binomΓ(d - 1, c - 1) *
+            sum([(-1)^j * ωa[j + 1] * binomΓ(d + γ + k - 1, d + γ + j - 1) * 
+                                      binomΓ(d - c + k - j - 1, -γ - j - 1) 
+            for j ∈ 0 : min(k, length(ωa) - 1)]) for k ∈ 0 : length(z) - 1]
 
-    oMz = [oneMinusZα(z, α) for z ∈ z]
-    ba = ϕ ./ oMz / (cispi(2α) - 1)                                     # Singular RHS
-    bb = f - ϕ / (cispi(2α) - 1)                                        # Regular RHS
+    sing = [oneMinusZα(zi, γ - c + d) * sum(Ak .* (1 - zi).^(0 : length(Ak) - 1)) for zi ∈ z]
+    
+    r  = abs(1 - z[1])                                          # Radius of correction
+    scale = r.^(-(0 : length(z) - 1))                           # Coefficient scaling
 
-    r = -abs(1 - z[1])
-    ωa = r.^(-(0 : length(z) - 1)) .* ifft(ba)
-    ωb = r.^(-(0 : length(z) - 1)) .* ifft(bb)
+    Bk = scale .* ifft(f - sing)                                # Regular coefficients
+#     display(Bk)
 
-    return(ωa, ωb)
+    return(Ak, Bk)
 end
+# function getZ1ExpansionWeights(a, b, ωa, z, f; n = 150)
+#     α = sum(b) - sum(a)                                                 # Branch exponent
+# 
+#     ϕ = Φ(a, b, ωa, z, n = n)                                           # Branch correction
+# 
+#     oMz = [oneMinusZα(z, α) for z ∈ z]
+#     ba = ϕ ./ oMz / (cispi(2α) - 1)                                     # Singular RHS
+#     bb = f - ϕ / (cispi(2α) - 1)                                        # Regular RHS
+# 
+#     r = -abs(1 - z[1])
+#     ωa = r.^(-(0 : length(z) - 1)) .* ifft(ba)
+#     ωb = r.^(-(0 : length(z) - 1)) .* ifft(bb)
+# 
+#     return(ωa, ωb)
+# end
 
 """
     z1PFQ(a, b, ωa, ωb, z)
@@ -104,8 +127,10 @@ end
 function z1PFQ(a::Vector, b::Vector, ωa::Vector, ωb::Vector, z::Number)
     α = sum(b) - sum(a)
     γ = oneMinusZα(z, α)
+    zi = (1 - z).^(0 : length(ωa) - 1)
 
-    f = sum((γ * ωa + ωb) .* (1 - z).^(0 : length(ωa) - 1))
+    f = sum((γ * ωa + ωb) .* zi)
+    f = sum(γ * ωa .* zi) + sum(ωb .* zi)
 
     return f
 end
