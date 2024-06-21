@@ -2,7 +2,7 @@
 # Generalized Gregory quadrature for computing high order hypergeometric pFq over a grid
 #
 # Author: Caleb Jacobs
-# DLM: May 21, 2024
+# DLM: June 20, 2024
 =#
 
 using SpecialFunctions
@@ -53,7 +53,7 @@ function _0F1(b, g)
     return f
 end
 
-function pFq(a, b; r = 1.99, n = 41, np = 5, Tr = 0.5, modifyZ1 = true, corrR = .25, circR = .8, branchN = 150, circN = 150, interpN = 10)
+function pFq(a, b; r = 1.99, n = 41, np = 5, Tr = 0.5, modifyZ1 = true, corrR = .5, innerR = .6, outerR = .8, z1N = 70)
     o = min(length(a), length(b))                                   # Order of pFq
 
     g = getGrid(n, r, ir = Tr, np = np, nl = o)                     # Initial grid
@@ -113,30 +113,24 @@ function pFq(a, b; r = 1.99, n = 41, np = 5, Tr = 0.5, modifyZ1 = true, corrR = 
                     Γ .* (D2 * f + D3 * h))                         # Compute values for next layer
 
             if modifyZ1
-                cIdx = abs.(g.z .- 1) .<= corrR                     # Corrected node indices
+                zm1 = abs.(g.z .- 1)
+                cIdx = zm1 .<= corrR                                # Corrected node indices
 
-                zCirc = getZVals(r = circR, n = circN)              # Scaled roots of unity
-                
-                fCirc = Vector{ComplexF64}(undef, 0)                # Interpolated function values
-                ω = barycentricWeights(getInterpolantNodes(g, g.z[g.c], n = interpN))
-                for zc ∈ zCirc
-                    zIdx = getInterpolantNodes(g, zc, n = interpN)
-                    if real(zc) >= 1.0
-                        fTmp = [nsgn(imag(zc)) == nsgn(imag(g.z[zi])) ? f[zi] : h[zi] for zi ∈ zIdx]
-                    else
-                        fTmp = f[zIdx]
-                    end
-                    push!(fCirc, barycentricInterpolate(g.z[zIdx], ω, fTmp)(zc))
-                end
+                zIdx = (innerR .<= zm1) .&& (zm1 .< outerR)         # Stencil nodes
+                zCirc = g.z[zIdx]
+                fCirc = f[zIdx]
 
-                ωaTmp = ωa
+                println("Number of points in stencil anulus ", 
+                        length(findall(zIdx)))
+
+
                 (ωa, ωb) = getZ1ExpansionWeights(a[aIdx : end], 
                                                  b[bIdx : end], 
                                                  ωa, zCirc, fCirc,
-                                                 n = branchN)
+                                                 n = z1N)
 
                 f[cIdx] = z1PFQ(a[aIdx : end], b[bIdx : end], ωa, ωb, g.z[cIdx])
-                h[cIdx] = f[cIdx] + Φ(a[aIdx : end], b[bIdx : end], ωaTmp, g.z[cIdx], n = branchN)
+#                 h[cIdx] = f[cIdx] + Φ(a[aIdx : end], b[bIdx : end], ωaTmp, g.z[cIdx], n = branchN)
             end
         
         end

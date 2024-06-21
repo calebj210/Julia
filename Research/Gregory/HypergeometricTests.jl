@@ -47,7 +47,7 @@ function getGraphics(z, f, tru; title = "", dir = -1, exclude = true)
 end
 
 "Generate pFq test"
-function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, interpN = 10, circR = .8, circN = 150, corrR = .25, branchN = 150, modifyZ1 = true, dir = -1, exclude = false)
+function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, modifyZ1 = true, dir = -1, exclude = false, corrR = .5, innerR = .6, outerR = .8, z1N = 70)
     generateGrids("grid.csv", n, r)
 
     println("Press enter after running Mathematica to update values!")
@@ -57,7 +57,7 @@ function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, interpN = 10, circR = .8,
         (z, f) = pFq(a, b, r = r, n = n, np = np, Tr = Tr)
         h = []
     else    
-        (z, f, h) = pFq(a, b, r = r, n = n, np = np, Tr = Tr, interpN = interpN, circR = circR, circN = circN, corrR = corrR, branchN = branchN, modifyZ1 = modifyZ1)
+        (z, f, h) = pFq(a, b, r = r, n = n, np = np, Tr = Tr, modifyZ1 = modifyZ1, corrR = corrR, innerR = innerR, outerR = outerR, z1N = z1N)
     end
 
     tru = getComplexVals("Data/pfq.csv")
