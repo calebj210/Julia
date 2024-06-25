@@ -1,4 +1,4 @@
-names = String.(strip.(split(read("022_names.txt", String), ','), '"'))
+names = String.(strip.(split(read("InputFiles/022_names.txt", String), ','), '"'))
 
 function nameScore(name::String)
     return sum(Int.(collect(name))) - length(name) * (Int('A') - 1)

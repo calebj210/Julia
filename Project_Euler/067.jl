@@ -1,4 +1,4 @@
-triangleString = read("067_triangle.txt", String)
+triangleString = read("InputFiles/067_triangle.txt", String)
 triangle = Vector{Vector{Int}}()
 for line ∈ split(triangleString, '\n')[1 : end - 1]
     vals = parse.(Int, split(line, ' '))
