@@ -2,10 +2,27 @@
 # Time stepping algorithms for complex steps in ODEs
 #
 # Author: Caleb Jacobs
-# DLM: June 20, 2024
+# DLM: July 3, 2024
 =#
 
 using Polynomials
+
+"""
+    polinv(a, d = 16)
+Compute the polynomial inverse of `a` to degree `d`.
+"""
+function polinv(a::AbstractPolynomial, d = 16)
+    b = Polynomial([1 / a[0]])
+    
+    for m ∈ 1 : d
+        nextterm = -sum([a[k] * b[m - k] for k ∈ 1 : m]) / a[0]
+
+        mysetindex!(b, nextterm, m)
+    end
+
+
+    return b
+end
 
 """
     /(p::AbstractPolynomial, q::AbstractPolymomial)
@@ -30,7 +47,7 @@ function Base.:/(a::AbstractPolynomial, b::AbstractPolynomial)
     return q
 end
 
-function mySetindex!(p::AbstractPolynomial, value, idx::Int)
+function mysetindex!(p::AbstractPolynomial, value, idx::Int)
     n = length(coeffs(p))
     if n ≤ idx
         resize!(p.coeffs, idx + 1)
@@ -58,11 +75,17 @@ function taylorStep(z0, y0, f, h; order = 10)
     z = Polynomial([z0, 1])                         # Time step polynomial
     y = Polynomial.(y0)                             # Solution polynomial
 
+    if f(z,y) isa Tuple
+        den = polinv.(f(z,y)[2], order)             # Polynomial inverse for denominator
+    else
+        den = 1
+    end
+
     for i ∈ 1 : order
-        RHS = integrate.(f(z, y))                   # Compute next order of expansion
+        RHS = integrate.(f(z, y)[1] .* den)         # Compute next order of expansion
 
         for j ∈ eachindex(y)
-            mySetindex!(y[j], RHS[j][i], i)         # Store next expansion coefficients
+            mysetindex!(y[j], RHS[j][i], i)         # Store next expansion coefficients
         end
     end
 
