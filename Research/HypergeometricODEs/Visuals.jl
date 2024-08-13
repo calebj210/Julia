@@ -2,7 +2,7 @@
 # Collection of functions for visualizing properties of complex functions
 #
 # Author: Caleb Jacobs
-# DLM: January 17, 2023
+# DLM: January 17, 2024
 =#
 
 using PlotlyJS

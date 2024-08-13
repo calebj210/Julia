@@ -2,7 +2,7 @@
 # Time stepping algorithms for complex steps in ODEs
 #
 # Author: Caleb Jacobs
-# DLM: July 3, 2024
+# DLM: August 13, 2024
 =#
 
 using Polynomials
@@ -93,11 +93,11 @@ function taylorStep(z0, y0, f, h; order = 10)
 end
 
 """
-    odeSolve(z0, f0, f, z, H; order = 20)
+    ODEsolve(z0, f0, f, z, H; order = 20)
 
-Solve IVP ODE y'(z) = `f`(z, y) with initial conditions y(`z0`) = `f0` using a max step size of `H` and taylor expansions up to degree of `order`.
+Solve the IVP y'(z) = `f`(z, y) with initial conditions y(`z0`) = `f0` using a max step size of `H` and taylor expansions up to degree of `order`.
 """
-function odeSolve(z0, y0, f, z, H; order = 20, store = true)
+function ODEsolve(z0, y0, f, z, H; order = 20, store = false)
     dir = sign(z - z0)                                  # Step size
 
     tn = z0                                             # Time variable
@@ -123,5 +123,18 @@ function odeSolve(z0, y0, f, z, H; order = 20, store = true)
         return (Z, Y) 
     else
         return yn
+    end
+end
+
+"""
+    ODEpathsolve(z0, f0, f, z, H; order = 20)
+"""
+function ODEpathsolve(z0, f0, f, z, H; order = 20)
+    if real(z) >= 1 && abs(imag(z)) < .9 
+        z0new = real(z) + 2imag(z0) * im                           # Horizontal travel
+        f0new = ODEsolve(z0,    f0,    f, z0new, H; order = order) # Horizontal value
+        return  ODEsolve(z0new, f0new, f, z,     H; order = order) # Final value
+    else
+        return ODEsolve(z0, f0, f, z, H; order = order)            # Final value
     end
 end

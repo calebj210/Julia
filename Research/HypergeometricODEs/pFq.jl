@@ -2,12 +2,16 @@
 #   ODE approach to computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: July 3, 2024
+# DLM: August 13, 2024
 =#
 
 using Polynomials
 using SpecialFunctions
 include("TimeStep.jl")
+
+function sgn(x)
+    iszero(x) ? one(x) : sign(x)
+end
 
 function pFqTaylor(a, b, z, N)
     coeffs = zeros(typeof(z), N + 1)
@@ -23,13 +27,17 @@ function pFqTaylor(a, b, z, N)
     return (p(z), dp(z))
 end
 
-function F21(a, b, c, z::Number; h = .1, z0 = .25 + 0im, order = 20, TaylorN = 50)
-    y0, dy0 = pFqTaylor([a, b], [c], z0, TaylorN)
+function F21(a, b, c, z::Number; h = .1, z0 = 0im, order = 20, taylorN = 100)
+    if iszero(z0)
+        z0 = sgn(imag(z)) * 0.5im
+    end
+
+    y0, dy0 = pFqTaylor([a, b], [c], z0, taylorN)
 
     F(zn, fn) = ([fn[2], a * b * fn[1] - (c - (a + b + 1) * zn) * fn[2]],
                  [1, zn * (1 - zn)])
 
-    f = odeSolve(z0, [y0, dy0], F, z, h, order = order, store = false)[1]
+    f = ODEpathsolve(z0, [y0, dy0], F, z, h, order = order)[1]
 
     return f
 end
