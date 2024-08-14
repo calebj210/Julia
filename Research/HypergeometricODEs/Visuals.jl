@@ -2,7 +2,7 @@
 # Collection of functions for visualizing properties of complex functions
 #
 # Author: Caleb Jacobs
-# DLM: January 17, 2024
+# DLM: August 14, 2024
 =#
 
 using PlotlyJS
@@ -52,9 +52,7 @@ function complexAbsPlot(z⃗, f⃗; logscale = false, title = "", smooth = "none
                 z = z⃗,
                 zsmooth = smooth,
                 zmin = -16, zmax = 1,
-#                 zmin = -16, zmax = -10,
                 colorscale = colors.viridis),
-#                 colorscale = colors.gray1),
                layout)
     else
         plt = plot(heatmap(
@@ -62,8 +60,7 @@ function complexAbsPlot(z⃗, f⃗; logscale = false, title = "", smooth = "none
                 y = y⃗,
                 z = z⃗,
                 zsmooth = smooth,
-#                 colorscale = colors.viridis),
-                colorscale = colors.gray1),
+                colorscale = colors.viridis),
                layout)
     end
     relayout!(plt, template = "plotly_white")
@@ -125,8 +122,9 @@ function colorWheel()
     return plt
 end
 
-function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1, exclude = false, mesh = false)
+function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1, exclude = false, mesh = false, logscale = false)
     x⃗, y⃗ = reim(z⃗)
+    f⃗ = deepcopy(f⃗)
         
     plts = Vector{GenericTrace}()
 
@@ -145,6 +143,10 @@ function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1, exclude = false, me
             z⃗ = abs.(p)
             args = angle.(p)
             args[args .< 0] .+= 2π
+        end
+        
+        if logscale
+            z⃗ = sign.(z⃗) .* log10.(abs.(z⃗))
         end
 
         if !mesh
@@ -209,6 +211,9 @@ function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1, exclude = false, me
             xaxis_title = "Re(z)",
             yaxis_title = "Im(z)",
             zaxis_title = "Abs(f)",
+            zaxis = attr(
+                range = (T == 1) ? [0, 20] : [-10, 10]
+            ),
         ),
         font=attr(
             size = 15
@@ -222,12 +227,12 @@ function complexPlot3d(z⃗::Matrix, f⃗::Matrix...; T = 1, exclude = false, me
     return plt
 end
 
-function complexPlot3d(z::Vector, f::Vector...; T = 1, exclude = false, mesh = false)
+function complexPlot3d(z::Vector, f::Vector...; T = 1, exclude = false, mesh = false, logscale = false)
     Z = reshape(z, round(Int64, sqrt(length(z))), :)
 
     N = round(Int64, sqrt(length(f[1])))
 
     F = reshape.(f, N , :)
 
-    return complexPlot3d(Z, F..., T = T, exclude = exclude, mesh = mesh)
+    return complexPlot3d(Z, F..., T = T, exclude = exclude, mesh = mesh, logscale = logscale)
 end

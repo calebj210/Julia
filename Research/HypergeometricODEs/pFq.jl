@@ -10,7 +10,7 @@ using SpecialFunctions
 include("TimeStep.jl")
 
 function sgn(x)
-    iszero(x) ? one(x) : sign(x)
+    iszero(x) ? -one(x) : sign(x)
 end
 
 function pFqTaylor(a, b, z, N)
