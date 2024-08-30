@@ -70,7 +70,7 @@ function convergencetest(a, b, z, tru; z0 = 0, order = 20, taylorN = 100, h0 = -
     H = 10 .^ range(h0, hf, length = hN)
 
     for h = H
-        f = F21(a[1], a[2], b[1], z, h = h, order = order, taylorN = taylorN)
+        f = fast2f1(a[1], a[2], b[1], z, H = h, order = order, N = taylorN)
         push!(F, abs(f - tru))
     end
     
