@@ -2,13 +2,14 @@
 # Tests for hypergeometric ODE approach
 # 
 # Author: Caleb Jacobs
-# DLM: August 14, 2024
+# DLM: September 5, 2024
 =#
 
 using CSV, Tables
-# include("Visuals.jl")
-using Plots
-plotlyjs()
+include("Visuals.jl")
+# using Plots
+using BenchmarkTools
+# plotlyjs()
 include("pFq.jl")
 
 "Generate CSVs of grid nodes"
@@ -26,6 +27,30 @@ function getcomplexvals(path::String)
     vals = vec(reims[:, 1] + im * reims[:, 2])
 
     return vals
+end
+
+function mathematica_2f1(a, b, c, z)
+    ra, ia = reim(a)
+    rb, ib = reim(b)
+    rc, ic = reim(c)
+    rz, iz = reim(z)
+
+    A = iszero(ia) ? "$(ra)" : "$(ra) + $(ib)I"
+    B = iszero(ib) ? "$(rb)" : "$(rb) + $(ib)I"
+    C = iszero(ic) ? "$(rc)" : "$(rc) + $(ic)I"
+    Z = iszero(iz) ? "$(rz)" : "$(rz) + $(iz)I"
+    
+    process = `wolfram -noprompt -run 
+        "val = OutputForm[NumberForm[
+            Hypergeometric2F1[$(A), $(B), $(C), $(Z)], 20]];
+         Print[val];
+         Exit[]"`
+
+    output = chomp(read(process, String))                   # Read initial Mathematica output
+    output = replace(output, r"I" => s"im", r"\*" => s"")   # Convert imaginary part to Julia syntax
+    value  = parse(ComplexF64, output)                      # Parse output to number
+
+    return value
 end
 
 "Generate graphics"
@@ -48,7 +73,7 @@ function getgraphics(z, f, tru; title = "", dir = -1, exclude = true, logscale =
     return [p1, p2, p3, p4, p5]
 end
 
-function gridtest(a, b, r, n, h = .1, order = 20, taylorN = 100, logscale = false, title = "")
+function gridtest(a, b, r, n, H = .1, order = 20, taylorN = 100, logscale = false, title = "")
     x = range(-r, r, length = n)
     z = vec(x .+ x' * im)
 
@@ -58,30 +83,44 @@ function gridtest(a, b, r, n, h = .1, order = 20, taylorN = 100, logscale = fals
     readline()
     tru = getcomplexvals("Data/pfq.csv") 
 
-    F = [F21(a[1], a[2], b[1], z, h = h, order = order, taylorN = taylorN) for z ∈ z]
+    F = [fast2f1(a[1], a[2], b[1], z, H = H, order = order, N = taylorN) for z ∈ z]
     
     p = getgraphics(z, F, tru, exclude = true, title = title, logscale = logscale)
     
     return (z, F, tru, p)
 end
 
-function convergencetest(a, b, z, tru; z0 = 0, order = 20, taylorN = 100, h0 = -2, hf = 0, hN = 100)
+function convergencetest(a, b, z; order = 20, taylorN = 150, h0 = -2, hf = 0, hN = 100)
     F = Vector{Float64}()
     H = 10 .^ range(h0, hf, length = hN)
 
+    tru = mathematica_2f1(a[1], a[2], b[1], z)
+
     for h = H
         f = fast2f1(a[1], a[2], b[1], z, H = h, order = order, N = taylorN)
-        push!(F, abs(f - tru))
+        push!(F, abs(f - tru) / abs(tru))
     end
     
     return (H, F)
 end
 
+function timetest(a, b, z; order = 20, N = 150, H = .1)
+    t = @benchmark fast2f1($(a[1]), $(a[2]), $(b[1]), $(z), order = $(order), N = $(N), H = $(H))
+    val = fast2f1(a[1], a[2], b[1], z, order = order, N = N, H = H)
+    tru = mathematica_2f1(a[1], a[2], b[1], z)
+    
+    med = round(median(t.times) * 1e-3, digits = 2)
+    dig = round(Int, -log10(abs(val - tru)))
+
+    return "Median = $(med) μs, Correct Digits = $(dig)"
+end
+
 function rungridtests(path::String = ""; N = nothing)
     tests = [
-        ([ .9,  1.1],   [ 1.2], 4, 99, .1, 20, 150, false, "2F1(.9, 1.1; 1.2; z)")
-        ([ .9,  1.1],   [-1.2], 4, 99, .1, 20, 150, false,  "2F1(.9, 1.1; -1.2; z)")
-        ([ .9, -1.1im], [-1.2], 4, 99, .1, 20, 150, false,  "2F1(.9, -1.1i; -1.2; z)")
+        ([-.9,  1.11], [1.2],    4, 200, .1,  20, 150, false, "2F1(-.9, 1.11; 1.2; z)")
+
+        ([-.9, 5.0-20im], [1.2], 4, 200, .05, 40, 150, false, "2F1(-.9, 5-20im; 1.2; z)")
+        ([-.9, 1.11], [50.0im],  4, 200, .05, 40, 150, false, "2F1(-.9, 1.11; 50i; z)")
     ]
 
     names = ["AbsErr", "AbsArg", "Re", "Im", "RelErr"]
@@ -111,33 +150,52 @@ function rungridtests(path::String = ""; N = nothing)
     return p
 end
 
-function runconvergencetests(path::String = ""; N = nothing)
+function runconvergencetests(path::String = ""; N = nothing, times = false)
     tests = [
-        #         a       b        z                                          tru
-        ([ .9, 1.1], [ 1.2], 2 + 2im, -0.06432544451316979 + 0.5206938157025687im)
-        ([-.9, 1.1], [-1.2], 2 + 2im,  2.966075098239322   + 2.865931991133645im)
-        ([-.9, 1.1-2im], [-1.2im], 2 + 2im, 0.4226703551093628 - 4.373177905207582im)
+        #         a       b        z
+        ([ .9, 1.11], [ 1.2], 1.5 + .5im)
+        ([ .9, 1.11], [ 1.2], 3cispi(-1/4))
+        ([ .9, 1.11], [ 1.2], cispi(1/3)-0.1)
+
+        ([-.9, 1.11], [ 1.2], 1.5 + .5im)
+        ([-.9, 1.11], [ 1.2], 3cispi(-1/4))
+        ([-.9, 1.11], [ 1.2], cispi(1/3)-0.1)
+
+        ([-0.9, 5.0-20.0im], [1.2], 1.5 - .5im)
+        ([-0.9, 5.0-20.0im], [1.2], 3cispi(-1/4))
+        ([-0.9, 5.0-20.0im], [1.2], cispi(1/3)-0.1)
+
+        ([-.9, 1.11], [50.0im], 1.5 - .5im)
+        ([-.9, 1.11], [50.0im], 3cispi(-1/4))
+        ([-.9, 1.11], [50.0im], cispi(1/3)-0.1)
     ]
 
-    orders = [1,2,4,8,12,16,20]
-    titles = ["2F1(0.9, 1.1; 1.2; 2 + 2i)", 
-              "2F1(-0.9, 1.1; -1.2; 2 + 2i)",
-              "2F1(-0.9, 1.1-2i; -1.2i; 2 + 2i)"]
+    orders = [1,2,4,8,12,16,20,30]
+    titles = "Test " .* string.(1:length(tests))
 
     if isnothing(N)
         N = 1:length(tests)
     end
 
-    h = []
-    plots = Vector{Plots.Plot}()
+    if !times
+        h = []
+        plots = Vector{Plots.Plot}()
+    end
     for (n, (name, test)) ∈ enumerate(zip(titles, tests))
         if n ∉ N
             continue
         end
 
+        if times
+            time = timetest(test..., H = 0.08, order = 30)
+            println("Test $(n): $(time)")
+
+            continue
+        end
+
         p = plot(title = name)
         for order ∈ orders
-            (h, f) = convergencetest(test..., order = order)
+            (h, f) = convergencetest(test..., order = order, hN = 200)
             plot!(h, f, 
                 scale  = :log10, 
                 xflip  = true, 
@@ -148,17 +206,18 @@ function runconvergencetests(path::String = ""; N = nothing)
                 lw     = 2,
                 label  = "T_$(order)")
         end
-        plot!(h, h, ls = :dash, lc = :black, lw = 3, label = "O(h)")
-        plot!(h, h.^20, ls = :dash, lc = :gray, lw = 3, label = "O(h^20)")
+        plot!(h, h.^orders[1],   ls = :dash, lc = :black, lw = 3, label = "O(h^$(orders[1]))")
+        plot!(h, h.^orders[end], ls = :dash, lc = :gray,  lw = 3, label = "O(h^$(orders[end]))")
 
         push!(plots, p)
     end
     
-    if path !== ""
-        for (n, p) ∈ enumerate(plots)
-            savefig(p, path * "Convergence$(n).png")
+    if !times
+        if path !== ""
+            for (n, p) ∈ enumerate(plots)
+                savefig(p, path * "Convergence$(n).png")
+            end
         end
+        return plots
     end
-
-    return plots
 end

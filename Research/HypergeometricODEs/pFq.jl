@@ -2,7 +2,7 @@
 #   ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: August 30, 2024
+# DLM: September 4, 2024
 =#
 
 using Polynomials
@@ -70,43 +70,30 @@ function recursive_2f1_taylor(a, b, c, z0::T, c0, N) where {T <: Number}
     coeffs = zeros(T, N + 1)                                # Initialize Taylor coefficients
     coeffs[1:2] .= c0                                       # First 2 coefficients
 
-#     A(n) = -(n + a) * (n + b)                               # c_n recursive coefficient
-#     B(n) =  (n + 1) * (n + c - (1 + a + b + 2n) * z0)       # c_(n+1) recursive coefficient
-#     C(n) =  (n + 1) * (n + 2) * (1 - z0) * z0               # c_(n+2) recursive coefficient
-# 
-#     # Recursively compute N Taylor coefficients for 2F1
-#     for k ∈ 0:(N - 2)
-#         coeffs[k + 3] = -(A(k) * coeffs[k + 1] + B(k) * coeffs[k + 2]) / C(k)
-#     end
-
-    # 10 flop optimization
-    d1 = -a * b
-    d2 = 1 - a - b
-    d3 = d4 = c - (1 + a + b) * z0;
-    d5 = 2 - 4z0
-    d6 = d7 = d8 = 2z0 * (z0 - 1)
+    # 10 flop optimization for 3-term recurrence
+    a0 = -a * b; a1 =  1 - a - b
+    b0 = b1 = c - (1 + a + b) * z0; b2 =  2 - 4z0
+    c0 = c1 = c2 = 2z0 * (z0 - 1)
 
     for n = 3 : N + 1
-        coeffs[n] = (d1 * coeffs[n - 2] + d3 * coeffs[n - 1]) / d6
+        # Compute next coefficient
+        coeffs[n] = (a0 * coeffs[n - 2] + b0 * coeffs[n - 1]) / c0
 
-        d2 -= 2
-        d1 += d2
-        d4 += d5
-        d3 += d4
-        d7 += d8
-        d6 += d7
+        # Update recurrence values
+        a1 -= 2;  a0 += a1
+        b1 += b2; b0 += b1
+        c1 += c2; c0 += c1
     end
 
     return Polynomial(coeffs)
 end
 
 function fast_2f1(a, b, c, z; H = 0.1, N = 150, order = 20)
-    if abs(z) <= .5
+    if abs(z) <= .3
         return pfq_taylor([a, b], [c], z, N)[1]
     end
 
-    z0 = sign(z) * 0.5im
-
+    z0 = sign(z) * 0.3im
     dir = sign(z - z0)
 
     zn = z0
@@ -115,7 +102,7 @@ function fast_2f1(a, b, c, z; H = 0.1, N = 150, order = 20)
     for i ∈ 1 : ceil(Int64, abs(z - z0) / H)
         h = dir * min(H, abs(z - zn))
 
-        Tn = recursive_2f1_taylor(a, b, c, zn, fn, order)
+        Tn = recursive_2f1_taylor(a, b, c, zn, fn, order + 1)   # Order increase so derivative hits the desired order
         Tnp = derivative(Tn)
 
         zn += h
