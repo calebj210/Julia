@@ -2,11 +2,12 @@
 #   ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: September 4, 2024
+# DLM: September 10, 2024
 =#
 
 using Polynomials
-using SpecialFunctions
+using SpecialFunctions, ArbNumerics
+import SpecialFunctions.gamma
 include("TimeStep.jl")
 
 function sgn(x)
@@ -42,7 +43,10 @@ function F21(a, b, c, z::Number; h = .1, z0 = 0im, order = 20, taylorN = 100)
     return f
 end
 
+gamma(z::Complex{BigFloat}) = gamma(ArbComplex(z))
 function fast2f1(a, b, c, z::Number; H = 0.1, N = 150, order = 20)
+    a,b,c,z = big.((a,b,c,z))
+
     if real(z) <= 0.5 && abs(z) <= 1
         f = fast_2f1(a, b, c, z, H = H, N = N, order = order)
     elseif abs(z) >= 1 && abs(z - 1) >= 1
@@ -72,7 +76,7 @@ function recursive_2f1_taylor(a, b, c, z0::T, c0, N) where {T <: Number}
 
     # 10 flop optimization for 3-term recurrence
     a0 = -a * b; a1 =  1 - a - b
-    b0 = b1 = c - (1 + a + b) * z0; b2 =  2 - 4z0
+    b0 = b1 = c - (1 + a + b) * z0; b2 = 2 - 4z0
     c0 = c1 = c2 = 2z0 * (z0 - 1)
 
     for n = 3 : N + 1

@@ -2,15 +2,18 @@
 # Tests for hypergeometric ODE approach
 # 
 # Author: Caleb Jacobs
-# DLM: September 5, 2024
+# DLM: September 10, 2024
 =#
 
 using CSV, Tables
-include("Visuals.jl")
-# using Plots
-using BenchmarkTools
-# plotlyjs()
 include("pFq.jl")
+
+# include("Visuals.jl")
+using Plots
+plotlyjs()
+
+using BenchmarkTools
+using MathLink
 
 "Generate CSVs of grid nodes"
 function generategrids(path::String, n::Int64, r)
@@ -29,29 +32,9 @@ function getcomplexvals(path::String)
     return vals
 end
 
-function mathematica_2f1(a, b, c, z)
-    ra, ia = reim(a)
-    rb, ib = reim(b)
-    rc, ic = reim(c)
-    rz, iz = reim(z)
-
-    A = iszero(ia) ? "$(ra)" : "$(ra) + $(ib)I"
-    B = iszero(ib) ? "$(rb)" : "$(rb) + $(ib)I"
-    C = iszero(ic) ? "$(rc)" : "$(rc) + $(ic)I"
-    Z = iszero(iz) ? "$(rz)" : "$(rz) + $(iz)I"
+mathematica_2f1(a, b, c, z) = 
+    Complex(weval( W`N[Hypergeometric2F1[a,b,c,z]]`, a = a, b = b, c = c, z = z).args...)
     
-    process = `wolfram -noprompt -run 
-        "val = OutputForm[NumberForm[
-            Hypergeometric2F1[$(A), $(B), $(C), $(Z)], 20]];
-         Print[val];
-         Exit[]"`
-
-    output = chomp(read(process, String))                   # Read initial Mathematica output
-    output = replace(output, r"I" => s"im", r"\*" => s"")   # Convert imaginary part to Julia syntax
-    value  = parse(ComplexF64, output)                      # Parse output to number
-
-    return value
-end
 
 "Generate graphics"
 function getgraphics(z, f, tru; title = "", dir = -1, exclude = true, logscale = false)
@@ -170,7 +153,8 @@ function runconvergencetests(path::String = ""; N = nothing, times = false)
         ([-.9, 1.11], [50.0im], cispi(1/3)-0.1)
     ]
 
-    orders = [1,2,4,8,12,16,20,30]
+#     orders = [1,2,4,8,12,16,20,30]
+    orders = [30, 40, 60, 100, 150, 200]
     titles = "Test " .* string.(1:length(tests))
 
     if isnothing(N)
