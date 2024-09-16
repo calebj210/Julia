@@ -13,7 +13,6 @@ using Plots
 plotlyjs()
 
 using BenchmarkTools
-using MathLink
 
 "Generate CSVs of grid nodes"
 function generategrids(path::String, n::Int64, r)
@@ -31,10 +30,6 @@ function getcomplexvals(path::String)
 
     return vals
 end
-
-mathematica_2f1(a, b, c, z) = 
-    Complex(weval( W`N[Hypergeometric2F1[a,b,c,z]]`, a = a, b = b, c = c, z = z).args...)
-    
 
 "Generate graphics"
 function getgraphics(z, f, tru; title = "", dir = -1, exclude = true, logscale = false)
