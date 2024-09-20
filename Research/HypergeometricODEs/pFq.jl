@@ -2,7 +2,7 @@
 #   ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: September 16, 2024
+# DLM: September 20, 2024
 =#
 
 using Polynomials, MathLink
@@ -16,24 +16,46 @@ end
 
 gamma(z::Complex{BigFloat}) = gamma(ArbComplex(z))
 poc(a, n) = iszero(n) ? 1 : prod(a + k for k ∈ 0:n - 1)
+const Big = Union{BigInt, BigFloat, Complex{BigFloat}, Complex{BigInt}}
 
 mathematica_2f1(a, b, c, z) = 
-    Complex(weval( W`N[Hypergeometric2F1[a,b,c,z]]`, a = a, b = b, c = c, z = z).args...)
+    try 
+        Complex(weval( W`N[Hypergeometric2F1[a,b,c,z]]`, a = a, b = b, c = c, z = z).args...)
+    catch 
+        Real(weval( W`N[Hypergeometric2F1[a,b,c,z]]`, a = a, b = b, c = c, z = z))
+    end
     
-function pfq_taylor(a, b, z, N = 150; tol = 1e-16)
-    coeffs = Vector{typeof(z)}()
-    push!(coeffs, 1.0)
+function maclaurin_pfq(a::Vector{Ta}, b::Vector{Tb}, z::Tz, N = 1000) where Ta where Tb where Tz
+    if Ta <: Big || Tb <: Big || Tz <: Big
+        if Ta <: Complex || Tb <: Complex || Tz <: Complex
+            coef_type = Complex{BigFloat}
+        else
+            coef_type = BigFloat
+        end
+    else
+        if Ta <: Complex || Tb <: Complex || Tz <: Complex
+            coef_type = ComplexF64
+        else
+            coef_type = Float64
+        end
+    end
+    coeffs = Vector{coef_type}()
+    push!(coeffs, 1)
 
-    S = zn = coeff = 1
+    S = zn = coeff = one(z)
     for n ∈ 1 : N
         coeff *= prod(a .+ (n - 1)) / prod(b .+ (n - 1)) / n 
         push!(coeffs, coeff)
 
         zn *= z
 
-        if abs(coeff*zn / S) <= tol
+        if abs(coeff*zn) <= eps(abs(S))
             break
         end
+
+#         if abs(coeff*zn / S) <= eps(real(coef_type))
+#             break
+#         end
 
         S  += coeff * zn
     end
@@ -44,8 +66,66 @@ function pfq_taylor(a, b, z, N = 150; tol = 1e-16)
     return [p(z), dp(z)]
 end
 
-function recursive_2f1_taylor(a, b, c, z0::T, f0, h, N; tol = 1e-16) where {T <: Number}
-    coeffs = Vector{T}()
+function maclaurin_2f1(a::Ta, b::Tb, c::Tc, z::Tz, N = 1000) where Ta where Tb where Tc where Tz 
+    if Ta <: Big || Tb <: Big || Tc <: Big || Tz <: Big
+        if Ta <: Complex || Tb <: Complex || Tc <: Complex || Tz <: Complex || z > 1
+            coef_type = Complex{BigFloat}
+        else
+            coef_type = BigFloat
+        end
+    else
+        if Ta <: Complex || Tb <: Complex || Tc <: Complex || Tz <: Complex || z > 1
+            coef_type = ComplexF64
+        else
+            coef_type = Float64
+        end
+    end
+
+    S = coeff = one(coef_type) #/ gamma(c)
+    
+    coeffs = Vector{coef_type}()
+    push!(coeffs, coeff)
+
+    zn = one(coef_type)
+
+    for n ∈ 1 : N
+        coeff *= (a + n - 1) / (c + n - 1) * (b + n - 1) / n
+        push!(coeffs, coeff)
+
+        zn *= z
+
+        if abs(coeff*zn) <= eps(abs(S))
+            break
+        end
+
+#         if abs(coeff*zn / S) <= eps(real(coef_type))
+#             break
+#         end
+
+        S  += coeff * zn
+    end
+
+    p  = Polynomial(coeffs)
+    dp = derivative(p)
+
+    return [p(z), dp(z)]
+end
+
+function recursive_2f1(a::Ta, b::Tb, c::Tc, z0::Tz, f0, h, N) where Ta where Tb where Tc where Tz 
+    if Ta <: Big || Tb <: Big || Tc <: Big || Tz <: Big
+        if Ta <: Complex || Tb <: Complex || Tc <: Complex || Tz <: Complex || z0 > 1
+            coef_type = Complex{BigFloat}
+        else
+            coef_type = BigFloat
+        end
+    else
+        if Ta <: Complex || Tb <: Complex || Tc <: Complex || Tz <: Complex || z0 > 1
+            coef_type = ComplexF64
+        else
+            coef_type = Float64
+        end
+    end
+    coeffs = Vector{coef_type}()
     push!(coeffs, f0...)
 
     # 10 flop optimization for 3-term recurrence
@@ -60,10 +140,15 @@ function recursive_2f1_taylor(a, b, c, z0::T, f0, h, N; tol = 1e-16) where {T <:
         push!(coeffs, (a0 * coeffs[n - 2] + b0 * coeffs[n - 1]) / c0)
 
         hn *= h
-        criteria = abs(coeffs[end] * hn / S)
-        if criteria <= tol
+        criteria = abs(coeffs[end] * hn)
+        if criteria <= eps(abs(S))
             break
         end
+
+#         criteria = abs(coeffs[end] * hn / S)
+#         if criteria <= eps(real(coef_type))
+#             break
+#         end
         S += coeffs[end] * hn
 
         # Update recurrence values
@@ -71,37 +156,35 @@ function recursive_2f1_taylor(a, b, c, z0::T, f0, h, N; tol = 1e-16) where {T <:
         b1 += b2; b0 += b1
         c1 += c2; c0 += c1
     end 
-    
+
     Tn  = Polynomial(coeffs)
     Tnp = derivative(Tn)
 
     return [Tn(h), Tnp(h)]
 end
 
-function taylor_2f1(a, b, c, z; H = 0.1, N = 150, order = 20)
+function taylor_2f1(a, b, c, z::Number; H = 0.1, N = 1000, order = 1000)
     if abs(z) <= .3
-        return pfq_taylor([a, b], [c], z, N)[1]
+        return maclaurin_2f1(a, b, c, z, N)[1]
     end
 
-    z0 = sign(z) * 0.3im
+    z0 = sign(z) * 0.3
     dir = sign(z - z0)
 
     zn = z0
-    fn = pfq_taylor([a, b], [c], z0, N)
+    fn = maclaurin_2f1(a, b, c, z0, N)
 
     for i ∈ 1 : ceil(Int64, abs(z - z0) / H)
         h = dir * min(H, abs(z - zn))
 
-        fn = recursive_2f1_taylor(a, b, c, zn, fn, h, order + 1) # Order increase so derivative hits the desired order
+        fn = recursive_2f1(a, b, c, zn, fn, h, order + 1) # Order increase so derivative hits the desired order
         zn += h
     end
 
     return fn[1]
 end
 
-function _2f1(a, b, c, z::Number; H = 0.1, N = 150, order = 20)
-#     a,b,c,z = big.((a,b,c,z))
-
+function _2f1(a, b, c, z::Number; H = 0.1, N = 150, order = 200)
     if real(z) <= 0.5 && abs(z) <= 1
         f = taylor_2f1(a, b, c, z, H = H, N = N, order = order)
     elseif abs(z) >= 1 && abs(z - 1) >= 1
@@ -185,7 +268,6 @@ function int_abc_2f1(a, b, c, z; N = 100, tol = 1e-15)
         return gamma(c) * (sum1 + sum2)
     end
 end
-
 
 """
     int_ab_2f1(a, b, c, z; N = 150)

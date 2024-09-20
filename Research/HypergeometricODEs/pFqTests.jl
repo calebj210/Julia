@@ -8,9 +8,9 @@
 using CSV, Tables
 include("pFq.jl")
 
-# include("Visuals.jl")
-using Plots
-plotlyjs()
+include("Visuals.jl")
+# using Plots
+# plotlyjs()
 
 using BenchmarkTools
 
@@ -61,7 +61,8 @@ function gridtest(a, b, r, n, H = .1, order = 20, taylorN = 100, logscale = fals
     readline()
     tru = getcomplexvals("Data/pfq.csv") 
 
-    F = [fast2f1(a[1], a[2], b[1], z, H = H, order = order, N = taylorN) for z ∈ z]
+#     F = [_2f1(a[1], a[2], b[1], z, H = H, order = order, N = taylorN) for z ∈ z]
+    F = [extended_precision_2f1(a[1], a[2], b[1], z, H = H, order = order, N = taylorN) for z ∈ z]
     
     p = getgraphics(z, F, tru, exclude = true, title = title, logscale = logscale)
     
@@ -75,7 +76,7 @@ function convergencetest(a, b, z; order = 20, taylorN = 150, h0 = -2, hf = 0, hN
     tru = mathematica_2f1(a[1], a[2], b[1], z)
 
     for h = H
-        f = fast2f1(a[1], a[2], b[1], z, H = h, order = order, N = taylorN)
+        f = _2f1(a[1], a[2], b[1], z, H = h, order = order, N = taylorN)
         push!(F, abs(f - tru) / abs(tru))
     end
     
@@ -95,10 +96,10 @@ end
 
 function rungridtests(path::String = ""; N = nothing)
     tests = [
-        ([-.9,  1.11], [1.2],    4, 200, .1,  20, 150, false, "2F1(-.9, 1.11; 1.2; z)")
+        ([-.9,  1.11], [1.2],    4, 200, .1,  150, 150, false, "2F1(-.9, 1.11; 1.2; z)")
 
-        ([-.9, 5.0-20im], [1.2], 4, 200, .05, 40, 150, false, "2F1(-.9, 5-20im; 1.2; z)")
-        ([-.9, 1.11], [50.0im],  4, 200, .05, 40, 150, false, "2F1(-.9, 1.11; 50i; z)")
+        ([-.9, 5.0-20im], [1.2], 4, 200, .05, 150, 150, false, "2F1(-.9, 5-20im; 1.2; z)")
+        ([-.9, 1.11], [50.0im],  20, 200, .05, 150, 150, false, "2F1(-.9, 1.11; 50i; z)")
     ]
 
     names = ["AbsErr", "AbsArg", "Re", "Im", "RelErr"]
