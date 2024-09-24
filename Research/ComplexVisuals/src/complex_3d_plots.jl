@@ -1,0 +1,160 @@
+using PlotlyJS
+using Images, Base64
+const CS = PlotlyJS.PlotlyBase.ColorSchemes
+templates.default = "plotly_white"
+
+function complex_surface_plot(z::T, f::T; kwargs...) where T <: Matrix{<: Number}
+    x, y   = vec.(reim(z))
+    absval = vec(abs.(f))
+    phase  = mod.(angle.(f), 2π)
+
+    i, j, k, c = grid_mesh(phase)
+
+    trace = mesh3d(;
+        x = x,
+        y = y,
+        z = absval,
+        i = i,
+        j = j,
+        k = k,
+
+        intensity = c,
+        intensitymode = "cell",
+        colorscale = CS.hsv,
+        showscale = false,
+    )
+
+    png_data = read("/home/merlin/Documents/Julia/Research/ComplexVisuals/src/AngleWheel.png", String) # Read the PNG file as a string
+    png_base64 = base64encode(png_data)
+
+    layout = Layout(;
+        width  = 800, height = 800,
+        title = attr(
+            font_size = 25,
+            y = 0.8,
+            x = 0.5
+        ),
+        font_size = 15,
+        scene = attr(
+            xaxis_title = attr(
+                font_size = 20,
+                text = "Re(z)"
+            ),
+            yaxis_title = attr(
+                font_size = 20,
+                text = "Im(z)"
+            ),
+            zaxis_title = attr(
+                font_size = 20,
+                text = "Abs(f)"
+            ),
+            aspectratio = attr(x = 1, y = 1, z = .6),
+        ),
+        images = [attr(
+            source = "data:image/png;base64,$png_base64",
+            xref = "paper",  # Reference the paper coordinates (0 to 1)
+            yref = "paper",
+            x = 0.8,         # Position horizontally (0.5 is center)
+            y = 0.2,         # Position vertically
+            sizex = 0.15,      # Size relative to paper width
+            sizey = 0.15,      # Size relative to paper height
+            opacity = 0.8,    # Adjust transparency as needed
+            layer = "above"   # Place the image above the 3D graph
+        )],
+        kwargs...
+    )
+
+    plot(trace, layout)
+end
+
+function complex_real_imaginary_plot(z::T, f::T; kwargs...) where T <: Matrix{<: Number}
+    x, y = reim(z)
+    f_re, f_im = reim(f)
+
+    xmin, xmax = extrema(x)
+    ymin, ymax = extrema(y)
+    hx = abs(x[1,1] - x[1,2])
+    hy = abs(y[1,1] - y[2,1])
+
+    trace_real = surface(
+        x = x, y = y, z = f_re,
+        connectgaps = false,
+        opacity = 0,
+        showscale = false,
+        contours = attr(
+            x = attr(
+                show = true,
+                size = hx,
+                color = "black",
+                width = 1
+            ),
+            x_start = xmin, x_end = xmax,
+            y = attr(
+                show = true,
+                size = hy,
+                color = "black",
+                width = 1
+            ),
+            y_start = ymin, y_end = ymax,
+        )
+    )
+
+    trace_imag = surface(
+        x = x, y = y, z = f_im,
+        connectgaps = false,
+        opacity = 0,
+        showscale = false,
+        contours = attr(
+            x = attr(
+                show = true,
+                size = hx,
+                color = "black",
+                width = 1
+            ),
+            x_start = xmin, x_end = xmax,
+            y = attr(
+                show = true,
+                size = hy,
+                color = "black",
+                width = 1
+            ),
+            y_start = ymin, y_end = ymax,
+        )
+    )
+
+    layout = Layout(;
+        width  = 800, height = 800,
+        title = attr(
+            font_size = 25,
+            y = 0.8,
+            x = 0.5
+        ),
+        font_size = 15,
+        scene = attr(
+            xaxis_title = attr(
+                font_size = 20,
+                text = "Re(z)"
+            ),
+            yaxis_title = attr(
+                font_size = 20,
+                text = "Im(z)"
+            ),
+            zaxis_title = attr(
+                font_size = 20,
+                text = "f(z)"
+            ),
+            aspectratio = attr(x = 1, y = 1, z = .6),
+        ),
+        kwargs...
+    )
+
+    pltre = Plot(trace_real, layout)
+    relayout!(pltre, title_text = "Re(f)")
+    pltim = Plot(trace_imag, layout)
+    relayout!(pltim, title_text = "Im(f)")
+
+    plot_real = plot(pltre)
+    plot_imag = plot(pltim)
+
+    return (plot_real, plot_imag)
+end
