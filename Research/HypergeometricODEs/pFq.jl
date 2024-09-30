@@ -137,18 +137,16 @@ function recursive_2f1(a::Ta, b::Tb, c::Tc, z0::Tz, f0, h, N) where Ta where Tb 
     hn = h
     for n = 3 : N + 1
         # Compute next coefficient
-        push!(coeffs, (a0 * coeffs[n - 2] + b0 * coeffs[n - 1]) / c0)
+        coeff = (a0 * coeffs[n - 2] + b0 * coeffs[n - 1]) / c0
 
         hn *= h
-        criteria = abs(coeffs[end] * hn)
-        if criteria <= eps(abs(S))
+        criteria = abs(coeff * hn)
+        if criteria <= eps(abs(S)) || isnan(criteria) || isinf(criteria)
             break
         end
 
-#         criteria = abs(coeffs[end] * hn / S)
-#         if criteria <= eps(real(coef_type))
-#             break
-#         end
+        push!(coeffs, coeff)
+
         S += coeffs[end] * hn
 
         # Update recurrence values
@@ -184,7 +182,7 @@ function taylor_2f1(a, b, c, z::Number; H = 0.1, N = 1000, order = 1000)
     return fn[1]
 end
 
-function _2f1(a, b, c, z::Number; H = 0.1, N = 150, order = 200)
+function _2f1(a, b, c, z::Number; H = 0.1, N = 1000, order = 1000)
     if real(z) <= 0.5 && abs(z) <= 1
         f = taylor_2f1(a, b, c, z, H = H, N = N, order = order)
     elseif abs(z) >= 1 && abs(z - 1) >= 1

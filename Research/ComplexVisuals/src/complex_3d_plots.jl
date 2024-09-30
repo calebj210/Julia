@@ -1,7 +1,39 @@
 using PlotlyJS
 using Images, Base64
 const CS = PlotlyJS.PlotlyBase.ColorSchemes
-templates.default = "plotly_white"
+
+const plot_template_3d = (;
+    template = "plotly_white",
+    width  = 800, height = 800,
+
+    title = attr(
+        font_size = 25,
+        y = 0.8,
+        x = 0.5
+    ),
+
+    font_size = 15,
+
+    scene = attr(
+        xaxis_title = attr(
+            font_size = 20,
+        ),
+        yaxis_title = attr(
+            font_size = 20,
+        ),
+        zaxis_title = attr(
+            font_size = 20,
+        ),
+        aspectratio = attr(x = 1, y = 1, z = .6),
+    )
+)
+
+const plot_template_3d_complex = (;
+    plot_template_3d...,
+
+    scene_xaxis_title_text = "Re(z)",
+    scene_yaxis_title_text = "Im(z)"
+)
 
 function complex_surface_plot(z::T, f::T; kwargs...) where T <: Matrix{<: Number}
     x, y   = vec.(reim(z))
@@ -24,32 +56,14 @@ function complex_surface_plot(z::T, f::T; kwargs...) where T <: Matrix{<: Number
         showscale = false,
     )
 
-    png_data = read("/home/merlin/Documents/Julia/Research/ComplexVisuals/src/AngleWheel.png", String) # Read the PNG file as a string
+    png_data = read("$(@__DIR__)/AngleWheel.png", String) # Read the PNG file as a string
     png_base64 = base64encode(png_data)
 
     layout = Layout(;
-        width  = 800, height = 800,
-        title = attr(
-            font_size = 25,
-            y = 0.8,
-            x = 0.5
-        ),
-        font_size = 15,
-        scene = attr(
-            xaxis_title = attr(
-                font_size = 20,
-                text = "Re(z)"
-            ),
-            yaxis_title = attr(
-                font_size = 20,
-                text = "Im(z)"
-            ),
-            zaxis_title = attr(
-                font_size = 20,
-                text = "Abs(f)"
-            ),
-            aspectratio = attr(x = 1, y = 1, z = .6),
-        ),
+        plot_template_3d_complex...,
+
+        scene_zaxis_title_text = "abs(f)",
+
         images = [attr(
             source = "data:image/png;base64,$png_base64",
             xref = "paper",  # Reference the paper coordinates (0 to 1)
@@ -61,13 +75,14 @@ function complex_surface_plot(z::T, f::T; kwargs...) where T <: Matrix{<: Number
             opacity = 0.8,    # Adjust transparency as needed
             layer = "above"   # Place the image above the 3D graph
         )],
+
         kwargs...
     )
 
     plot(trace, layout)
 end
 
-function complex_real_imaginary_plot(z::T, f::T; kwargs...) where T <: Matrix{<: Number}
+function complex_reim_surface_plot(z::T, f::T; kwargs...) where T <: Matrix{<: Number}
     x, y = reim(z)
     f_re, f_im = reim(f)
 
@@ -123,35 +138,14 @@ function complex_real_imaginary_plot(z::T, f::T; kwargs...) where T <: Matrix{<:
     )
 
     layout = Layout(;
-        width  = 800, height = 800,
-        title = attr(
-            font_size = 25,
-            y = 0.8,
-            x = 0.5
-        ),
-        font_size = 15,
-        scene = attr(
-            xaxis_title = attr(
-                font_size = 20,
-                text = "Re(z)"
-            ),
-            yaxis_title = attr(
-                font_size = 20,
-                text = "Im(z)"
-            ),
-            zaxis_title = attr(
-                font_size = 20,
-                text = "f(z)"
-            ),
-            aspectratio = attr(x = 1, y = 1, z = .6),
-        ),
+        plot_template_3d_complex...,
         kwargs...
     )
 
     pltre = Plot(trace_real, layout)
-    relayout!(pltre, title_text = "Re(f)")
+    relayout!(pltre, scene_zaxis_title_text = "Re(f)")
     pltim = Plot(trace_imag, layout)
-    relayout!(pltim, title_text = "Im(f)")
+    relayout!(pltim, scene_zaxis_title_text = "Im(f)")
 
     plot_real = plot(pltre)
     plot_imag = plot(pltim)

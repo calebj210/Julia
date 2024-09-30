@@ -1,7 +1,29 @@
 using PlotlyJS
 using Images, Base64
 const CS = PlotlyJS.PlotlyBase.ColorSchemes
-templates.default = "plotly_white"
+
+const plot_template_2d = (;
+    template = "plotly_white",
+    width = 800, height = 800,
+
+    title = attr(
+        font_size = 25,
+        y = 0.96,
+        x = 0.5
+    ),
+
+    font_size = 20,
+
+    xaxis_title_font_size = 25,
+    yaxis_title_font_size = 25,
+)
+
+const plot_template_2d_complex = (;
+    plot_template_2d...,
+
+    xaxis_title_text = "Re(z)",
+    yaxis_title_text = "Im(z)",
+)
 
 function complex_phase_plot(z::T, f::T; kwargs...) where T <: Vector{<: Number}
     x, y = reim(z)
@@ -17,25 +39,12 @@ function complex_phase_plot(z::T, f::T; kwargs...) where T <: Vector{<: Number}
         showscale = false,
     )
 
-    png_data = read("/home/merlin/Documents/Julia/Research/ComplexVisuals/src/AngleWheel.png", String) # Read the PNG file as a string
+    png_data = read("$(@__DIR__)/AngleWheel.png", String) # Read the PNG file as a string
     png_base64 = base64encode(png_data)
 
     layout = Layout(;
-        width = 800, height = 800,
-        title = attr(
-            font_size = 25,
-            y = 0.96,
-            x = 0.5
-        ),
-        font_size = 20,
-        xaxis_title = attr(
-            font_size = 25,
-            text = "Re(z)"
-        ),
-        yaxis_title = attr(
-            font_size = 25,
-            text = "Im(z)"
-        ),
+        plot_template_2d_complex...,
+
         images = [attr(
             source = "data:image/png;base64,$png_base64",
             xref = "paper",  # Reference the paper coordinates (0 to 1)
@@ -47,6 +56,7 @@ function complex_phase_plot(z::T, f::T; kwargs...) where T <: Vector{<: Number}
             opacity = 0.8,    # Adjust transparency as needed
             layer = "above"   # Place the image above the 3D graph
         )],
+
         kwargs...
     )
 

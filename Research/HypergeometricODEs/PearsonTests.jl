@@ -39,21 +39,55 @@ tests = [
 ]
 
 """
-    run_pearson_tests(prec; order = 1000)
-Run 2F1 tests mentioned in Pearson et al using the Taylor method of `order` and rerun test with extended `prec`ision calculations.
+    run_pearson_tests(precs; order = 1000)
+Run 2F1 tests mentioned in Pearson et al using the Taylor method of `order` and rerun test with extended `precs`ision calculations.
 """
-function run_pearson_tests(prec = 256; order = 1000, relative = false)
+function run_pearson_tests(precs = [128, 256, 512, 1024, 2048]; order = 5000)
     tru = [mathematica_2f1(test...) for test ∈ tests]
-    valdouble = [taylor_2f1(test..., order = order) for test ∈ tests]
 
-    setprecision(prec)
-    valextend = [taylor_2f1((big.(test))..., order = order) for test ∈ tests]
+    vals = Matrix{Number}(undef, length(tests) + 1, length(precs) + 2)
 
-    vals = [valdouble valextend]
-
-    if relative
-        return [[1:length(tests)...] abs.((vals .- tru) ./ (abs.(tru) .+ eps()))]
-    else
-        return [[1:length(tests)...] abs.(vals .- tru)]
+    vals[1,:] = [[0, 64]; precs]
+    vals[2:end,1] = 1:length(tests)
+    vals[2:end,2] = correct_digits.([taylor_2f1(test..., order = order) for test ∈ tests], tru)
+    for (i, prec) ∈ enumerate(precs)
+        setprecision(prec)
+        vals[2:end, i + 2] = correct_digits.([taylor_2f1((big.(test))..., order = order) for test ∈ tests], tru)
     end
+
+    return vals
 end
+
+function absolute_error(val::Number, tru::Number)
+    return abs(val - tru)
+end
+
+function relative_error(val::Number, tru::Number)
+    return absolute_error(val, tru) / (abs(tru) + eps(abs(tru)))
+end
+
+function correct_digits(val::Number, tru::Number)
+    if isinf(val)
+        return Inf
+    elseif isnan(val)
+        return NaN
+    elseif relative_error(val, tru) < eps(abs(tru)) || absolute_error(val, tru) < eps(abs(tru))
+        return 16
+    end
+
+    sval = prepare_digit_comparison(abs(val))
+    stru = prepare_digit_comparison(abs(tru))
+
+    digits = 0
+    for (cval, ctru) ∈ zip(sval, stru)
+        if cval == ctru
+            digits += 1
+        else
+            break
+        end
+    end
+
+    return digits
+end
+
+prepare_digit_comparison(val::Real) = rpad(lstrip(replace(string(val), "." => ""), '0'), 16, '0')
