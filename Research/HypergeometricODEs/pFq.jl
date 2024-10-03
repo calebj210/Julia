@@ -2,13 +2,12 @@
 #   ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: September 20, 2024
+# DLM: October 2, 2024
 =#
 
-using Polynomials, MathLink
+using Polynomials, MathLink, SparseArrays
 using SpecialFunctions, ArbNumerics
 import SpecialFunctions.gamma
-include("TimeStep.jl")
 
 function sgn(x)
     iszero(x) ? -one(x) : sign(x)
@@ -25,21 +24,8 @@ mathematica_2f1(a, b, c, z) =
         Real(weval( W`N[Hypergeometric2F1[a,b,c,z]]`, a = a, b = b, c = c, z = z))
     end
     
-function maclaurin_pfq(a::Vector{Ta}, b::Vector{Tb}, z::Tz, N = 1000) where Ta where Tb where Tz
-    if Ta <: Big || Tb <: Big || Tz <: Big
-        if Ta <: Complex || Tb <: Complex || Tz <: Complex
-            coef_type = Complex{BigFloat}
-        else
-            coef_type = BigFloat
-        end
-    else
-        if Ta <: Complex || Tb <: Complex || Tz <: Complex
-            coef_type = ComplexF64
-        else
-            coef_type = Float64
-        end
-    end
-    coeffs = Vector{coef_type}()
+function maclaurin_pfq(a::Vector{Ta}, b::Vector{Tb}, z::Tz, N = 1000) where {Ta, Tb, Tz}
+    coeffs = Vector{promote_type(Ta, Tb, Tz)}()
     push!(coeffs, 1)
 
     S = zn = coeff = one(z)
@@ -66,23 +52,11 @@ function maclaurin_pfq(a::Vector{Ta}, b::Vector{Tb}, z::Tz, N = 1000) where Ta w
     return [p(z), dp(z)]
 end
 
-function maclaurin_2f1(a::Ta, b::Tb, c::Tc, z::Tz, N = 1000) where Ta where Tb where Tc where Tz 
-    if Ta <: Big || Tb <: Big || Tc <: Big || Tz <: Big
-        if Ta <: Complex || Tb <: Complex || Tc <: Complex || Tz <: Complex || z > 1
-            coef_type = Complex{BigFloat}
-        else
-            coef_type = BigFloat
-        end
-    else
-        if Ta <: Complex || Tb <: Complex || Tc <: Complex || Tz <: Complex || z > 1
-            coef_type = ComplexF64
-        else
-            coef_type = Float64
-        end
-    end
+function maclaurin_2f1(a::Ta, b::Tb, c::Tc, z::Tz, N = 1000) where {Ta, Tb, Tc, Tz}
+    coef_type = promote_type(Ta, Tb, Tc, Tz)
 
     S = coeff = one(coef_type) #/ gamma(c)
-    
+
     coeffs = Vector{coef_type}()
     push!(coeffs, coeff)
 
@@ -98,10 +72,6 @@ function maclaurin_2f1(a::Ta, b::Tb, c::Tc, z::Tz, N = 1000) where Ta where Tb w
             break
         end
 
-#         if abs(coeff*zn / S) <= eps(real(coef_type))
-#             break
-#         end
-
         S  += coeff * zn
     end
 
@@ -111,21 +81,9 @@ function maclaurin_2f1(a::Ta, b::Tb, c::Tc, z::Tz, N = 1000) where Ta where Tb w
     return [p(z), dp(z)]
 end
 
-function recursive_2f1(a::Ta, b::Tb, c::Tc, z0::Tz, f0, h, N) where Ta where Tb where Tc where Tz 
-    if Ta <: Big || Tb <: Big || Tc <: Big || Tz <: Big
-        if Ta <: Complex || Tb <: Complex || Tc <: Complex || Tz <: Complex || z0 > 1
-            coef_type = Complex{BigFloat}
-        else
-            coef_type = BigFloat
-        end
-    else
-        if Ta <: Complex || Tb <: Complex || Tc <: Complex || Tz <: Complex || z0 > 1
-            coef_type = ComplexF64
-        else
-            coef_type = Float64
-        end
-    end
-    coeffs = Vector{coef_type}()
+function recursive_2f1(a::Ta, b::Tb, c::Tc, z0::Tz, f0, h, N) where {Ta, Tb, Tc, Tz}
+    Tcomplex = real(z0) >= 1 ? ComplexF64 : Float64             # Passed branch point 
+    coeffs = Vector{promote_type(Ta, Tb, Tc, Tz, Tcomplex)}()
     push!(coeffs, f0...)
 
     # 10 flop optimization for 3-term recurrence
@@ -312,4 +270,58 @@ function int_ab_2f1(a, b, c, z; N = 100, tol = 1e-15)
     sum2 *= (-z)^(-a) / gamma(a)
 
     return gamma(c) * (sum1 + sum2)
+end
+
+function sparse_taylor_coefficients(a, b, c, z0, h, c0, c1, N)
+    A(n) = -(n + a) * (n + b) * h^2
+    B(n) =  (n + 1) * (n + c  - (1 + a + b + 2n) * z0) * h
+    C(n) =  (n + 1) * (n + 2) * (1 - z0) * z0
+    s0 = c0
+    s1 = c1 * h
+
+    As = A.(2:N - 2)
+    Bs = B.(1:N - 2)
+    Cs = C.(0:N - 2)
+    
+    LHS = spdiagm(-2 => As, -1 => Bs, 0 => Cs)
+    RHS = sparsevec(Dict(1 => -A(0) * s0 - B(0) * s1, 2 => -A(1) * s1), N - 1)
+
+    return [s0; s1; LHS\RHS]
+end
+
+function recursive_taylor_coefficients(a::Ta, b::Tb, c::Tc, z0::Tz, h, f0, f1, N) where {Ta, Tb, Tc, Tz}
+    # 10 flop optimization for 3-term recurrence
+    a0 = -a * b * h^2; a1 =  (1 - a - b) * h^2; a2 = -2h^2
+    b0 = b1 = (c - (1 + a + b) * z0) * h; b2 = (2 - 4z0) * h
+    c0 = c1 = c2 = 2z0 * (z0 - 1)
+    
+    s = zeros(promote_type(Ta,Tb,Tc,Tz), N + 1)
+    s[1] = f0; s[2] = f1 * h
+    for n = 3 : N + 1
+        # Compute next coefficient
+        s[n] = (a0 * s[n - 2] + b0 * s[n - 1]) / c0
+
+        # Update recurrence values
+        a1 += a2; a0 += a1
+        b1 += b2; b0 += b1
+        c1 += c2; c0 += c1
+    end 
+
+    return s
+end
+
+function sp_vs_rc(a, b, c, z, N)
+    z0 = sign(z) * .2
+    h  = sign(z) * .1
+
+    c0,c1 = maclaurin_2f1(a, b, c, z0)
+
+    rc_sums = recursive_taylor_coefficients(a, b, c, z0, h, c0, c1, N)
+    sp_sums = sparse_taylor_coefficients(a, b, c, z0, h, c0, c1, N)
+    
+    rel_err = norm(rc_sums - sp_sums) / norm(rc_sums)
+
+    printstyled("Relative Error = ", rel_err, '\n', bold = true, color = :light_green)
+
+    return (rc_sums, sp_sums)
 end

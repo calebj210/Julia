@@ -53,6 +53,7 @@ function complex_surface_plot(z::T, f::T; kwargs...) where T <: Matrix{<: Number
         intensity = c,
         intensitymode = "cell",
         colorscale = CS.hsv,
+        cmin = 0, cmax = 2π,
         showscale = false,
     )
 

@@ -36,6 +36,7 @@ function complex_phase_plot(z::T, f::T; kwargs...) where T <: Vector{<: Number}
 
         zsmooth = "fast",
         colorscale = CS.hsv,
+        zmin = 0, zmax = 2π,
         showscale = false,
     )
 

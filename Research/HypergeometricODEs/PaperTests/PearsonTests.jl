@@ -1,4 +1,4 @@
-include("pFq.jl")
+include("../pFq.jl")
 
 tests = [
     (0.1,0.2,0.3,0.5)                   # 1
@@ -58,36 +58,23 @@ function run_pearson_tests(precs = [128, 256, 512, 1024, 2048]; order = 5000)
     return vals
 end
 
-function absolute_error(val::Number, tru::Number)
-    return abs(val - tru)
-end
-
-function relative_error(val::Number, tru::Number)
-    return absolute_error(val, tru) / (abs(tru) + eps(abs(tru)))
-end
+relative_error(val::Number, tru::Number)::Float64 = abs((val - tru) / tru)
 
 function correct_digits(val::Number, tru::Number)
-    if isinf(val)
-        return Inf
-    elseif isnan(val)
-        return NaN
-    elseif relative_error(val, tru) < eps(abs(tru)) || absolute_error(val, tru) < eps(abs(tru))
-        return 16
-    end
+    relerr = relative_error(val, tru)
 
-    sval = prepare_digit_comparison(abs(val))
-    stru = prepare_digit_comparison(abs(tru))
-
-    digits = 0
-    for (cval, ctru) ∈ zip(sval, stru)
-        if cval == ctru
-            digits += 1
-        else
-            break
+    if iszero(relerr)
+        digs = 15
+    elseif isinf(relerr) || isnan(relerr)
+        digs = 0
+    else
+        digs = -round(Int,log10(relerr))
+        if digs <= 0 
+            digs = 0
+        elseif digs > 16
+            digs = 16
         end
     end
 
-    return digits
+    return digs
 end
-
-prepare_digit_comparison(val::Real) = rpad(lstrip(replace(string(val), "." => ""), '0'), 16, '0')
