@@ -138,15 +138,10 @@ function complex_reim_surface_plot(z::T, f::T; kwargs...) where T <: Matrix{<: N
         )
     )
 
-    layout = Layout(;
-        plot_template_3d_complex...,
-        kwargs...
-    )
-
-    pltre = Plot(trace_real, layout)
-    relayout!(pltre, scene_zaxis_title_text = "Re(f)")
-    pltim = Plot(trace_imag, layout)
-    relayout!(pltim, scene_zaxis_title_text = "Im(f)")
+    pltre = Plot(trace_real)
+    relayout!(pltre; plot_template_3d_complex..., kwargs..., scene_zaxis_title_text = "Re(f)")
+    pltim = Plot(trace_imag)
+    relayout!(pltim; plot_template_3d_complex..., kwargs..., scene_zaxis_title_text = "Im(f)")
 
     plot_real = plot(pltre)
     plot_imag = plot(pltim)

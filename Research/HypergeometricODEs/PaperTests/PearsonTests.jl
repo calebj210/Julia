@@ -38,6 +38,20 @@ tests = [
     (2/3,1,4/3,cispi(1/3))              # 30
 ]
 
+"Quick relative error test of 2f1."
+function test_2f1(test::T; prec = 64) where T <: NTuple{4, Number}
+    tru = mathematica_2f1(test...)
+
+    if prec != 64
+        setprecision(prec)
+        val = taylor_2f1((big.(test))...)
+    else
+        val = taylor_2f1(test...)
+    end
+
+    return abs((val - tru) / tru)
+end
+
 """
     run_pearson_tests(precs; order = 1000)
 Run 2F1 tests mentioned in Pearson et al using the Taylor method of `order` and rerun test with extended `precs`ision calculations.

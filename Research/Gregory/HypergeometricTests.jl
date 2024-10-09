@@ -2,57 +2,23 @@
 # Test suite for grid based hypergeometric calculations
 #
 # Author: Caleb Jacobs
-# DLM: November 15, 2023
+# DLM: October 9, 2024
 =#
 
-using CSV, Tables
-include("Visuals.jl")
+using ComplexVisuals
+using PlotlyJS
+using MathLink
 include("HypergeometricGrid.jl")
 
-"Generate CSVs of grid nodes"
-function generateGrids(path::String, n::Int64, r)
-    g = getGrid(n, r)
-    CSV.write("Data/" * path, Tables.table([real(g.z) imag(g.z)]), writeheader = false)
-
-    return nothing
-end
-
-"Read CSV to complex vector"
-function getComplexVals(path::String)
-    reims = CSV.File(path, header = false, delim = ',', types = Float64) |> Tables.matrix
-
-    vals = vec(reims[:, 1] + im * reims[:, 2])
-
-    return vals
-end
-
-"Generate graphics"
-function getGraphics(z, f, tru; title = "", dir = -1, exclude = true)
-    p1 = complexAbsPlot(z, f - tru, logscale = true, title = title)
-    p2 = complexPlot3d(z, f, exclude = exclude)
-    p3 = complexPlot3d(z, f, T = 2, exclude = exclude, mesh = true)
-    p4 = complexPlot3d(z, f, T = 3, exclude = exclude, mesh = true)
-    p5 = complexAbsPlot(z, (f - tru) ./ abs.(tru), logscale = true, title = title)
-
-    camera = attr(
-        eye=attr(x = 1.5dir, y = 1.5dir, z = 1.5)
-    )
-    relayout!(p1, template = "plotly_white")
-    relayout!(p2, scene_camera = camera, template = "plotly_white")
-    relayout!(p3, scene_camera = camera, template = "plotly_white")
-    relayout!(p4, scene_camera = camera, template = "plotly_white")
-    relayout!(p5, template = "plotly_white")
-
-    return [p1, p2, p3, p4, p5]
-end
+mathematica_pfq(a, b, z) = 
+    try 
+        Complex(weval( W`N[HypergeometricPFQ[a,b,z]]`, a = a, b = b, z = z).args...)
+    catch 
+        Real(weval( W`N[HypergeometricPFQ[a,b,z]]`, a = a, b = b, z = z))
+    end
 
 "Generate pFq test"
-function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, modifyZ1 = true, dir = -1, exclude = false, corrR = .5, innerR = .6, outerR = .8, z1N = 70)
-    generateGrids("grid.csv", n, r)
-
-    println("Press enter after running Mathematica to update values!")
-    readline()
-
+function gridtest(a,b, r = 1, n = 20, np = 3, Tr = 0.5, modifyZ1 = true, corrR = .5, innerR = .6, outerR = .8, z1N = 70)
     if length(a) != length(b) + 1
         (z, f) = pFq(a, b, r = r, n = n, np = np, Tr = Tr)
         h = []
@@ -60,45 +26,44 @@ function pFqTest(a,b; r = 1, n = 20, np = 3, Tr = 0.5, modifyZ1 = true, dir = -1
         (z, f, h) = pFq(a, b, r = r, n = n, np = np, Tr = Tr, modifyZ1 = modifyZ1, corrR = corrR, innerR = innerR, outerR = outerR, z1N = z1N)
     end
 
-    tru = getComplexVals("Data/pfq.csv")
+    tru::Vector{ComplexF64} = [mathematica_pfq(a, b, z) for z ∈ z]
+
+    N = isqrt(length(z))
+    Z = reshape(z, N, :)
+    F = reshape(f, N, :)
+    TRU = reshape(tru, N, :)
 
     title = string(length(a), "F", length(b), "(", a, "; ", b, "; z)") 
 
-    p = getGraphics(z, f, tru, title = title, dir = dir, exclude = exclude)
+    p = generate_graphics(Z, F, TRU, title = title)
 
     return (z, f, h, tru, p)
 end
 
-
-function runTests(; N = 0)
-    test = 
+function rungridtests(; N = 0)
+    tests = 
         [
-#                 a                  b                    r   n np   Tr circR circN corrR interpN branchN cam  exclusion
-            ([1.1,1.9],          [2.9],                1.99, 41, 5, 0.5,   .8,  200,   .5,    10,     150, -1,  true),    # Test 1
-            ([1.1,-1.9],         [2.9],                1.99, 41, 5, 0.5,   .8,  200,   .5,    10,     150,  1,  true),    # Test 2
-            ([1.0,1.1,0.9],      [1.2,1.3],            1.99, 41, 5, 0.6,   .8,  200,   .5,    10,     150, -1,  true),    # Test 3
-            ([1.0,1.1,-0.9],     [1.2,1.3],            1.99, 41, 5, 0.6,   .8,  200,   .5,    10,     150,  1,  true),    # Test 4
-            ([1.0,1.1,1.2,0.9],  [1.3,1.4,1.5],        1.99, 41, 5, 0.6,   .8,  200,   .5,    10,     150, -1,  true),    # Test 5
-            ([1.0,1.1,1.2,-0.9], [1.3,1.4,1.5],        1.99, 41, 5, 0.6,   .8,  200,   .5,    10,     150,  1,  true),    # Test 6
+#                 a                  b                    r   n np  Tr  modz1 corR inR outR z1N
+            ([1.1,1.9],          [2.9],                1.99, 41, 5, 0.5, true, .5,  .6, .8, 70),    # Test 1
+            ([1.1,-1.9],         [2.9],                1.99, 41, 5, 0.5, true, .5,  .6, .8, 70),    # Test 2
+            ([1.0,1.1,0.9],      [1.2,1.3],            1.99, 41, 5, 0.6, true, .5,  .6, .8, 70),    # Test 3
+            ([1.0,1.1,-0.9],     [1.2,1.3],            1.99, 41, 5, 0.6, true, .5,  .6, .8, 70),    # Test 4
+            ([1.0,1.1,1.2,0.9],  [1.3,1.4,1.5],        1.99, 41, 5, 0.6, true, .5,  .6, .8, 70),    # Test 5
+            ([1.0,1.1,1.2,-0.9], [1.3,1.4,1.5],        1.99, 41, 5, 0.6, true, .5,  .6, .8, 70),    # Test 6
         ]
 
-    if N != 0
-        tests = N
-    else
-        tests = eachindex(test)
-    end
+for (n, test) ∈ enumerate(tests)
+        if n ∉ N
+            continue
+        end
 
-    for testN ∈ tests
-        (a, b, r, n, np, Tr, circR, circN, corrR, interpN, branchN, dir, ex) = test[testN]
+        println("Running test ", test, " with a = ", a, " and b = ", b, ".")
 
-        println("Running test ", testN, " with a = ", a, " and b = ", b, ".")
+        (z, f, h, tru, ps) = gridtest(test...)
 
-        (z, f, h, tru, p) = pFqTest(a, b, r = r, n = n, np = np, Tr = Tr, circR = circR, circN = circN, corrR = corrR, interpN = interpN, branchN = branchN, dir = dir, exclude = ex)
-
-        display(p[1])
-        display(p[2])
-        display(p[3])
-        display(p[4])
+        for p ∈ ps
+            display(p)
+        end
 
         println("Press enter when ready for next test.")
         readline()
@@ -106,3 +71,48 @@ function runTests(; N = 0)
 
     return nothing
 end
+
+"Generate a heatmap over a complex domain"
+function complex_heatmap(z::T, f::S; kwargs...) where {T <: Vector{<: Number}, S <: Vector{<: Real}}
+    x, y = reim(z)
+    
+    trace = heatmap(
+        x = x, y = y, z = f,
+
+        colorscale = "Viridis",
+        zmin = -17, zmax = 1,
+    )
+
+    layout = Layout(;
+        plot_template_2d_complex...,
+        kwargs...
+    )
+    
+    return plot(trace, layout)
+end
+complex_heatmap(z::T, f::S; kwargs...) where {T <: Matrix{<: Number}, S <: Matrix{<: Real}} = complex_heatmap(vec(z), vec(f); kwargs...)
+
+"Generate graphics"
+function generate_graphics(z::T, f::T, tru::T; title = "") where T <: Matrix{<: Number}
+    err = abs.(f - tru)
+    err[iszero.(err)] .= 1e-17
+
+    abserr         = complex_heatmap(z, log10.(err); title_text = title)              # Absolute error plot
+    relerr         = complex_heatmap(z, log10.(err ./ abs.(tru)); title_text = title) # Relative error plot
+    absarg         = complex_surface_plot(z, f; title_text = title)                   # Abs-arg plot
+    replot, implot = complex_reim_surface_plot(z, f, title_text = title)              # Real and imaginary part plots
+
+    return (abserr, relerr, absarg, replot, implot)
+end
+
+generate_graphics(z::T, f::T, tru::T; title = "") where T <: Vector{<: Number} = 
+begin
+    N = isqrt(length(z))
+
+    Z   = reshape(z,   N, N)
+    F   = reshape(f,   N, N)
+    TRU = reshape(tru, N, N)
+
+    generate_graphics(Z, F, TRU; title = title)
+end
+    
