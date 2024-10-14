@@ -9,7 +9,7 @@
 include("PearsonMethods.jl")
 include("../HypergeometricTests.jl")
 
-function runPearsonTests()
+function run_pearson_tests()
     r  = 1.99; n  = 41; Tr = .6; np = 5
     corrR = .5; innerR = .6; outerR = .8
     z1N = 70; modifyZ1 = true

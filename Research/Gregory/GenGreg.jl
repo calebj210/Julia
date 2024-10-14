@@ -413,7 +413,7 @@ function getDiffMat(n, r; α = 0.0, β = 0.0, ir = 0.5, np = 3, nl = 1, branch =
             push!(row1, idx1...)
             push!(col1, repeat([i], length(idx1))...)
             push!(wgt1, wgts1...)
-            if branch && real(g.z[i]) >= 1
+            if branch && real(g.z[j]) >= 1
                 idx2, wgts2, idx3, wgts3 = getExternalWeights(j, c, g, α, β, branch = true)
 
                 push!(row2, idx2...)

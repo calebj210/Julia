@@ -6,9 +6,9 @@ project_hash = "d5cfecc3431750cb0c2e92c3dfcbe3671fc20727"
 
 [[deps.AbstractAlgebra]]
 deps = ["InteractiveUtils", "LinearAlgebra", "MacroTools", "Preferences", "Random", "RandomExtensions", "SparseArrays", "Test"]
-git-tree-sha1 = "f7cd148a76ce9668c3fe36f29fcc9201adf14265"
+git-tree-sha1 = "709a09fbc20ae499657a9cd2e832c9946809ece8"
 uuid = "c3fe647b-3220-5bb0-a1ea-a7954cac585d"
-version = "0.43.5"
+version = "0.43.6"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -287,15 +287,15 @@ version = "6.2.1+6"
 
 [[deps.GR]]
 deps = ["Artifacts", "Base64", "DelimitedFiles", "Downloads", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Preferences", "Printf", "Qt6Wayland_jll", "Random", "Serialization", "Sockets", "TOML", "Tar", "Test", "p7zip_jll"]
-git-tree-sha1 = "629693584cef594c3f6f99e76e7a7ad17e60e8d5"
+git-tree-sha1 = "ee28ddcd5517d54e417182fec3886e7412d3926f"
 uuid = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
-version = "0.73.7"
+version = "0.73.8"
 
 [[deps.GR_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "FreeType2_jll", "GLFW_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pixman_jll", "Qt6Base_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "a8863b69c2a0859f2c2c87ebdc4c6712e88bdf0d"
+git-tree-sha1 = "f31929b9e67066bee48eec8b03c0df47d31a74b3"
 uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
-version = "0.73.7+0"
+version = "0.73.8+0"
 
 [[deps.Gettext_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "XML2_jll"]
@@ -372,9 +372,9 @@ version = "0.1.8"
 
 [[deps.JLLWrappers]]
 deps = ["Artifacts", "Preferences"]
-git-tree-sha1 = "f389674c99bfcde17dc57454011aa44d5a260a40"
+git-tree-sha1 = "be3dc50a92e5a386872a493a10050136d4703f9b"
 uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
-version = "1.6.0"
+version = "1.6.1"
 
 [[deps.JSExpr]]
 deps = ["JSON", "MacroTools", "Observables", "WebIO"]
@@ -413,10 +413,10 @@ uuid = "c1c5ebd0-6772-5130-a774-d5fcae4a789d"
 version = "3.100.2+0"
 
 [[deps.LERC_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "bf36f528eec6634efc60d7ec062008f171071434"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "36bdbc52f13a7d1dcb0f3cd694e01677a515655b"
 uuid = "88015f11-f218-50d7-93a8-a6af411a945d"
-version = "3.0.0+1"
+version = "4.0.0+0"
 
 [[deps.LLVMOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -526,9 +526,9 @@ version = "2.40.1+0"
 
 [[deps.Libtiff_jll]]
 deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "LERC_jll", "Libdl", "XZ_jll", "Zlib_jll", "Zstd_jll"]
-git-tree-sha1 = "2da088d113af58221c52828a80378e16be7d037a"
+git-tree-sha1 = "b404131d06f7886402758c9ce2214b636eb4d54a"
 uuid = "89763e89-9b03-5906-acba-b20f662cd828"
-version = "4.5.1+1"
+version = "4.7.0+0"
 
 [[deps.Libuuid_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -567,9 +567,9 @@ version = "1.0.3"
 
 [[deps.LoweredCodeUtils]]
 deps = ["JuliaInterpreter"]
-git-tree-sha1 = "c2b5e92eaf5101404a58ce9c6083d595472361d6"
+git-tree-sha1 = "96d2a4a668f5c098fb8a26ce7da53cde3e462a80"
 uuid = "6f1432cf-f94c-5a45-995e-cdbf5db27b0b"
-version = "3.0.2"
+version = "3.0.3"
 
 [[deps.MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "oneTBB_jll"]
@@ -901,9 +901,9 @@ version = "1.3.0"
 
 [[deps.Revise]]
 deps = ["CodeTracking", "Distributed", "FileWatching", "JuliaInterpreter", "LibGit2", "LoweredCodeUtils", "OrderedCollections", "REPL", "Requires", "UUIDs", "Unicode"]
-git-tree-sha1 = "0a20a01fbb3a9531f3325a94b6dcf95c404a1658"
+git-tree-sha1 = "2d4e5de3ac1c348fd39ddf8adbef82aa56b65576"
 uuid = "295af30f-e4ad-537b-8983-00126c2a3abe"
-version = "3.6.0"
+version = "3.6.1"
 
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"

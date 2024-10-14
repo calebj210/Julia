@@ -1,25 +1,29 @@
 % Generalized Gregory quadrature for computing high order hypergeometric pFq over a grid
 %
 % Author: Caleb Jacobs
-% DLM: May 22, 2024
+% DLM: October 14, 2024
 
 function [z, f, h] = pFq(a, b, varargin)
     % Parse optional inputs
     p = inputParser;
-    addParameter(p, 'r', 2.49); % Width/height of grid
-    addParameter(p, 'n', 60);   % Number of nodes for width/height
-    addParameter(p, 'np', 3);   % Number of padding layers
-    addParameter(p, 'Tr', 0.6); % Taylor expansion radius
-    addParameter(p, 'sr', 11);  % z = 1 stencil radius
-    addParameter(p, 'cr', 9);   % z = 1 correction radius
+    addParameter(p, 'r', 2.49);     % Width/height of grid
+    addParameter(p, 'n', 60);       % Number of nodes for width/height
+    addParameter(p, 'np', 3);       % Number of padding layers
+    addParameter(p, 'Tr', 0.6);     % Taylor expansion radius
+    addParameter(p, 'corrR', .5);   % z = 1 radius to correct
+    addParameter(p, 'innerR', .6);  % Inner annulus radii for correction nodes
+    addParameter(p, 'outerR', .8);  % Outer annulus radii for correction nodes
+    addParameter(p, 'z1N', 70);     % Number of z = 1 expansion terms
     parse(p, varargin{:});
 
     r  = p.Results.r;
     n  = p.Results.n;
     np = p.Results.np;
     Tr = p.Results.Tr;
-    sr = p.Results.sr;
-    cr = p.Results.cr;
+    corrR  = p.Results.corrR;
+    innerR = p.Results.innerR;
+    outerR = p.Results.outerR;
+    z1N    = p.Results.z1N;
 
     o = min(length(a), length(b)); % Order of pFq
 
@@ -59,9 +63,9 @@ function [z, f, h] = pFq(a, b, varargin)
         g = Grid(n, r, Tr, np, nl - 1); % Get next computation grid
 
         Gamma = g.z.^(1 - b(bIdx)) * ... % Front coefficient
-                (gamma(b(bIdx)) / ...
-                 gamma(a(aIdx)) / ...
-                 gamma(b(bIdx) - a(aIdx)));
+                (gamfun(b(bIdx)) / ...
+                 gamfun(a(aIdx)) / ...
+                 gamfun(b(bIdx) - a(aIdx)));
         
         % Compute next set of pFq values
         if ~branch
@@ -73,13 +77,17 @@ function [z, f, h] = pFq(a, b, varargin)
             f = fTmp;
 
             %% Use z = 1 expansion to correct
-            zM1  = abs(g.z - 1);                                % Shift all z values by 1
-            sIdx = ((sr - .5) * g.h < zM1) & (zM1 <= sr * g.h); % Stencil node indices
-            cIdx = zM1 <= cr * g.h;                             % Corrected node indices
+            zm1  = abs(g.z - 1);                            % Shift all z values by 1
+            cIdx = zm1 <= corrR;                            % Corrected node indices
 
-            [wa, wb] = getZ1ExpansionWeights(a(aIdx : end), b(bIdx : end), wa, g.z(sIdx), f(sIdx));
+            zIdx = (innerR <= zm1) & (zm1 < outerR);        % Stencil nodes
+            zCirc = g.z(zIdx);
+            fCirc = f(zIdx);
 
-            f(cIdx) = z1Correction(a(aIdx : end), b(bIdx : end), wa, wb, g.z(cIdx));
+            [wa, wb] = getZ1ExpansionWeights(a(aIdx : end), b(bIdx : end), wa, zCirc, fCirc, z1N);
+
+            f(cIdx) = z1PFQ(a(aIdx : end), b(bIdx : end), wa, wb, g.z(cIdx), false);
+            h(cIdx) = z1PFQ(a(aIdx : end), b(bIdx : end), wa, wb, g.z(cIdx), true);
         end
 
         f(g.c) = 1 + 0i; % Correct origin value

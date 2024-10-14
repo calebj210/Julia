@@ -52,12 +52,10 @@ function rungridtests(; N = 0)
             ([1.0,1.1,1.2,-0.9], [1.3,1.4,1.5],        1.99, 41, 5, 0.6, true, .5,  .6, .8, 70),    # Test 6
         ]
 
-for (n, test) ∈ enumerate(tests)
+    for (n, test) ∈ enumerate(tests)
         if n ∉ N
             continue
         end
-
-        println("Running test ", test, " with a = ", a, " and b = ", b, ".")
 
         (z, f, h, tru, ps) = gridtest(test...)
 

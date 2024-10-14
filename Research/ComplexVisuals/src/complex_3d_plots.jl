@@ -4,7 +4,7 @@ const CS = PlotlyJS.PlotlyBase.ColorSchemes
 
 const plot_template_3d = (;
     template = "plotly_white",
-    width  = 800, height = 800,
+    width  = 1000, height = 1000,
 
     title = attr(
         font_size = 25,

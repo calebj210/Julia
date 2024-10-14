@@ -68,7 +68,7 @@ for j = 1:length(g.ie)
         col1 = [col1, repmat(i, 1, length(idx1))];
         wgt1 = [wgt1, wgts1];
 
-        if branch && real(g.z(i)) >= 1
+        if branch && real(g.z(j)) >= 1
             [idx2, wgts2, idx3, wgts3] = getExternalWeights(j, c, g, alpha, beta, true);
 
             row2 = [row2, idx2];

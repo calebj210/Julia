@@ -35,11 +35,11 @@ function getZ1ExpansionWeights(a, b, ωa, z, f; n = 150)
 end
 
 """
-    z1PFQ(a, b, ωa, ωb, z)
+    z1PFQ(a, b, ωa, ωb, z; branch = false)
 """
-function z1PFQ(a::Vector, b::Vector, ωa::Vector, ωb::Vector, z::Number)
+function z1PFQ(a::Vector, b::Vector, ωa::Vector, ωb::Vector, z::Number; branch = false)
     α = sum(b) - sum(a)
-    γ = oneMinusZα(z, α)
+    γ = oneMinusZα(z, α, branch)
     zi = (1 - z).^(0 : length(ωa) - 1)
 
     f = sum((γ * ωa + ωb) .* zi)
@@ -47,4 +47,4 @@ function z1PFQ(a::Vector, b::Vector, ωa::Vector, ωb::Vector, z::Number)
 
     return f
 end
-z1PFQ(a, b, ωa, ωb, z::Vector) = [z1PFQ(a, b, ωa, ωb, z) for z ∈ z]
+z1PFQ(a, b, ωa, ωb, z::Vector; branch = false) = [z1PFQ(a, b, ωa, ωb, z, branch = branch) for z ∈ z]

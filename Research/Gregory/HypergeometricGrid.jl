@@ -71,7 +71,7 @@ function pFq(a, b; r = 1.99, n = 41, np = 5, Tr = 0.5, modifyZ1 = true, corrR = 
     elseif length(a) == length(b) + 1
         f = _1F0(a[end], g)                                         # 1F0 base function case
         h = _1F0(a[end], g, branch = true)                          # 1F0 base function case alternate branch
-        ωa = [1]                                                    # Initial z = 1 expansion coeficient
+        ωa = [1]                                                    # Initial z = 1 expansion coefficient
 
         branch = true
 
@@ -120,19 +120,14 @@ function pFq(a, b; r = 1.99, n = 41, np = 5, Tr = 0.5, modifyZ1 = true, corrR = 
                 zCirc = g.z[zIdx]
                 fCirc = f[zIdx]
 
-                println("Number of points in stencil anulus ", 
-                        length(findall(zIdx)))
-
-
                 (ωa, ωb) = getZ1ExpansionWeights(a[aIdx : end], 
                                                  b[bIdx : end], 
                                                  ωa, zCirc, fCirc,
                                                  n = z1N)
 
                 f[cIdx] = z1PFQ(a[aIdx : end], b[bIdx : end], ωa, ωb, g.z[cIdx])
-#                 h[cIdx] = f[cIdx] + Φ(a[aIdx : end], b[bIdx : end], ωaTmp, g.z[cIdx], n = branchN)
+                h[cIdx] = z1PFQ(a[aIdx : end], b[bIdx : end], ωa, ωb, g.z[cIdx], branch = true)
             end
-        
         end
 
         aIdx -= 1                                                   # Move to next layer in a
