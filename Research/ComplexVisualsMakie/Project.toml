@@ -1,0 +1,12 @@
+name = "ComplexVisualsMakie"
+uuid = "ec2e7517-96cc-4a5f-9dfe-ddb9c3fb2531"
+authors = ["Caleb Jacobs <calebjacobs210@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+
+[compat]
+CairoMakie = "0.12.14"
+GLMakie = "0.10.14"
