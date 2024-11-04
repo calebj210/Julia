@@ -167,14 +167,26 @@ function buhring_2f1(a, b, c, z, z0 = 0.0 + 0im, tol = 1e-15)
         end
     end
 
-    return gamma(c) * (gamma(b - a) / gamma(b) / gamma(c - a) * (z0 - z)^(-a) * b1 +
-                       gamma(a - b) / gamma(a) / gamma(c - b) * (z0 - z)^(-b) * b2)
+    if real(b) < 0 && isinteger(b) || real(a) < 0 && isinteger(a) || real(c) < 0 && isinteger(c) || isinteger(a - b)
+        return NaN
+    else
+        return gamma(c) * (gamma(b - a) / gamma(b) / gamma(c - a) * (z0 - z)^(-a) * b1 +
+                           gamma(a - b) / gamma(a) / gamma(c - b) * (z0 - z)^(-b) * b2)
+    end
 end
 
 " 2F1 Gauss-Jacobi quadrature "
 function gauss_jacobi_quadrature_2f1(a, b, c, z, N = 150)
-    x, w = gaussjacobi(N, c - b - 1, b - 1)
+    x = Vector{ComplexF64}(undef, N)
+    w = Vector{ComplexF64}(undef, N)
+
+    try
+        x, w = gaussjacobi(N, c - b - 1, b - 1)
+    catch
+        return NaN
+    end
 
     return [gamma(c) / gamma(b) / gamma(c - b) / (2^(c - 1)) *
            sum(w .* (1 .- z / 2 * (x .+ 1)).^(-a)) for z ∈ z]
 end
+gauss_jacobi_quadrature_2f1(a, b, c, z::Number, N = 150) = gauss_jacobi_quadrature_2f1(a, b, c, [z])[1]

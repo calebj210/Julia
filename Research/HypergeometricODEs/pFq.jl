@@ -2,7 +2,7 @@
 #   ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: October 8, 2024
+# DLM: November 2, 2024
 =#
 
 using Polynomials
@@ -43,9 +43,9 @@ function maclaurin_pfq(a::Vector{Ta}, b::Vector{Tb}, z::Tz, N = 1000) where {Ta,
             break
         end
 
-#         if abs(coeff*zn / S) <= eps(real(coef_type))
-#             break
-#         end
+        # if abs(coeff*zn / S) <= eps(real(coef_type))
+        #     break
+        # end
 
         S  += coeff * zn
     end
@@ -54,13 +54,12 @@ function maclaurin_pfq(a::Vector{Ta}, b::Vector{Tb}, z::Tz, N = 1000) where {Ta,
     dp = derivative(p)
 
     return p
-#     return [p(z), dp(z)]
 end
 
 function maclaurin_2f1(a::Ta, b::Tb, c::Tc, z::Tz, N = 1000) where {Ta, Tb, Tc, Tz}
     coef_type = promote_type(Ta, Tb, Tc, Tz)
 
-    S = coeff = one(coef_type) #/ gamma(c)
+    S = coeff = one(coef_type)
 
     coeffs = Vector{coef_type}()
     push!(coeffs, coeff)
@@ -97,12 +96,12 @@ function recursive_2f1(a::Ta, b::Tb, c::Tc, z0::Tz, f0, h, N) where {Ta, Tb, Tc,
     c0 = c1 = c2 = 2z0 * (z0 - 1)
     
     S = f0[1] + f0[2] * h
-    hn = h / 4
+    hn = h
     for n = 3 : N + 1
         # Compute next coefficient
         coeff = (a0 * coeffs[n - 2] + b0 * coeffs[n - 1]) / c0
 
-        hn *= h / 4
+        hn *= h
         criteria = abs(coeff * hn)
         if criteria <= eps(abs(S)) || isnan(criteria) || isinf(criteria)
             break
@@ -119,37 +118,33 @@ function recursive_2f1(a::Ta, b::Tb, c::Tc, z0::Tz, f0, h, N) where {Ta, Tb, Tc,
     end 
 
     Tn  = Polynomial(coeffs)
-#     Tnp = derivative(Tn)
-# 
-#     return [Tn(h), Tnp(h)]
+    Tnp = derivative(Tn)
 
-    n = degree(Tn) ÷ 2
-    if n <= 1
-        Tnp = derivative(Tn)
-        return [Tn(h), Tnp(h)]
-    else
-        p = pade(Tn, n, n)
-        dp = derivative(p)
-        return [p(h), dp(h)]
-    end
+    return [Tn(h), Tnp(h)]
 end
 
-function taylor_2f1(a, b, c, z::Number; H = 0.4, N = 1000, order = 1000)
+function taylor_2f1(a, b, c, z::Number; H = 0.1, N = 1000, order = 1000)
     if abs(z) <= .3
         return maclaurin_2f1(a, b, c, z, N)[1]
     end
 
     z0 = sign(z) * 0.3
+    if real(z) > 1
+        z0 += imag(z) >= 0 ? 0.5im : -0.5im
+    end
     dir = sign(z - z0)
 
     zn = z0
     fn = maclaurin_2f1(a, b, c, z0, N)
 
-    for i ∈ 1 : ceil(Int64, abs(z - z0) / H)
-        h = dir * min(H, abs(z - zn))
+    n = 1
+    while !isapprox(zn, z) && n < N
+        h = dir * min(H, abs(z - zn), .9abs(zn - 1))
 
         fn = recursive_2f1(a, b, c, zn, fn, h, order + 1) # Order increase so derivative hits the desired order
+
         zn += h
+        n += 1
     end
 
     return fn[1]

@@ -1,11 +1,13 @@
 using ComplexVisuals
 using PlotlyJS
 include("pFq.jl")
+include("PaperTests/Johansson2F1.jl")
 
 function gridtest(a, b, c, r, n, H = .1, order = 20, taylorN = 100, title = "")
     z = complex_grid(r, n);
 
-    tru = mathematica_2f1.(a, b, c, z)
+    # tru = mathematica_2f1.(a, b, c, z)
+    tru = johansson_2f1.(a, b, c, z)
     val = _2f1.(a, b, c, z)
     
     plts = generate_graphics(z, val, tru, title = title)

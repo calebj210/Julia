@@ -1,21 +1,20 @@
 module ComplexVisualsMakie
 
-export CairoMakie,
-       ComplexGrid,
-       complex_grid,
-       complex_phase_plot,
-       complex_phase_plot!,
-       complex_color_wheel,
+export complex_color_wheel,
        complex_color_wheel!,
-       complex_surface_plot,
-       complex_real_plot,
-       complex_imag_plot
+       complex_theme
 
-using CairoMakie
-CairoMakie.activate!()
+export ComplexGrid,
+       complex_square_grid
+
+export Phase,
+       phase,
+       phase!
+
+using MakieCore, Makie
 
 include("complex_grids.jl")
 include("color_wheel.jl")
 include("complex_plots_2d.jl")
-include("complex_plots_3d.jl")
+# include("complex_plots_3d.jl")
 end

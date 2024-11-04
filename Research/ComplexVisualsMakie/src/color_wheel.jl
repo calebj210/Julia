@@ -4,12 +4,12 @@ function complex_color_wheel()
     hidespines!(ax)
     hidedecorations!(ax)
 
-    z = complex_grid(1, 500)
+    z = complex_square_grid(1, 500)
 
     f = collect(z)
     f[abs.(z) .>= 1] .= NaN
 
-    plt = complex_phase_plot!(ax, z, f)
+    plt = phase!(ax, z, f)
     colsize!(fig.layout, 1, Aspect(1, 1.0))
     resize_to_layout!(fig)
 
@@ -18,12 +18,12 @@ end
 
 function complex_color_wheel!(scene::Scene; center = (.85,.15), radius = .1)
     relative = Makie.camrelative(scene)
-    z = complex_grid(1, 500)
+    z = complex_square_grid(1, 500)
 
     f = collect(z)
     f[abs.(z) .>= 1] .= NaN
 
-    plt = complex_phase_plot!(relative, z, f)
+    plt = phase!(relative, z, f)
     scale!(plt, radius, radius)
     translate!(plt, center...)
 end

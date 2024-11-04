@@ -9,7 +9,13 @@
 using HypergeometricFunctions: pFqweniger as weniger_pfq, pFqdrummond as drummond_pfq
 
 "Levin-type factorial"
-weniger_2f1(a, b, c, z) = weniger_pfq((a,b), (c,), z)   
+function weniger_2f1(a, b, c, z::Number) 
+    (a,b,c,z) = convert.(ComplexF64, (a,b,c,z))
+    return weniger_pfq((a,b), (c,), z)   
+end
 
 "Drummond 2F1"
-drummond_2f1(a, b, c, z) = drummond_pfq((a,b), (c,), z)
+function drummond_2f1(a, b, c, z::Number)
+    (a,b,c,z) = convert.(ComplexF64, (a,b,c,z))
+    return drummond_pfq((a,b), (c,), z)
+end

@@ -8,7 +8,7 @@ const plot_template_2d = (;
 
     title = attr(
         font_size = 25,
-        y = 0.96,
+        y = 0.97,
         x = 0.5
     ),
 

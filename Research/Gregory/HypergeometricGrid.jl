@@ -2,7 +2,7 @@
 # Generalized Gregory quadrature for computing high order hypergeometric pFq over a grid
 #
 # Author: Caleb Jacobs
-# DLM: June 20, 2024
+# DLM: October 31, 2024
 =#
 
 using SpecialFunctions
@@ -53,10 +53,10 @@ function _0F1(b, g)
     return f
 end
 
-function pFq(a, b; r = 1.99, n = 41, np = 5, Tr = 0.5, modifyZ1 = true, corrR = .5, innerR = .6, outerR = .8, z1N = 70)
+function pFq(a, b; grid_radius = 1.99, grid_points = 41, padding_layers = 5, taylor_radius = 0.5, modify_z1 = true, correction_radius = .5, inner_radius = .6, outer_radius = .8, z1_expansion_order = 70)
     o = min(length(a), length(b))                                   # Order of pFq
 
-    g = getGrid(n, r, ir = Tr, np = np, nl = o)                     # Initial grid
+    g = getGrid(grid_points, grid_radius, ir = taylor_radius, np = padding_layers, nl = o)                     # Initial grid
 
     aIdx = length(a)                                                # Index for a
     bIdx = length(b)                                                # Index for b
@@ -91,14 +91,14 @@ function pFq(a, b; r = 1.99, n = 41, np = 5, Tr = 0.5, modifyZ1 = true, corrR = 
         β = b[bIdx] - a[aIdx] - 1                                   # Evaluation point singularity order
 
         if !branch
-            D0, D1 = getDiffMat(n, r, α = α, β = β,                 # Generate differentiation matrix
-                       ir = Tr, np = np, nl= nl)
+            D0, D1 = getDiffMat(grid_points, grid_radius, α = α, β = β,                 # Generate differentiation matrix
+                       ir = taylor_radius, np = padding_layers, nl= nl)
         else
-            D0,D1,D2,D3 = getDiffMat(n, r, α = α, β = β,            # Generate differentiation matrices with alternate branch
-                        ir = Tr, np = np, nl= nl, branch = branch)
+            D0,D1,D2,D3 = getDiffMat(grid_points, grid_radius, α = α, β = β,            # Generate differentiation matrices with alternate branch
+                        ir = taylor_radius, np = padding_layers, nl= nl, branch = branch)
         end
 
-        g = getGrid(n, r, ir = Tr, np = np, nl = nl - 1)            # Get next computation grid
+        g = getGrid(grid_points, grid_radius, ir = taylor_radius, np = padding_layers, nl = nl - 1)            # Get next computation grid
 
         Γ = g.z.^(1 - b[bIdx]) * (                                  # Front coefficient
                 gamma(b[bIdx]) / 
@@ -112,18 +112,18 @@ function pFq(a, b; r = 1.99, n = 41, np = 5, Tr = 0.5, modifyZ1 = true, corrR = 
             f, h = (Γ .* (D0 * f + D1 * h), 
                     Γ .* (D2 * f + D3 * h))                         # Compute values for next layer
 
-            if modifyZ1
+            if modify_z1
                 zm1 = abs.(g.z .- 1)
-                cIdx = zm1 .<= corrR                                # Corrected node indices
+                cIdx = zm1 .<= correction_radius                                # Corrected node indices
 
-                zIdx = (innerR .<= zm1) .&& (zm1 .< outerR)         # Stencil nodes
+                zIdx = (inner_radius .<= zm1) .&& (zm1 .< outer_radius)         # Stencil nodes
                 zCirc = g.z[zIdx]
                 fCirc = f[zIdx]
 
                 (ωa, ωb) = getZ1ExpansionWeights(a[aIdx : end], 
                                                  b[bIdx : end], 
                                                  ωa, zCirc, fCirc,
-                                                 n = z1N)
+                                                 n = z1_expansion_order)
 
                 f[cIdx] = z1PFQ(a[aIdx : end], b[bIdx : end], ωa, ωb, g.z[cIdx])
                 h[cIdx] = z1PFQ(a[aIdx : end], b[bIdx : end], ωa, ωb, g.z[cIdx], branch = true)

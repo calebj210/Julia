@@ -2,13 +2,24 @@
 # Test suite for grid based hypergeometric calculations
 #
 # Author: Caleb Jacobs
-# DLM: October 9, 2024
+# DLM: October 31, 2024
 =#
 
-using ComplexVisuals
-using PlotlyJS
+# using ComplexVisuals
+using ComplexVisualsMakie, CairoMakie
+# using PlotlyJS
 using MathLink
+using HypergeometricFunctions: pFqweniger, pFqdrummond
+using Nemo: hypergeometric_1f1, hypergeometric_2f1, ComplexField # Arb/Flint interface for Julia
+using Suppressor
 include("HypergeometricGrid.jl")
+
+function jo_2f1(a, b, c, z::Number) :: ComplexF64
+    cc = ComplexField()
+    (a,b,c,z) = cc.((a,b,c,z))
+
+    return hypergeometric_2f1(a, b, c, z)
+end
 
 mathematica_pfq(a, b, z) = 
     try 
@@ -18,99 +29,149 @@ mathematica_pfq(a, b, z) =
     end
 
 "Generate pFq test"
-function gridtest(a,b, r = 1, n = 20, np = 3, Tr = 0.5, modifyZ1 = true, corrR = .5, innerR = .6, outerR = .8, z1N = 70)
+function gridtest(a,b; kwargs...)
+        defaults = (;
+            grid_radius = 1, 
+            grid_points = 41, 
+            padding_layers = 5, 
+            taylor_radius = 0.5, 
+            correction_radius = .5, 
+            inner_radius = .6, 
+            outer_radius = .8, 
+            z1_expansion_order = 70,
+            modify_z1 = true) 
+        kwargs = merge(defaults, kwargs)
+
     if length(a) != length(b) + 1
-        (z, f) = pFq(a, b, r = r, n = n, np = np, Tr = Tr)
+        (z, f) = pFq(a, b; kwargs...)
         h = []
     else    
-        (z, f, h) = pFq(a, b, r = r, n = n, np = np, Tr = Tr, modifyZ1 = modifyZ1, corrR = corrR, innerR = innerR, outerR = outerR, z1N = z1N)
+        println("Tra time: ")
+        @time (z, f, h) = pFq(a, b; kwargs...)
     end
 
-    tru::Vector{ComplexF64} = [mathematica_pfq(a, b, z) for z ∈ z]
+    println("Wen time: ")
+    @time wenf = @suppress_err [pFqweniger(a, b, z) for z ∈ z]
 
-    N = isqrt(length(z))
-    Z = reshape(z, N, :)
-    F = reshape(f, N, :)
-    TRU = reshape(tru, N, :)
+    # println("Dru time: ")
+    # @time druf = @suppress_err [pFqdrummond(a, b, z) for z ∈ z]
+
+    println("Jo time: ")
+    @time jof = @suppress_err jo_2f1.(a..., b..., z)
+
+    println("Mat time: ")
+    @time tru::Vector{ComplexF64} = [mathematica_pfq(a, b, z) for z ∈ z]
 
     title = string(length(a), "F", length(b), "(", a, "; ", b, "; z)") 
-
-    p = generate_graphics(Z, F, TRU, title = title)
-
-    return (z, f, h, tru, p)
+    
+    trap_plots = generate_graphics(z, f, tru, title = title)
+    wen_plots = generate_graphics(z, wenf, tru, title = title)
+    # dru_plots = generate_graphics(z, druf, tru, title = title)
+    jo_plots = generate_graphics(z, jof, tru, title = title)
+    
+    return (;trap = trap_plots, wen = wen_plots, jo = jo_plots) #, dru = dru_plots)
 end
 
-function rungridtests(; N = 0)
-    tests = 
-        [
-#                 a                  b                    r   n np  Tr  modz1 corR inR outR z1N
-            ([1.1,1.9],          [2.9],                1.99, 41, 5, 0.5, true, .5,  .6, .8, 70),    # Test 1
-            ([1.1,-1.9],         [2.9],                1.99, 41, 5, 0.5, true, .5,  .6, .8, 70),    # Test 2
-            ([1.0,1.1,0.9],      [1.2,1.3],            1.99, 41, 5, 0.6, true, .5,  .6, .8, 70),    # Test 3
-            ([1.0,1.1,-0.9],     [1.2,1.3],            1.99, 41, 5, 0.6, true, .5,  .6, .8, 70),    # Test 4
-            ([1.0,1.1,1.2,0.9],  [1.3,1.4,1.5],        1.99, 41, 5, 0.6, true, .5,  .6, .8, 70),    # Test 5
-            ([1.0,1.1,1.2,-0.9], [1.3,1.4,1.5],        1.99, 41, 5, 0.6, true, .5,  .6, .8, 70),    # Test 6
-        ]
+function large_b_test()
+    a = [1.1, 6.32]
+    b = [1.2]
+    
+    test = (;
+            grid_radius = 2.49,
+            grid_points = 71,
+            padding_layers = 5,
+            taylor_radius = .5,
+            correction_radius = .7,
+            inner_radius = .7,
+            outer_radius = .8,
+            z1_expansion_order = 120,
+            modify_z1 = true
+           )
+    
+    results = gridtest(a, b; test...)
+end
 
-    for (n, test) ∈ enumerate(tests)
-        if n ∉ N
-            continue
-        end
+function pattern_test()
+    a = [1.99, 0.9]
+    b = [2.9]
+    
+    test = (;
+            grid_radius = 2.49,
+            grid_points = 81,
+            padding_layers = 5,
+            taylor_radius = .5,
+            correction_radius = .25,
+            inner_radius = .6,
+            outer_radius = .8,
+            z1_expansion_order = 120,
+            modify_z1 = true
+           )
 
-        (z, f, h, tru, ps) = gridtest(test...)
+    (z,f,h) = pFq(a, b; test...)
 
-        for p ∈ ps
-            display(p)
-        end
+    tru = [mathematica_pfq(a, b, z) for z ∈ z]
 
-        println("Press enter when ready for next test.")
-        readline()
-    end
+    relerr = abs.((f - tru) ./ tru)
 
-    return nothing
+    fig,ax,plt = heatmap(real(z), imag(z), relerr;
+                         colorscale = log10,
+                         colorrange = (1e-17, 1e-6))
+    lines!(ax, [-2.49, 2.49], [0, 0], linewidth = 1, color = :white)
+    lines!(ax, [0, 0], [-2.49, 2.49], linewidth = 1, color = :white)
+    lines!(ax, reim(cispi.(range(0, 2π, 100)))..., linewidth = 1, color = :white)
+    ax.xlabel = "Re(z)"
+    ax.ylabel = "Im(z)"
+    ax.title  = L"End-Corrected Trapezoidal Rule for ${_2}F_1(1.99, 0.9; 2.9; z)$"
+    Colorbar(fig[1,2], plt)
+    colsize!(fig.layout, 1, Aspect(1, 1))
+    resize_to_layout!(fig)
+
+    return Makie.FigureAxisPlot(fig, ax, plt)
 end
 
 "Generate a heatmap over a complex domain"
-function complex_heatmap(z::T, f::S; kwargs...) where {T <: Vector{<: Number}, S <: Vector{<: Real}}
-    x, y = reim(z)
+# function complex_heatmap(z::T, f::S; kwargs...) where {T <: Vector{<: Number}, S <: Vector{<: Real}}
+#     x, y = reim(z)
     
-    trace = heatmap(
-        x = x, y = y, z = f,
+#     trace = heatmap(
+#         x = x, y = y, z = f,
 
-        colorscale = "Viridis",
-        zmin = -17, zmax = 1,
-    )
+#         colorscale = "Viridis",
+#         zmin = -17, zmax = 1,
+#     )
 
-    layout = Layout(;
-        plot_template_2d_complex...,
-        kwargs...
-    )
+#     layout = Layout(;
+#         plot_template_2d_complex...,
+#         kwargs...
+#     )
     
-    return plot(trace, layout)
-end
-complex_heatmap(z::T, f::S; kwargs...) where {T <: Matrix{<: Number}, S <: Matrix{<: Real}} = complex_heatmap(vec(z), vec(f); kwargs...)
+#     return plot(trace, layout)
+# end
+# complex_heatmap(z::T, f::S; kwargs...) where {T <: Matrix{<: Number}, S <: Matrix{<: Real}} = complex_heatmap(vec(z), vec(f); kwargs...)
 
 "Generate graphics"
-function generate_graphics(z::T, f::T, tru::T; title = "") where T <: Matrix{<: Number}
-    err = abs.(f - tru)
-    err[iszero.(err)] .= 1e-17
+# function generate_graphics(z::T, f::T, tru::T; title = "") where T <: Matrix{<: Number}
+#     err = abs.(f - tru)
+#     err[iszero.(err)] .= 1e-17
 
-    abserr         = complex_heatmap(z, log10.(err); title_text = title)              # Absolute error plot
-    relerr         = complex_heatmap(z, log10.(err ./ abs.(tru)); title_text = title) # Relative error plot
-    absarg         = complex_surface_plot(z, f; title_text = title)                   # Abs-arg plot
-    replot, implot = complex_reim_surface_plot(z, f, title_text = title)              # Real and imaginary part plots
+#     abserr         = complex_heatmap(z, log10.(err); title_text = title)              # Absolute error plot
+#     relerr         = complex_heatmap(z, log10.(err ./ abs.(tru)); title_text = title) # Relative error plot
 
-    return (abserr, relerr, absarg, replot, implot)
-end
+#     f[imag(z) .≈ 0 .&& real(z) .>= 1] .= NaN + NaN * im
 
-generate_graphics(z::T, f::T, tru::T; title = "") where T <: Vector{<: Number} = 
-begin
-    N = isqrt(length(z))
+#     absarg         = complex_surface_plot(z, f; title_text = "Abs-Arg(f)")            # Abs-arg plot
+#     replot, implot = complex_reim_surface_plot(z, f)                                  # Real and imaginary part plots
 
-    Z   = reshape(z,   N, N)
-    F   = reshape(f,   N, N)
-    TRU = reshape(tru, N, N)
+#     return (abserr, relerr, absarg, replot, implot)
+# end
 
-    generate_graphics(Z, F, TRU; title = title)
-end
-    
+# generate_graphics(z::T, f::T, tru::T; title = "") where T <: Vector{<: Number} = 
+# begin
+#     N = isqrt(length(z))
+
+#     Z   = reshape(z,   N, N)
+#     F   = reshape(f,   N, N)
+#     TRU = reshape(tru, N, N)
+
+#     generate_graphics(Z, F, TRU; title = title)
+# end

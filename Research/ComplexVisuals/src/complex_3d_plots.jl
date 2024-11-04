@@ -8,7 +8,7 @@ const plot_template_3d = (;
 
     title = attr(
         font_size = 25,
-        y = 0.8,
+        y = 0.85,
         x = 0.5
     ),
 
@@ -71,10 +71,10 @@ function complex_surface_plot(z::T, f::T; kwargs...) where T <: Matrix{<: Number
             yref = "paper",
             x = 0.8,         # Position horizontally (0.5 is center)
             y = 0.2,         # Position vertically
-            sizex = 0.15,      # Size relative to paper width
-            sizey = 0.15,      # Size relative to paper height
-            opacity = 0.8,    # Adjust transparency as needed
-            layer = "above"   # Place the image above the 3D graph
+            sizex = 0.15,    # Size relative to paper width
+            sizey = 0.15,    # Size relative to paper height
+            opacity = 0.8,   # Adjust transparency as needed
+            layer = "above"  # Place the image above the 3D graph
         )],
 
         kwargs...
@@ -139,9 +139,9 @@ function complex_reim_surface_plot(z::T, f::T; kwargs...) where T <: Matrix{<: N
     )
 
     pltre = Plot(trace_real)
-    relayout!(pltre; plot_template_3d_complex..., kwargs..., scene_zaxis_title_text = "Re(f)")
+    relayout!(pltre; plot_template_3d_complex..., kwargs..., scene_zaxis_title_text = "Re(f)", scene_title_text = "Re(f)")
     pltim = Plot(trace_imag)
-    relayout!(pltim; plot_template_3d_complex..., kwargs..., scene_zaxis_title_text = "Im(f)")
+    relayout!(pltim; plot_template_3d_complex..., kwargs..., scene_zaxis_title_text = "Im(f)", scene_title_text = "Im(f)")
 
     plot_real = plot(pltre)
     plot_imag = plot(pltim)

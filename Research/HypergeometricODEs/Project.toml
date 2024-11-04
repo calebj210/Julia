@@ -1,6 +1,7 @@
 [deps]
 ArbNumerics = "7e558dbc-694d-5a72-987c-6f4ebed21442"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
 HypergeometricFunctions = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 MathLink = "18c93696-a329-5786-9845-8443133fa0b4"

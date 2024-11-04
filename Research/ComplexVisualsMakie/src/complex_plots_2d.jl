@@ -1,19 +1,35 @@
-function complex_phase_plot(z::ComplexGrid, f::Matrix{<: Complex}; kwargs...)
-    θ = mod.(angle.(f), 2π)
+@recipe Phase (z, f) begin
+    "Sets whether colors should be interpolated"
+    interpolate = false
 
-    return heatmap(z.x, z.y, θ;
-                   colormap = :hsv,
-                   colorrange = (0, 2π),
-                   kwargs...
-                  )
+    MakieCore.mixin_generic_plot_attributes()...
+    MakieCore.mixin_colormap_attributes()...
+
+    colormap = :hsv
+    colorrange = (0, 2π)
 end
 
-function complex_phase_plot!(ax::Union{Axis,Scene}, z::ComplexGrid, f::Matrix{<: Complex}; kwargs...)
+function Makie.plot!(ph::Phase{<: Tuple{ComplexGrid, AbstractMatrix{<: Number}}})
+    x = to_value(ph.z).real
+    y = to_value(ph.z).imag
+    f = to_value(ph.f)
+
     θ = mod.(angle.(f), 2π)
 
-    return heatmap!(ax, z.x, z.y, θ;
-                   colormap = :hsv,
-                   colorrange = (0, 2π),
-                   kwargs...
-                  )
+    heatmap!(ph, x, y, θ;
+             attributes(ph)...)
+
+    return ph
 end
+
+const complex_theme = Theme(
+    Axis = (
+        xautolimitmargin = (0, 0),
+        yautolimitmargin = (0, 0),
+    )
+)
+
+
+
+Makie.convert_arguments(P::Type{<: Phase}, z::ComplexGrid, f::Function) = (z, f.(z))
+Makie.convert_arguments(P::Type{<: Phase}, x::AbstractRange{<: Real}, y::AbstractRange{<: Real}, f::AbstractMatrix{<: Number}) = (ComplexGrid(x, y), f)
