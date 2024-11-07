@@ -11,10 +11,14 @@ export Phase,
        phase,
        phase!
 
+export ComplexSurface,
+       complexsurface,
+       complexsurface!
+
 using MakieCore, Makie
 
 include("complex_grids.jl")
 include("color_wheel.jl")
 include("complex_plots_2d.jl")
-# include("complex_plots_3d.jl")
+include("complex_plots_3d.jl")
 end

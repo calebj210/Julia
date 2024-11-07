@@ -2,7 +2,7 @@
 #   ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: November 2, 2024
+# DLM: November 4, 2024
 =#
 
 using Polynomials
@@ -28,6 +28,13 @@ mathematica_2f1(a, b, c, z) =
         Real(weval( W`N[Hypergeometric2F1[a,b,c,z]]`, a = a, b = b, c = c, z = z))
     end
     
+mathematica_pfq(a, b, z) = 
+    try 
+        Complex(weval( W`N[HypergeometricPFQ[a,b,z]]`, a = a, b = b, z = z).args...)
+    catch 
+        Real(weval( W`N[HypergeometricPFQ[a,b,z]]`, a = a, b = b, z = z))
+    end
+
 function maclaurin_pfq(a::Vector{Ta}, b::Vector{Tb}, z::Tz, N = 1000) where {Ta, Tb, Tz}
     coeffs = Vector{promote_type(Ta, Tb, Tz)}()
     push!(coeffs, 1)
@@ -123,7 +130,7 @@ function recursive_2f1(a::Ta, b::Tb, c::Tc, z0::Tz, f0, h, N) where {Ta, Tb, Tc,
     return [Tn(h), Tnp(h)]
 end
 
-function taylor_2f1(a, b, c, z::Number; H = 0.1, N = 1000, order = 1000)
+function taylor_2f1(a, b, c, z::Number; H = Inf, N = 1000, order = 1000)
     if abs(z) <= .3
         return maclaurin_2f1(a, b, c, z, N)[1]
     end
@@ -139,9 +146,10 @@ function taylor_2f1(a, b, c, z::Number; H = 0.1, N = 1000, order = 1000)
 
     n = 1
     while !isapprox(zn, z) && n < N
-        h = dir * min(H, abs(z - zn), .9abs(zn - 1))
+        r = abs(zn - 1)
+        h = dir * min(r / exp(2), abs(z - zn), H)           # Step size based on Jorba and Zou 2005
 
-        fn = recursive_2f1(a, b, c, zn, fn, h, order + 1) # Order increase so derivative hits the desired order
+        fn = recursive_2f1(a, b, c, zn, fn, h, order + 1)   # Order increase so derivative hits the desired order
 
         zn += h
         n += 1

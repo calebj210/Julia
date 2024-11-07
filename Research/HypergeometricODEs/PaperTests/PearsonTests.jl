@@ -77,21 +77,21 @@ function run_pearson_tests(precs = [128, 256, 512, 1024, 2048]; order = 5000)
     return vals
 end
 
-function pearson_tests()
-    tru = [mathematica_2f1(test...) for test ∈ tests]
-    taylor = [taylor_2f1(test..., H = .09) for test ∈ tests]
-    weniger = [weniger_2f1(test...) for test ∈ tests]
-    drummond = [drummond_2f1(test...) for test ∈ tests]
-    taylor_a = [taylor_a_2f1(test...) for test ∈ tests]
-    taylor_b = [taylor_b_2f1(test...) for test ∈ tests]
-    single_fraction = [single_fraction_2f1(test...) for test ∈ tests]
-    buhring = [buhring_2f1(test...) for test ∈ tests]
+function pearson_tests(; bits = 2048)
+    mathematica = [mathematica_2f1(test...)                         for test ∈ tests]
+    taylor = [taylor_2f1(test...)                                   for test ∈ tests]
+    weniger = [weniger_2f1(test...)                                 for test ∈ tests]
+    drummond = [drummond_2f1(test...)                               for test ∈ tests]
+    taylor_a = [taylor_a_2f1(test...)                               for test ∈ tests]
+    taylor_b = [taylor_b_2f1(test...)                               for test ∈ tests]
+    single_fraction = [single_fraction_2f1(test...)                 for test ∈ tests]
+    buhring = [buhring_2f1(test...)                                 for test ∈ tests]
     gauss_jacobi_quadrature = [gauss_jacobi_quadrature_2f1(test...) for test ∈ tests]
-    johansson = [johansson_2f1(test...) for test ∈ tests]
+    johansson = [johansson_2f1(test..., bits = bits)                for test ∈ tests]
 
-    vals = [taylor  weniger  drummond  taylor_a  taylor_b  single_fraction  buhring  gauss_jacobi_quadrature  johansson]
+    vals = [taylor weniger drummond taylor_a taylor_b single_fraction buhring gauss_jacobi_quadrature mathematica]
 
-    errs = [1:length(tests) correct_digits.(vals, tru)]
+    errs = [1:length(tests) correct_digits.(vals, johansson)]
 
     return errs
 end

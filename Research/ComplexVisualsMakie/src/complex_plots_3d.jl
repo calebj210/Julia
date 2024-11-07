@@ -1,44 +1,30 @@
-function complex_surface_plot(z::ComplexGrid, f::Matrix{<: Complex}; kwargs...)
+@recipe ComplexSurface (z, f) begin
+    "[(W)GLMakie only] Specifies whether the surface matrix gets sampled with interpolation."
+    interpolate = false
+
+    MakieCore.mixin_generic_plot_attributes()...
+    MakieCore.mixin_shading_attributes()...
+    MakieCore.mixin_colormap_attributes()...
+
+    colormap = :hsv
+    colorrange = (0, 2π)
+end
+
+Makie.preferred_axis_type(plot::ComplexSurface) = Axis3
+
+function Makie.plot!(cs::ComplexSurface{<:Tuple{ComplexGrid, AbstractMatrix{<:Number}}})
+    @extractvalue cs (z, f)
+
+    height = abs.(f)
     θ = mod.(angle.(f), 2π)
 
-    fig = Figure()
-    ax = Axis3(fig[1,1])
-    plt = surface!(ax, z.x, z.y, abs.(f);
-                   colormap = :hsv,
-                   colorrange = (0, 2π),
-                   color = θ,
-                   interpolate = false,
-                   kwargs...
-                  )
-    ax.xlabel = "Re(z)"
-    ax.ylabel = "Im(z)"
-    ax.zlabel = "Abs(f)"
+    surface!(cs, z.real, z.imag, height;
+             attributes(cs)...,
+             color = θ
+            )
 
-    return Makie.FigureAxisPlot(fig, ax, plt)
+    return cs
 end
 
-function complex_real_plot(z::ComplexGrid, f::Matrix{<: Complex}; kwargs...)
-    fig = Figure()
-    ax = Axis3(fig[1,1])
-    plt = wireframe!(ax, z.x, z.y, real.(f);
-                   kwargs...
-                  )
-    ax.xlabel = "Re(z)"
-    ax.ylabel = "Im(z)"
-    ax.zlabel = "Re(f)"
-
-    return Makie.FigureAxisPlot(fig, ax, plt)
-end
-
-function complex_imag_plot(z::ComplexGrid, f::Matrix{<: Complex}; kwargs...)
-    fig = Figure()
-    ax = Axis3(fig[1,1])
-    plt = wireframe!(ax, z.x, z.y, imag.(f);
-                   kwargs...
-                  )
-    ax.xlabel = "Re(z)"
-    ax.ylabel = "Im(z)"
-    ax.zlabel = "Im(f)"
-
-    return Makie.FigureAxisPlot(fig, ax, plt)
-end
+Makie.convert_arguments(P::Type{<:ComplexSurface}, z::ComplexGrid, f::Function) = convert_arguments(P, z, f.(z))
+Makie.convert_arguments(P::Type{<:ComplexSurface}, x::AbstractRange{<:Real}, y::AbstractRange{<:Real}, f) = convert_arguments(P, ComplexGrid(x, y), f)

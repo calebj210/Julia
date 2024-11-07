@@ -2,7 +2,7 @@
 # Test suite for grid based hypergeometric calculations
 #
 # Author: Caleb Jacobs
-# DLM: October 31, 2024
+# DLM: November 5, 2024
 =#
 
 # using ComplexVisuals
@@ -127,6 +127,27 @@ function pattern_test()
     resize_to_layout!(fig)
 
     return Makie.FigureAxisPlot(fig, ax, plt)
+end
+
+function grid_time_complexity_error(a, b, c; r = 2, Ns = 81:22:301)
+    times = zeros(length(Ns))
+
+    for (i, N) ∈ enumerate(Ns)
+        times[i] = @elapsed pFq([a, b], [c]; 
+                                grid_radius = r,
+                                grid_points = (N - 1) ÷ 2,
+                                padding_layers = 5,
+                                taylor_radius = .5,
+                                modify_z1 = true,
+                                correction_radius = .5,
+                                inner_radius = .6,
+                                outer_radius = .8,
+                                z1_expansion_order = 70)
+    end
+
+    fig, ax, plt = lines(Ns, times)
+
+    return fig
 end
 
 "Generate a heatmap over a complex domain"

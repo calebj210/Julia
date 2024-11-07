@@ -26,4 +26,6 @@ function complex_color_wheel!(scene::Scene; center = (.85,.15), radius = .1)
     plt = phase!(relative, z, f)
     scale!(plt, radius, radius)
     translate!(plt, center...)
+
+    return plt
 end
