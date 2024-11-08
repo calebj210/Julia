@@ -2,7 +2,7 @@
 #   ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: November 4, 2024
+# DLM: November 7, 2024
 =#
 
 using Polynomials
@@ -137,7 +137,7 @@ function taylor_2f1(a, b, c, z::Number; H = Inf, N = 1000, order = 1000)
 
     z0 = sign(z) * 0.3
     if real(z) > 1
-        z0 += imag(z) >= 0 ? 0.5im : -0.5im
+        z0 += imag(z) > 0 ? 0.5im : -0.5im
     end
     dir = sign(z - z0)
 

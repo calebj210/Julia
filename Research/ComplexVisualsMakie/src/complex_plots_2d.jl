@@ -11,14 +11,15 @@
 end
 
 function Makie.plot!(ph::Phase{<: Tuple{ComplexGrid, AbstractMatrix{<: Number}}})
-    x = to_value(ph.z).real
-    y = to_value(ph.z).imag
-    f = to_value(ph.f)
+    @extractvalue ph (z, f)
 
     θ = mod.(angle.(f), 2π)
 
-    heatmap!(ph, x, y, θ;
-             attributes(ph)...)
+    valid_attributes = Makie.shared_attributes(ph, Heatmap)
+
+    heatmap!(ph, z.real, z.imag, θ;
+            valid_attributes...
+           )
 
     return ph
 end
@@ -38,7 +39,18 @@ const complex_theme = Theme(
     )
 )
 
-Makie.convert_arguments(P::Type{<: Phase}, z::ComplexGrid, f::Function) = convert_arguments(P, z, f.(z))
-Makie.convert_arguments(P::Type{<: Phase}, x::AbstractRange{<: Real}, y::AbstractRange{<: Real}, f) = convert_arguments(P, ComplexGrid(x, y), f)
-Makie.convert_arguments(P::Type{<: Heatmap}, z::ComplexGrid, f::Matrix{<: Real}) = convert_arguments(P, z.real, z.imag, f)
-Makie.convert_arguments(P::Type{<: Heatmap}, z::ComplexGrid, f::Function) = convert_arguments(P, z.real, z.imag, f)
+function Makie.convert_arguments(P::Type{<: Phase}, z::ComplexGrid, f::Function) 
+    return convert_arguments(P, z, f.(z))
+end
+
+function Makie.convert_arguments(P::Type{<: Phase}, x::AbstractRange{<: Real}, y::AbstractRange{<: Real}, f) 
+    return convert_arguments(P, ComplexGrid(x, y), f)
+end
+
+function Makie.convert_arguments(P::Type{<: Heatmap}, z::ComplexGrid, f::Matrix{<: Real}) 
+    return convert_arguments(P, z.real, z.imag, f)
+end
+
+function Makie.convert_arguments(P::Type{<: Heatmap}, z::ComplexGrid, f::Function) 
+    return convert_arguments(P, z.real, z.imag, f)
+end

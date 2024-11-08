@@ -1,15 +1,6 @@
 using Makie, ComplexVisualsMakie
 import CairoMakie: heatmap
 
-function heatmap(z::ComplexGrid, f::Matrix; kwargs...)
-    fig, ax, plt = heatmap(z.x, z.y, f; kwargs...)
-
-    ax.xlabel = "Re(z)"
-    ax.ylabel = "Im(z)"
-
-    return Makie.FigureAxisPlot(fig, ax, plt)
-end
-
 function grid_error_plot(z, f, tru; kwargs...)
     fig, ax, plt = heatmap(z, abs.((f - tru) ./ tru); 
                            colorscale = log10,

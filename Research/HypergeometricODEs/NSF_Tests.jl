@@ -508,3 +508,49 @@ function make_time_error_figure(times, errs)
 
     return fig
 end
+
+function crespo_tests_table_1()
+    tests = [
+        (-.1,.2,.3,.5)
+        (-.1,.2,.3,1.5)
+        (-.1,.2,.3,100)
+        (2+8im,3-5im,sqrt(2) - im*π,.25)
+        (2+8im,3-5im,sqrt(2) - im*π,.75)
+        (2+8im,3-5im,sqrt(2) - im*π,-10)
+        (2+200im,5-100im,10+500im,.8)
+        (2.25,3.75,-.5,-1)
+        (2+200im,5,10,0.6)
+        (1,3,7,.25)
+        (1,3,7,.75)
+        (1,3,7,-3)
+       ]
+
+    johansson = [johansson_2f1(test...) for test ∈ tests]
+    taylor = [taylor_2f1(test...) for test ∈ tests]
+
+    relative_error = round.(abs.((taylor - johansson) ./ johansson), sigdigits = 2)
+
+    return relative_error
+end
+
+function crespo_tests_table_2()
+    tests = [
+        (.1,.2,-.3,-.5+.5im)
+        (.1,.2,-.3,1+.5im)
+        (.1,.2,-.3,5+5im)
+        (4,1.1,2,cispi(1/3))
+        (4,1.1,2,1+5im)
+        (4,1.1,2,-5+5im)
+        (2/3,1,4/3,cispi(1/3))
+        (2/3,1,4/3,2im)
+        (2/3,1,4/3,1+im)
+        (2/3,1,4/3,100im)
+       ]
+
+    johansson = [johansson_2f1(test...) for test ∈ tests]
+    taylor = [taylor_2f1(test...) for test ∈ tests]
+
+    relative_error = round.(abs.((taylor - johansson) ./ johansson), sigdigits = 2)
+
+    return relative_error
+end
