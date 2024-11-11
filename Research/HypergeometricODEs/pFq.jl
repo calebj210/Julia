@@ -9,7 +9,8 @@ using Polynomials
 using Polynomials.RationalFunctionFit: pade_fit
 
 using MathLink, SparseArrays
-using SpecialFunctions, ArbNumerics
+using SpecialFunctions
+using ArbNumerics: gamma, hypergeometric_2F1 as arb_2f1, ArbComplex, ArbFloat
 import SpecialFunctions.gamma
 
 function sgn(x)
@@ -35,33 +36,7 @@ mathematica_pfq(a, b, z) =
         Real(weval( W`N[HypergeometricPFQ[a,b,z]]`, a = a, b = b, z = z))
     end
 
-function maclaurin_pfq(a::Vector{Ta}, b::Vector{Tb}, z::Tz, N = 1000) where {Ta, Tb, Tz}
-    coeffs = Vector{promote_type(Ta, Tb, Tz)}()
-    push!(coeffs, 1)
-
-    S = zn = coeff = one(z)
-    for n ∈ 1 : N
-        coeff *= prod(a .+ (n - 1)) / prod(b .+ (n - 1)) / n 
-        push!(coeffs, coeff)
-
-        zn *= z
-
-        if abs(coeff*zn) <= eps(abs(S))
-            break
-        end
-
-        # if abs(coeff*zn / S) <= eps(real(coef_type))
-        #     break
-        # end
-
-        S  += coeff * zn
-    end
-
-    p  = Polynomial(coeffs)
-    dp = derivative(p)
-
-    return p
-end
+johansson_2f1(a, b, c, z; bits = 106)::ComplexF64 = arb_2f1(ArbComplex.((a, b, c, z), bits = bits)...)
 
 function maclaurin_2f1(a::Ta, b::Tb, c::Tc, z::Tz, N = 1000) where {Ta, Tb, Tc, Tz}
     coef_type = promote_type(Ta, Tb, Tc, Tz)
@@ -104,18 +79,21 @@ function recursive_2f1(a::Ta, b::Tb, c::Tc, z0::Tz, f0, h, N) where {Ta, Tb, Tc,
     
     S = f0[1] + f0[2] * h
     hn = h
-    for n = 3 : N + 1
+    for n = 3:N + 1
         # Compute next coefficient
         coeff = (a0 * coeffs[n - 2] + b0 * coeffs[n - 1]) / c0
 
         hn *= h
         criteria = abs(coeff * hn)
-        if criteria <= eps(abs(S)) || isnan(criteria) || isinf(criteria)
+        if criteria <= eps(abs(S))
+            push!(coeffs, coeff)
+            break
+        elseif isnan(criteria) || isinf(criteria)
+            @warn "Method diverged"
             break
         end
 
         push!(coeffs, coeff)
-
         S += coeffs[end] * hn
 
         # Update recurrence values
@@ -305,41 +283,4 @@ function sparse_taylor_coefficients(a, b, c, z0, h, c0, c1, N)
     RHS = sparsevec(Dict(1 => -A(0) * s0 - B(0) * s1, 2 => -A(1) * s1), N - 1)
 
     return [s0; s1; LHS\RHS]
-end
-
-function recursive_taylor_coefficients(a::Ta, b::Tb, c::Tc, z0::Tz, h, f0, f1, N) where {Ta, Tb, Tc, Tz}
-    # 10 flop optimization for 3-term recurrence
-    a0 = -a * b * h^2; a1 =  (1 - a - b) * h^2; a2 = -2h^2
-    b0 = b1 = (c - (1 + a + b) * z0) * h; b2 = (2 - 4z0) * h
-    c0 = c1 = c2 = 2z0 * (z0 - 1)
-    
-    s = zeros(promote_type(Ta,Tb,Tc,Tz), N + 1)
-    s[1] = f0; s[2] = f1 * h
-    for n = 3 : N + 1
-        # Compute next coefficient
-        s[n] = (a0 * s[n - 2] + b0 * s[n - 1]) / c0
-
-        # Update recurrence values
-        a1 += a2; a0 += a1
-        b1 += b2; b0 += b1
-        c1 += c2; c0 += c1
-    end 
-
-    return s
-end
-
-function sp_vs_rc(a, b, c, z, N)
-    z0 = sign(z) * .2
-    h  = sign(z) * .1
-
-    c0,c1 = maclaurin_2f1(a, b, c, z0)
-
-    rc_sums = recursive_taylor_coefficients(a, b, c, z0, h, c0, c1, N)
-    sp_sums = sparse_taylor_coefficients(a, b, c, z0, h, c0, c1, N)
-    
-    rel_err = norm(rc_sums - sp_sums) / norm(rc_sums)
-
-    printstyled("Relative Error = ", rel_err, '\n', bold = true, color = :light_green)
-
-    return (rc_sums, sp_sums)
 end
