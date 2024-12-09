@@ -4,16 +4,28 @@ using DifferentialEquations,
       SciMLOperators,
       FFTW
 
-using GLMakie
+using CairoMakie
+using LinearAlgebra
 
 export kuramoto,
        plot_kuramoto,
        animate_kuramoto
 include("kuramoto_sivashinsky.jl")
 
-export practice, 
-       lorenz
-include("practice.jl")
+export burgers,
+       burgers_heatmap,
+       burgers_animation
+include("burgers.jl")
+
+export schrodinger,
+       schrodinger_heatmap,
+       schrodinger_animation
+include("schrodinger.jl")
+
+export burgers_plot,
+       schrodinger_plot,
+       kuramoto_plot
+include("testing.jl")
 
 export convolve
 include("convolve.jl")
