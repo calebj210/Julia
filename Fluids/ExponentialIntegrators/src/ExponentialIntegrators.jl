@@ -22,9 +22,15 @@ export schrodinger,
        schrodinger_animation
 include("schrodinger.jl")
 
+export KdV,
+       plot_KdV,
+       animate_KdV
+include("KdV.jl")
+
 export burgers_plot,
        schrodinger_plot,
-       kuramoto_plot
+       kuramoto_plot,
+       KdV_plot
 include("testing.jl")
 
 export convolve

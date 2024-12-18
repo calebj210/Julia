@@ -1,10 +1,12 @@
 name = "ComplexVisuals"
-uuid = "5033eb9f-1a01-4887-adcd-7279121b37a9"
+uuid = "a4eac8e2-b850-4e34-bd58-e2db9627dab1"
 authors = ["Caleb Jacobs <calebjacobs210@gmail.com>"]
 version = "0.1.0"
 
 [deps]
-Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
-Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
-PlotlyJS = "f0f68f2c-4968-5e81-91da-67840de0976a"
-Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+MakieCore = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
+
+[compat]
+Makie = "0.21.18"
+MakieCore = "0.8.12"

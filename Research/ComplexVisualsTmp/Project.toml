@@ -1,4 +1,4 @@
-name = "ComplexVisualsMakie"
+name = "ComplexVisuals"
 uuid = "ec2e7517-96cc-4a5f-9dfe-ddb9c3fb2531"
 authors = ["Caleb Jacobs <calebjacobs210@gmail.com>"]
 version = "0.1.0"

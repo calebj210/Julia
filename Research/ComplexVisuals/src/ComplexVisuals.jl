@@ -1,16 +1,24 @@
 module ComplexVisuals
 
-export complex_grid, 
-       complex_phase_plot, 
-       complex_surface_plot,
-       complex_reim_surface_plot,
-       plot_template_2d,
-       plot_template_2d_complex,
-       plot_template_3d,
-       plot_template_3d_complex
+export complex_color_wheel,
+       complex_color_wheel!,
+       complex_theme
 
-include("complex_builders.jl")
-include("complex_2d_plots.jl")
-include("complex_3d_plots.jl")
+export ComplexGrid,
+       complex_square_grid
 
-end # module ComplexVisuals
+export Phase,
+       phase,
+       phase!
+
+export ComplexSurface,
+       complexsurface,
+       complexsurface!
+
+using MakieCore, Makie
+
+include("complex_grids.jl")
+include("color_wheel.jl")
+include("complex_plots_2d.jl")
+include("complex_plots_3d.jl")
+end
