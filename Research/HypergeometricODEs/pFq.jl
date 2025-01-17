@@ -89,7 +89,7 @@ function recursive_2f1(a::Ta, b::Tb, c::Tc, z0::Tz, f0, h, N) where {Ta, Tb, Tc,
             push!(coeffs, coeff)
             break
         elseif isnan(criteria) || isinf(criteria)
-            @warn "Method diverged"
+            # @warn "Method diverged"
             break
         end
 

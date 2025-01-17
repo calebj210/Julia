@@ -1,7 +1,6 @@
 include("../pFq.jl")
 include("Pearson2F1.jl")
 include("Slevinsky2F1.jl")
-include("Johansson2F1.jl")
 
 using BenchmarkTools
 
@@ -61,8 +60,8 @@ end
     run_pearson_tests(precs; order = 1000)
 Run 2F1 tests mentioned in Pearson et al using the Taylor method of `order` and rerun test with extended `precs`ision calculations.
 """
-function run_pearson_tests(precs = [128, 256, 512, 1024, 2048]; order = 5000)
-    tru = [mathematica_2f1(test...) for test ∈ tests]
+function run_pearson_tests(precs = [127, 256, 512, 1024, 2048]; order = 5000)
+    tru = [mathematica_1f1(test...) for test ∈ tests]
 
     vals = Matrix{Number}(undef, length(tests) + 1, length(precs) + 2)
 
@@ -80,29 +79,59 @@ end
 function pearson_tests(; bits = 2048)
     mathematica = [mathematica_2f1(test...)                         for test ∈ tests]
     taylor = [taylor_2f1(test...)                                   for test ∈ tests]
-    weniger = [weniger_2f1(test...)                                 for test ∈ tests]
-    drummond = [drummond_2f1(test...)                               for test ∈ tests]
+    levin = [weniger_2f1(test...)                                   for test ∈ tests]
     taylor_a = [taylor_a_2f1(test...)                               for test ∈ tests]
     taylor_b = [taylor_b_2f1(test...)                               for test ∈ tests]
     single_fraction = [single_fraction_2f1(test...)                 for test ∈ tests]
     buhring = [buhring_2f1(test...)                                 for test ∈ tests]
     gauss_jacobi_quadrature = [gauss_jacobi_quadrature_2f1(test...) for test ∈ tests]
-    johansson = [johansson_2f1(test..., bits = bits)                for test ∈ tests]
+    johansson = [johansson_2f1(test..., bits = 53)                  for test ∈ tests]
 
-    vals = [taylor weniger drummond taylor_a taylor_b single_fraction buhring gauss_jacobi_quadrature mathematica]
+    tru = [johansson_2f1(test..., bits = bits)                      for test ∈ tests]
 
-    errs = [1:length(tests) correct_digits.(vals, johansson)]
+    vals = [taylor levin johansson mathematica taylor_a taylor_b single_fraction buhring gauss_jacobi_quadrature]
+
+    errs = [1:length(tests) correct_digits.(vals, tru)]
 
     return errs
 end
 
-function time_tests(test)
-    taylor = @benchmark taylor_2f1($(test)...)
-    weniger = @benchmark weniger_2f1($(test)...)
-    drummond = @benchmark drummond_2f1($(test)...)
-    johansson = @benchmark johansson_2f1($(test)...)
+function pearson_time_tests(; bits = 2048, N = 10)
+    mathematica = [mean([@elapsed mathematica_2f1(test...) for i ∈ 1:N])            for test ∈ tests]
+    taylor = [mean([@elapsed taylor_2f1(test...) for i ∈ 1:N])                      for test ∈ tests]
+    levin = [mean([@elapsed weniger_2f1(test...) for i ∈ 1:N])                      for test ∈ tests]
+    taylor_a = [mean([@elapsed taylor_a_2f1(test...) for i ∈ 1:N])                  for test ∈ tests]
+    taylor_b = [mean([@elapsed taylor_b_2f1(test...) for i ∈ 1:N])                  for test ∈ tests]
+    single_fraction = [mean([@elapsed single_fraction_2f1(test...) for i ∈ 1:N])    for test ∈ tests]
+    buhring = [mean([@elapsed buhring_2f1(test...) for i ∈ 1:N]) for test ∈ tests]
+    gauss_jacobi_quadrature = [mean([@elapsed gauss_jacobi_quadrature_2f1(test...)  for i ∈ 1:N]) for test ∈ tests]
+    johansson = [mean([@elapsed johansson_2f1(test..., bits = 53) for i ∈ 1:N])     for test ∈ tests]
 
-    return (;taylor = taylor, weniger = weniger, drummond = drummond, johansson = johansson)
+    vals = [taylor levin johansson mathematica taylor_a taylor_b single_fraction buhring gauss_jacobi_quadrature]
+
+    times = [1:length(tests) round.(1e6 * vals, digits = 2)]
+
+    return times
+end
+
+function pearson_times_and_errors()
+    errs = pearson_tests()
+    times = pearson_time_tests()
+    
+    times[errs .== 0] .= NaN
+
+    return (times, errs)
+end
+
+function time_tests(test)
+    jo(a,b,c,z) = johansson_2f1(a, b, c, z, bits = 53)
+
+    taylor = @benchmark taylor_2f1($(test)...)
+    levin = @benchmark weniger_2f1($(test)...)
+    johansson = @benchmark jo($(test)...)
+    mathematica = @benchmark mathematica_2f1($(test)...)
+
+    return (;taylor = taylor, levin = levin, johansson = johansson)
 end
 
 relative_error(val::Number, tru::Number)::Float64 = abs((val - tru) / tru)

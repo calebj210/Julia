@@ -18,33 +18,65 @@ using Suppressor: @suppress_err
 function levin_error()
     z = ComplexGrid(range(-1,3,300), range(-2,2,300))
 
-    tru = johansson_2f1.(1, -9/2, -9/4, z; bits = 106)
+    print("Getting true solution...")
+    tru = johansson_2f1.(1, -9/2, -9/4, z, bits = 106)
+    println(" Done")
+    print("\tJohansson...")
+    johansson = johansson_2f1.(1, -9/2, -9/4, z, bits = 53)
+    println(" Done")
+    print("\tMathematica...")
+    mathematica = mathematica_2f1.(1, -9/2, -9/4, z)
+    println(" Done")
+    print("\tLevin...")
     levin = weniger_2f1.(1, -9/2, -9/4, z)
+    println(" Done")
+    print("\tTaylor...")
     taylor = taylor_2f1.(1, -9/2, -9/4, z)
+    println(" Done")
 
+    johansson_error = abs.((johansson - tru) ./ tru)
+    johansson_error[iszero.(johansson_error)] .= 1e-17
+    mathematica_error = abs.((mathematica - tru) ./ tru)
+    mathematica_error[iszero.(mathematica_error)] .= 1e-17
     levin_error = abs.((levin - tru) ./ tru)
     levin_error[iszero.(levin_error)] .= 1e-17
     taylor_error = abs.((taylor - tru) ./ tru)
     taylor_error[iszero.(taylor_error)] .= 1e-17
 
     set_theme!(theme_latexfonts())
-    fig = Figure()
-    ax1 = Axis(fig[1,1], xlabel = "Re(z)", ylabel = "Im(z)", title = L"Taylor Method Error for ${_2}F_1(1, -9/4; -9/2; z)$")
-    ax2 = Axis(fig[1,2], xlabel = "Re(z)", title = L"Taylor Method Error for ${_2}F_1(1, -9/4; -9/2; z)$")
+    tp = heatmap(z.real, z.imag, taylor_error; colorscale = log10, colorrange = (1e-17, 1e-5))
+    tp.axis.title = L"Taylor Method Error for ${_2}F_1(1, -9/2; -9/4; z)$"
+    tp.axis.xlabel = L"\mathrm{Re}(z)"
+    tp.axis.ylabel = L"\mathrm{Im}(z)"
+    Colorbar(tp.figure[1,2], tp.plot)
+    colsize!(tp.figure.layout, 1, Aspect(1, 1))
+    resize_to_layout!(tp.figure)
 
-    linkxaxes!(ax1, ax2)
-    linkyaxes!(ax1, ax2)
-    
-    plt1 = heatmap!(ax1, z.real, z.imag, taylor_error; colorrange = (1e-17, 1e-5), colorscale = log10)
-    plt2 = heatmap!(ax2, z.real, z.imag, levin_error;  colorrange = (1e-17, 1e-5), colorscale = log10)
+    lp = heatmap(z.real, z.imag, levin_error; colorscale = log10, colorrange = (1e-17, 1e-5))
+    lp.axis.title = L"Levin-Type Error for ${_2}F_1(1, -9/2; -9/4; z)$"
+    lp.axis.xlabel = L"\mathrm{Re}(z)"
+    lp.axis.ylabel = L"\mathrm{Im}(z)"
+    Colorbar(lp.figure[1,2], lp.plot)
+    colsize!(lp.figure.layout, 1, Aspect(1, 1))
+    resize_to_layout!(lp.figure)
 
-    Colorbar(fig[1,3], plt1)
-    colsize!(fig.layout, 1, Aspect(1, 1))
-    colsize!(fig.layout, 2, Aspect(1, 1))
+    jp = heatmap(z.real, z.imag, johansson_error; colorscale = log10, colorrange = (1e-17, 1e-5))
+    jp.axis.title = L"Johansson Error for ${_2}F_1(1, -9/2; -9/4; z)$"
+    jp.axis.xlabel = L"\mathrm{Re}(z)"
+    jp.axis.ylabel = L"\mathrm{Im}(z)"
+    Colorbar(jp.figure[1,2], jp.plot)
+    colsize!(jp.figure.layout, 1, Aspect(1, 1))
+    resize_to_layout!(jp.figure)
 
-    resize_to_layout!(fig)
+    mp = heatmap(z.real, z.imag, mathematica_error; colorscale = log10, colorrange = (1e-17, 1e-5))
+    mp.axis.title = L"Mathematica Error for ${_2}F_1(1, -9/2; -9/4; z)$"
+    mp.axis.xlabel = L"\mathrm{Re}(z)"
+    mp.axis.ylabel = L"\mathrm{Im}(z)"
+    Colorbar(mp.figure[1,2], mp.plot)
+    colsize!(mp.figure.layout, 1, Aspect(1, 1))
+    resize_to_layout!(mp.figure)
 
-    return fig
+    return (; taylor = tp, levin = lp, johansson = jp, mathematica = mp)
 end
 
 function slevinsky_comparison()
@@ -78,33 +110,41 @@ function grid_timings()
     z = ComplexGrid(range(-1,3,300), range(-2,2,300))
 
     println("Running Taylor")
-    taylor = average_time.(1, -9/2, -9/4, z, (a,b,c,x) -> taylor_2f1(a, b, c, x))
+    taylor = average_time.(1, -9/2, -9/4, z, (a,b,c,x) -> taylor_2f1(a, b, c, x), microseconds = false)
     tp = heatmap(z.real, z.imag, taylor; colorscale = log10, colorrange = (1e-7, 1e-2))
     tp.axis.title = L"Taylor Method Times for ${_2}F_1(1, -9/2; -9/4; z)$"
+    tp.axis.xlabel = L"\mathrm{Re}(z)"
+    tp.axis.ylabel = L"\mathrm{Im}(z)"
     Colorbar(tp.figure[1,2], tp.plot)
     colsize!(tp.figure.layout, 1, Aspect(1, 1))
     resize_to_layout!(tp.figure)
 
     println("Running Levin-Type")
-    levin = average_time.(1, -9/2, -9/4, z, weniger_2f1)
+    levin = average_time.(1, -9/2, -9/4, z, weniger_2f1, microseconds = false)
     lp = heatmap(z.real, z.imag, levin; colorscale = log10, colorrange = (1e-7, 1e-2))
     lp.axis.title = L"Levin-Type Times for ${_2}F_1(1, -9/2; -9/4; z)$"
+    lp.axis.xlabel = L"\mathrm{Re}(z)"
+    lp.axis.ylabel = L"\mathrm{Im}(z)"
     Colorbar(lp.figure[1,2], lp.plot)
     colsize!(lp.figure.layout, 1, Aspect(1, 1))
     resize_to_layout!(lp.figure)
 
     println("Running Johansson")
-    johansson = average_time.(1, -9/2, -9/4, z, (a, b, c, z) -> johansson_2f1(a, b, c, z; bits = 106))
+    johansson = average_time.(1, -9/2, -9/4, z, (a, b, c, z) -> johansson_2f1(a, b, c, z; bits = 53), microseconds = false)
     jp = heatmap(z.real, z.imag, johansson; colorscale = log10, colorrange = (1e-7, 1e-2))
     jp.axis.title = L"Johansson Times for ${_2}F_1(1, -9/2; -9/4; z)$"
+    jp.axis.xlabel = L"\mathrm{Re}(z)"
+    jp.axis.ylabel = L"\mathrm{Im}(z)"
     Colorbar(jp.figure[1,2], jp.plot)
     colsize!(jp.figure.layout, 1, Aspect(1, 1))
     resize_to_layout!(jp.figure)
 
     println("Running Mathematica")
-    mathematica = average_time.(1, -9/2, -9/4, z, mathematica_2f1)
+    mathematica = average_time.(1, -9/2, -9/4, z, mathematica_2f1, microseconds = false)
     mp = heatmap(z.real, z.imag, mathematica; colorscale = log10, colorrange = (1e-7, 1e-2))
     mp.axis.title = L"Mathematica Times for ${_2}F_1(1, -9/2; -9/4; z)$"
+    mp.axis.xlabel = L"\mathrm{Re}(z)"
+    mp.axis.ylabel = L"\mathrm{Im}(z)"
     Colorbar(mp.figure[1,2], mp.plot)
     colsize!(mp.figure.layout, 1, Aspect(1, 1))
     resize_to_layout!(mp.figure)
@@ -250,7 +290,7 @@ function plot_average_grid_timings(times, errs)
     return fig
 end
 
-function average_time(a, b, c, z, f, N = 5)
+function average_time(a, b, c, z, f, N = 5; microseconds = true)
     time = 0.0
 
     for n ∈ 1 : N
@@ -259,7 +299,9 @@ function average_time(a, b, c, z, f, N = 5)
 
     time /= N
 
-    time = round(Int, time * 1e6) # Convert to microseconds
+    if microseconds
+        time = round(Int, time * 1e6) # Convert to microseconds
+    end
 
     return time
 end

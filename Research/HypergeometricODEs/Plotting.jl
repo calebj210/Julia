@@ -1,4 +1,4 @@
-using Makie, ComplexVisualsMakie
+using Makie, ComplexVisuals
 import CairoMakie: heatmap
 
 function grid_error_plot(z, f, tru; kwargs...)
