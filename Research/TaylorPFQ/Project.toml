@@ -1,0 +1,14 @@
+name = "TaylorPFQ"
+uuid = "f1161e6c-a9f9-41e4-9f4b-b9fbbcd2c577"
+authors = ["Caleb Jacobs <calebjacobs210@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+MathLink = "18c93696-a329-5786-9845-8443133fa0b4"
+Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+
+[compat]
+MathLink = "0.6.0"
+Polynomials = "4.0.13"
+SpecialFunctions = "2.5.0"

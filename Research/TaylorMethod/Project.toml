@@ -1,9 +1,0 @@
-name = "TaylorMethod"
-uuid = "fd86edfa-cb88-4eb9-9f00-f9341025d11d"
-authors = ["Caleb Jacobs <calebjacobs210@gmail.com>"]
-version = "0.1.0"
-
-[deps]
-BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
-Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
-TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"

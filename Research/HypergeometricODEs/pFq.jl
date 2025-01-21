@@ -114,8 +114,9 @@ function taylor_2f1(a, b, c, z::Number; H = Inf, N = 1000, order = 1000)
     end
 
     z0 = sign(z) * 0.3
+    # z0 = imag(z) > 0 ? .3im : -.3im
     if real(z) > 1
-        z0 += imag(z) > 0 ? 0.5im : -0.5im
+        z0 += imag(z) > 0 ? 0.3im : -0.3im
     end
     dir = sign(z - z0)
 

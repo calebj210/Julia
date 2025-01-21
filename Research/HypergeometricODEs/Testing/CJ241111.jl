@@ -5,7 +5,7 @@
 # DLM: November 11, 2024
 =#
 
-using ComplexVisualsMakie, CairoMakie
+using ComplexVisuals, CairoMakie
 using BenchmarkTools
 include("../pFq.jl")
 
