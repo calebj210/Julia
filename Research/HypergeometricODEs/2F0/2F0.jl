@@ -1,10 +1,20 @@
 using SpecialFunctions
+using MathLink
+
+function mathematica_U(a, b, z)
+    val = weval(W`N[HypergeometricU[a,b,z]]`, a = a, b = b, z = z)
+    try
+        return Complex(val.args...)
+    catch
+        return Real(val)
+    end
+end
 
 """
     U(a, b, z,; n, m)
 Compute the Krummer U hypergeometric function using the exponentially-improved expansion given in https://dlmf.nist.gov/13.7.E10.
 """
-function U(a, b, z; n = 10, m = 10) 
+function U(a, b, z; n = 20, m = 1) 
     as  = a .+ (0:n - 2)
     bs  = a - b + 1 .+ (0:n - 2)
     den = 1:n - 1
