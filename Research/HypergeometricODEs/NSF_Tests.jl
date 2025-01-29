@@ -2,7 +2,7 @@
 # Tests and graphics for the NSF Grant
 #
 # Author: Caleb Jacobs
-# DLM: November 6, 2024
+# DLM: January 28, 2025
 =#
 
 include("Plotting.jl")
@@ -13,10 +13,12 @@ include("../Gregory/HypergeometricGrid.jl")
 
 using CairoMakie
 using BenchmarkTools
+using Random
 using Suppressor: @suppress_err
 
-function levin_error()
-    z = ComplexGrid(range(-1,3,300), range(-2,2,300))
+# Used Test 1
+function levin_errors()
+    z = ComplexGrid(range(-10,10,300), range(-10,10,300))
 
     print("Getting true solution...")
     tru = johansson_2f1.(1, -9/2, -9/4, z, bits = 106)
@@ -79,8 +81,199 @@ function levin_error()
     return (; taylor = tp, levin = lp, johansson = jp, mathematica = mp)
 end
 
+# Used Test 2
+function levin_timings()
+    set_theme!(theme_latexfonts())
+    z = ComplexGrid(range(-10,10,300), range(-10,10,300))
+
+    println("Running Taylor")
+    taylor = average_time.(1, -9/2, -9/4, z, (a,b,c,x) -> taylor_2f1(a, b, c, x), microseconds = false)
+    println("Running Levin-Type")
+    levin = average_time.(1, -9/2, -9/4, z, weniger_2f1, microseconds = false)
+    println("Running Johansson")
+    johansson = average_time.(1, -9/2, -9/4, z, (a, b, c, z) -> johansson_2f1(a, b, c, z; bits = 53), microseconds = false)
+    println("Running Mathematica")
+    mathematica = average_time.(1, -9/2, -9/4, z, mathematica_2f1, microseconds = false)
+
+    mintime = minimum([taylor levin johansson mathematica])
+    maxtime = maximum([taylor levin johansson mathematica])
+    cbounds = (mintime, maxtime)
+
+    tp = heatmap(z.real, z.imag, taylor; colorscale = log10, colorrange = cbounds)
+    tp.axis.title = L"Taylor Method Times for ${_2}F_1(1, -9/2; -9/4; z)$"
+    tp.axis.xlabel = L"\mathrm{Re}(z)"
+    tp.axis.ylabel = L"\mathrm{Im}(z)"
+    Colorbar(tp.figure[1,2], tp.plot)
+    colsize!(tp.figure.layout, 1, Aspect(1, 1))
+    resize_to_layout!(tp.figure)
+
+    lp = heatmap(z.real, z.imag, levin; colorscale = log10, colorrange = cbounds)
+    lp.axis.title = L"Levin-Type Times for ${_2}F_1(1, -9/2; -9/4; z)$"
+    lp.axis.xlabel = L"\mathrm{Re}(z)"
+    lp.axis.ylabel = L"\mathrm{Im}(z)"
+    Colorbar(lp.figure[1,2], lp.plot)
+    colsize!(lp.figure.layout, 1, Aspect(1, 1))
+    resize_to_layout!(lp.figure)
+
+    jp = heatmap(z.real, z.imag, johansson; colorscale = log10, colorrange = cbounds)
+    jp.axis.title = L"Johansson Times for ${_2}F_1(1, -9/2; -9/4; z)$"
+    jp.axis.xlabel = L"\mathrm{Re}(z)"
+    jp.axis.ylabel = L"\mathrm{Im}(z)"
+    Colorbar(jp.figure[1,2], jp.plot)
+    colsize!(jp.figure.layout, 1, Aspect(1, 1))
+    resize_to_layout!(jp.figure)
+
+    mp = heatmap(z.real, z.imag, mathematica; colorscale = log10, colorrange = cbounds)
+    mp.axis.title = L"Mathematica Times for ${_2}F_1(1, -9/2; -9/4; z)$"
+    mp.axis.xlabel = L"\mathrm{Re}(z)"
+    mp.axis.ylabel = L"\mathrm{Im}(z)"
+    Colorbar(mp.figure[1,2], mp.plot)
+    colsize!(mp.figure.layout, 1, Aspect(1, 1))
+    resize_to_layout!(mp.figure)
+
+    return (; taylor = tp, levin = lp, johansson = jp, mathematica = mp)
+end
+
+# Used Test 3
+function random_tests(a = 1, b = 2, c = 3, z = .5 + .5im; N = 10000, rng = 50, seed = 997)
+    Random.seed!(seed)
+
+    # Setup random tests
+    as = a .+ 2rng * (rand(ComplexF64, N) .- .5(1 + im))
+    bs = b .+ 2rng * (rand(ComplexF64, N) .- .5(1 + im))
+    cs = c .+ 2rng * (rand(ComplexF64, N) .- .5(1 + im))
+    zs = z .+ 2rng * (rand(ComplexF64, N) .- .5(1 + im))
+    collected_tests = [(a, b, c, z) for (a,b,c) ∈ zip(as, bs, cs)]
+
+    # Evaluate each test for accuracy 
+    print("Running accuracy tests... ")
+    true_vals        = [johansson_2f1(test...,
+                                     bits = 512) for test ∈ collected_tests]
+    taylor_vals      = [taylor_2f1(test...)      for test ∈ collected_tests]
+    levin_vals       = [weniger_2f1(test...)     for test ∈ collected_tests]
+    mathematica_vals = [mathematica_2f1(test...) for test ∈ collected_tests]
+    johansson_vals   = [johansson_2f1(test...,
+                                     bits = 53)  for test ∈ collected_tests]
+    print("done\nRunning time tests...\n")
+
+    # Timings of each test
+    print("\tTrue... ")
+    true_times        = [average_time(test..., (a,b,c,z) -> johansson_2f1(a,b,c,z, bits = 512))
+                                                                for test ∈ collected_tests]
+    print("done\n\tTaylor... ")
+    taylor_times      = [average_time(test..., taylor_2f1)      for test ∈ collected_tests]
+    print("done\n\tLevin... ")
+    levin_times       = [average_time(test..., weniger_2f1)     for test ∈ collected_tests]
+    print("done\n\tMathematica... ")
+    mathematica_times = [average_time(test..., mathematica_2f1) for test ∈ collected_tests]
+    print("done\n\tJohansson... ")
+    johansson_times   = [average_time(test..., (a,b,c,z) -> 
+                             johansson_2f1(a,b,c,z; bits = 53)) for test ∈ collected_tests]
+    println("done")
+
+    # Structure data
+    true_jo     = merge((; avg = round(mean(true_times), sigdigits = 2), 
+                           med = round(median(true_times), sigdigits = 2)), 
+                           count_errors(true_vals, true_vals))
+    taylor      = merge((; avg = round(mean(taylor_times), sigdigits = 2), 
+                           med = round(median(taylor_times), sigdigits = 2)), 
+                           count_errors(taylor_vals, true_vals))
+    levin       = merge((; avg = round(mean(levin_times), sigdigits = 2), 
+                           med = round(median(levin_times), sigdigits = 2)), 
+                           count_errors(levin_vals, true_vals))
+    johansson   = merge((; avg = round(mean(johansson_times), sigdigits = 2), 
+                           med = round(median(johansson_times), sigdigits = 2)), 
+                           count_errors(johansson_vals, true_vals))
+    mathematica = merge((; avg = round(mean(mathematica_times), sigdigits = 2), 
+                           med = round(median(mathematica_times), sigdigits = 2)), 
+                           count_errors(mathematica_vals, true_vals))
+
+    taylor_error = abs.((taylor_vals - true_vals) ./ true_vals)
+    taylor_error[isnan.(taylor_error) .|| isinf.(taylor_error) .|| taylor_error .> 1] .= 1
+    taylor_error[taylor_error .<= 1e-17] .= 1e-17
+
+    levin_error = abs.((levin_vals - true_vals) ./ true_vals)
+    levin_error[isnan.(levin_error) .|| isinf.(levin_error) .|| levin_error .> 1] .= 1
+    levin_error[levin_error .<= 1e-17] .= 1e-17
+
+    johansson_error = abs.((johansson_vals - true_vals) ./ true_vals)
+    johansson_error[isnan.(johansson_error) .|| isinf.(johansson_error) .|| johansson_error .> 1] .= 1
+    johansson_error[johansson_error .<= 1e-17] .= 1e-17
+
+    mathematica_error = abs.((mathematica_vals - true_vals) ./ true_vals)
+    mathematica_error[isnan.(mathematica_error) .|| isinf.(mathematica_error) .|| mathematica_error .> 1] .= 1
+    mathematica_error[mathematica_error .<= 1e-17] .= 1e-17
+
+
+    # Display result
+    print("True:        "); print_error_and_time(true_jo)
+    print("Taylor:      "); print_error_and_time(taylor)
+    print("Levin:       "); print_error_and_time(levin)
+    print("Johansson:   "); print_error_and_time(johansson)
+    print("Mathematica: "); print_error_and_time(mathematica)
+
+    fig = Figure()
+    axt = Axis(fig[1,1], xscale = log10, title = "Taylor")
+    axl = Axis(fig[2,1], xscale = log10, title = "Levin-Type")
+    axj = Axis(fig[3,1], xscale = log10, title = "Johansson")
+    axm = Axis(fig[4,1], xscale = log10, title = "Mathematica")
+
+    hist!(axt, taylor_error,      bins = 10.0 .^ (-17:1), color = :values, normalization = :probability)
+    hist!(axl, levin_error,       bins = 10.0 .^ (-17:1), color = :values, normalization = :probability)
+    hist!(axj, johansson_error,   bins = 10.0 .^ (-17:1), color = :values, normalization = :probability)
+    hist!(axm, mathematica_error, bins = 10.0 .^ (-17:1), color = :values, normalization = :probability)
+
+    return (;taylor, levin, mathematica, johansson, fig)
+end
+
+# Used
+function count_errors(vals, true_values; good = 1e-14, fair = 1e-9, poor = 1e-1)
+    goods = fairs = poors = fails = 0
+
+    errs = abs.((vals - true_values) ./ true_values)
+
+    for (err, tru) ∈ zip(errs, true_values)
+        if isnan(tru) || isinf(tru)
+            continue
+        end
+        if err <= good
+            goods += 1
+        elseif err <= fair
+            fairs += 1
+        elseif err <= poor
+            poors += 1
+        else
+            fails += 1
+        end
+    end
+
+    return (; goods, fairs, poors, fails)
+end
+
+# Used
+function print_error_and_time(r)
+    print(r.avg, " Average, ", r.med, " Median, ", r.goods, " Good, ", r.fairs, " Fair, ", r.poors, " Poor, ", r.fails, " Fails.\n")
+end
+
+# Used
+function average_time(a, b, c, z, f, N = 5; microseconds = true)
+    time = 0.0
+
+    for n ∈ 1 : N
+        time += @elapsed f(a, b, c, z)
+    end
+
+    time /= N
+
+    if microseconds
+        time = round(Int, time * 1e6) # Convert to microseconds
+    end
+
+    return time
+end
+
 function slevinsky_comparison()
-    z = ComplexGrid(range(-1,3,300), range(-2,2,300))
+    z = ComplexGrid(range(-10,10,300), range(-10,10,300))
 
     println("Johansson Time")
     johansson = johansson_2f1.(1, -9/2, -9/4, z)
@@ -103,53 +296,6 @@ function slevinsky_comparison()
     println("Taylor Max-Relative-Error = ", maximum(abs.((taylor - johansson) ./ johansson)))
 
     return (;taylor = taylor_plots, levin = levin_plots)
-end
-
-function grid_timings()
-    set_theme!(theme_latexfonts())
-    z = ComplexGrid(range(-1,3,300), range(-2,2,300))
-
-    println("Running Taylor")
-    taylor = average_time.(1, -9/2, -9/4, z, (a,b,c,x) -> taylor_2f1(a, b, c, x), microseconds = false)
-    tp = heatmap(z.real, z.imag, taylor; colorscale = log10, colorrange = (1e-7, 1e-2))
-    tp.axis.title = L"Taylor Method Times for ${_2}F_1(1, -9/2; -9/4; z)$"
-    tp.axis.xlabel = L"\mathrm{Re}(z)"
-    tp.axis.ylabel = L"\mathrm{Im}(z)"
-    Colorbar(tp.figure[1,2], tp.plot)
-    colsize!(tp.figure.layout, 1, Aspect(1, 1))
-    resize_to_layout!(tp.figure)
-
-    println("Running Levin-Type")
-    levin = average_time.(1, -9/2, -9/4, z, weniger_2f1, microseconds = false)
-    lp = heatmap(z.real, z.imag, levin; colorscale = log10, colorrange = (1e-7, 1e-2))
-    lp.axis.title = L"Levin-Type Times for ${_2}F_1(1, -9/2; -9/4; z)$"
-    lp.axis.xlabel = L"\mathrm{Re}(z)"
-    lp.axis.ylabel = L"\mathrm{Im}(z)"
-    Colorbar(lp.figure[1,2], lp.plot)
-    colsize!(lp.figure.layout, 1, Aspect(1, 1))
-    resize_to_layout!(lp.figure)
-
-    println("Running Johansson")
-    johansson = average_time.(1, -9/2, -9/4, z, (a, b, c, z) -> johansson_2f1(a, b, c, z; bits = 53), microseconds = false)
-    jp = heatmap(z.real, z.imag, johansson; colorscale = log10, colorrange = (1e-7, 1e-2))
-    jp.axis.title = L"Johansson Times for ${_2}F_1(1, -9/2; -9/4; z)$"
-    jp.axis.xlabel = L"\mathrm{Re}(z)"
-    jp.axis.ylabel = L"\mathrm{Im}(z)"
-    Colorbar(jp.figure[1,2], jp.plot)
-    colsize!(jp.figure.layout, 1, Aspect(1, 1))
-    resize_to_layout!(jp.figure)
-
-    println("Running Mathematica")
-    mathematica = average_time.(1, -9/2, -9/4, z, mathematica_2f1, microseconds = false)
-    mp = heatmap(z.real, z.imag, mathematica; colorscale = log10, colorrange = (1e-7, 1e-2))
-    mp.axis.title = L"Mathematica Times for ${_2}F_1(1, -9/2; -9/4; z)$"
-    mp.axis.xlabel = L"\mathrm{Re}(z)"
-    mp.axis.ylabel = L"\mathrm{Im}(z)"
-    Colorbar(mp.figure[1,2], mp.plot)
-    colsize!(mp.figure.layout, 1, Aspect(1, 1))
-    resize_to_layout!(mp.figure)
-
-    return (; taylor = tp, levin = lp, johansson = jp, mathematica = mp)
 end
 
 function average_grid_timings()
@@ -288,99 +434,6 @@ function plot_average_grid_timings(times, errs)
     Legend(fig[2,2], [means, medians, l2s], ["Mean", "Median", L"$L^2$ Norm"], "Error Type", framevisible = false)
 
     return fig
-end
-
-function average_time(a, b, c, z, f, N = 5; microseconds = true)
-    time = 0.0
-
-    for n ∈ 1 : N
-        time += @elapsed f(a, b, c, z)
-    end
-
-    time /= N
-
-    if microseconds
-        time = round(Int, time * 1e6) # Convert to microseconds
-    end
-
-    return time
-end
-
-function count_errors(vals, true_values; good = 1e-14, fair = 1e-9, poor = 1e-1)
-    goods = fairs = poors = fails = 0
-
-    errs = abs.((vals - true_values) ./ true_values)
-
-    for err ∈ errs
-        if err <= good
-            goods += 1
-        elseif err <= fair
-            fairs += 1
-        elseif err <= poor
-            poors += 1
-        else
-            fails += 1
-        end
-    end
-
-    return (; goods, fairs, poors, fails)
-end
-
-function random_tests(a = 1, b = 2, c = 3, z = .5 + .5im; N = 10001, rng = 10, seed = 997)
-    Random.seed!(seed)
-
-    # Setup random tests
-    as = a .+ 2rng * (rand(ComplexF64, N) .- .5(1 + im))
-    bs = b .+ 2rng * (rand(ComplexF64, N) .- .5(1 + im))
-    cs = c .+ 2rng * (rand(ComplexF64, N) .- .5(1 + im))
-    zs = z .+ 2rng * (rand(ComplexF64, N) .- .5(1 + im))
-    collected_tests = [(a, b, c, z) for (a,b,c) ∈ zip(as, bs, cs)]
-
-    # Evaluate each test for accuracy 
-    true_vals        = [johansson_2f1(test...)   for test ∈ collected_tests]
-    taylor_vals      = [taylor_2f1(test...)      for test ∈ collected_tests]
-    levin_vals       = [weniger_2f1(test...)     for test ∈ collected_tests]
-    mathematica_vals = [mathematica_2f1(test...) for test ∈ collected_tests]
-    johansson_vals   = [johansson_2f1(test...,
-                                     bits = 53)  for test ∈ collected_tests]
-
-    # Timings of each test
-    true_times        = [average_time(test..., johansson_2f1)   for test ∈ collected_tests]
-    taylor_times      = [average_time(test..., taylor_2f1)      for test ∈ collected_tests]
-    levin_times       = [average_time(test..., weniger_2f1)     for test ∈ collected_tests]
-    mathematica_times = [average_time(test..., mathematica_2f1) for test ∈ collected_tests]
-    johansson_times   = [average_time(test..., (a,b,c,z) -> 
-                             johansson_2f1(a,b,c,z; bits = 53)) for test ∈ collected_tests]
-
-    # Structure data
-    true_jo     = merge((; avg = round(mean(true_times), sigdigits = 2), 
-                           med = round(median(true_times), sigdigits = 2)), 
-                           count_errors(true_vals, true_vals))
-    taylor      = merge((; avg = round(mean(taylor_times), sigdigits = 2), 
-                           med = round(median(taylor_times), sigdigits = 2)), 
-                           count_errors(taylor_vals, true_vals))
-    levin       = merge((; avg = round(mean(levin_times), sigdigits = 2), 
-                           med = round(median(levin_times), sigdigits = 2)), 
-                           count_errors(levin_vals, true_vals))
-    johansson   = merge((; avg = round(mean(johansson_times), sigdigits = 2), 
-                           med = round(median(johansson_times), sigdigits = 2)), 
-                           count_errors(johansson_vals, true_vals))
-    mathematica = merge((; avg = round(mean(mathematica_times), sigdigits = 2), 
-                           med = round(median(mathematica_times), sigdigits = 2)), 
-                           count_errors(mathematica_vals, true_vals))
-
-    # Display result
-    print("True:        "); print_error_and_time(true_jo)
-    print("Taylor:      "); print_error_and_time(taylor)
-    print("Levin:       "); print_error_and_time(levin)
-    print("Johansson:   "); print_error_and_time(johansson)
-    print("Mathematica: "); print_error_and_time(mathematica)
-
-    return (;taylor, levin, mathematica, johansson)
-end
-
-function print_error_and_time(r)
-    print(r.avg, " Average, ", r.med, " Median, ", r.goods, " Good, ", r.fairs, " Fair, ", r.poors, " Poor, ", r.fails, " Fails.\n")
 end
 
 function run_grid_complexity_tests(a, b, c; r = 1.99, Ns = 81:22:301)

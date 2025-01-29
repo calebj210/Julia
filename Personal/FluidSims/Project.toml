@@ -1,0 +1,4 @@
+name = "FluidSims"
+uuid = "1c91a57c-8836-444f-8045-1b0fc7bef967"
+authors = ["Caleb Jacobs <calebjacobs210@gmail.com>"]
+version = "0.1.0"
