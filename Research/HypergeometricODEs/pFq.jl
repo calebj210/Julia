@@ -2,7 +2,7 @@
 #   ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: January 21, 2025
+# DLM: January 30, 2025
 =#
 
 using Polynomials
@@ -48,6 +48,7 @@ function maclaurin_2f1(a::Ta, b::Tb, c::Tc, z::Tz, N = 1000) where {Ta, Tb, Tc, 
 
     zn = one(coef_type)
 
+    # println("|c_0| = $(abs(coeff * zn))")
     for n ∈ 1 : N
         coeff *= (a + n - 1) / (c + n - 1) * (b + n - 1) / n
         push!(coeffs, coeff)
@@ -59,6 +60,7 @@ function maclaurin_2f1(a::Ta, b::Tb, c::Tc, z::Tz, N = 1000) where {Ta, Tb, Tc, 
         end
 
         S  += coeff * zn
+        # println("|c_$(n)| = $(abs(coeff * zn))")
     end
 
     p  = Polynomial(coeffs)
@@ -94,7 +96,7 @@ function recursive_2f1(a::Ta, b::Tb, c::Tc, z0::Tz, f0, h, N) where {Ta, Tb, Tc,
         end
 
         push!(coeffs, coeff)
-        S += coeffs[end] * hn
+        S += coeff * hn
 
         # Update recurrence values
         a1 += a2; a0 += a1
@@ -108,13 +110,50 @@ function recursive_2f1(a::Ta, b::Tb, c::Tc, z0::Tz, f0, h, N) where {Ta, Tb, Tc,
     return [Tn(h), Tnp(h)]
 end
 
+function taylor_coefficients(a,b,c,z0,p)
+    F, dF = maclaurin_2f1(a,b,c,z0)
+
+    A0 = a + b - a * b - 1; A1 =  3 - a - b; A2 = -2    # Initial A(n)
+    B0 = 0; B1 = c - (a + b - 3) * z0 - 2; B2 = 2 - 4z0 # Initial B(n)
+    C0 = C1 = 0; C2 = 2z0 * (z0 - 1)                    # Initial C(n)
+    an = [F, dF]                                        # a_0 and a_1
+    
+    # 10-flop recursion
+    for n = 3:p
+        A1 += A2; A0 += A1                              # Update A(n)
+        B1 += B2; B0 += B1                              # Update B(n)
+        C1 += C2; C0 += C1                              # Update C(n)
+        push!(an, (A0 * an[n - 2]  +                    # Next a_n
+                   B0 * an[n - 1]) / C0)
+    end
+    return an
+end
+
+function taylor_terms(a, b, c, z0, p, h)
+    coeffs = taylor_coefficients(a, b, c, z0, p)
+
+    terms = coeffs .* h.^(0:(p - 1))
+
+    fig = Figure()
+    axt = Axis(fig[1,1], yscale = log10, ylabel = L"|a_n h^n|")
+    axs = Axis(fig[2,1], yscale = log10, ylabel = L"|S_n|")
+    axe = Axis(fig[3,1], yscale = log10, ylabel = L"\varepsilon(|S_n|)")
+    scatter!(axt, abs.(terms))
+    scatter!(axs, abs.(cumsum(terms)))
+    scatter!(axe, eps.(abs.(cumsum(terms))))
+    resize_to_layout!(fig)
+
+    return (fig, terms)
+end
+
 function taylor_2f1(a, b, c, z::Number; H = Inf, N = 1000, order = 1000)
     if abs(z) <= .3
         return maclaurin_2f1(a, b, c, z, N)[1]
     end
 
-    z0 = sign(z) * 0.3
-    # z0 = imag(z) > 0 ? .3im : -.3im
+    tmp = abs(c / (a * b))
+    z0 = sign(z) * min(tmp, 0.3)
+    # z0 = sign(z) * .3
     if real(z) > 1
         z0 += imag(z) > 0 ? 0.3im : -0.3im
     end
@@ -126,9 +165,13 @@ function taylor_2f1(a, b, c, z::Number; H = Inf, N = 1000, order = 1000)
     n = 1
     while !isapprox(zn, z) && n < N
         r = abs(zn - 1)
-        h = dir * min(r / exp(2), abs(z - zn), H)           # Step size based on Jorba and Zou 2005
+        # h = dir * min(r / exp(2), abs(z - zn), H)           # Step size based on Jorba and Zou 2005
+        h = dir * min(abs(1/fn[2]), r / exp(2), abs(z - zn), H)           # Step size based on Jorba and Zou 2005
 
+        display(abs(fn[1]))
+        display(h)
         fn = recursive_2f1(a, b, c, zn, fn, h, order + 1)   # Order increase so derivative hits the desired order
+        display(zn)
 
         zn += h
         n += 1

@@ -2,7 +2,7 @@
 # Tests and graphics for the NSF Grant
 #
 # Author: Caleb Jacobs
-# DLM: January 28, 2025
+# DLM: January 29, 2025
 =#
 
 include("Plotting.jl")
@@ -135,15 +135,19 @@ function levin_timings()
 end
 
 # Used Test 3
-function random_tests(a = 1, b = 2, c = 3, z = .5 + .5im; N = 10000, rng = 50, seed = 997)
+function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, rng = 10, seed = 997)
     Random.seed!(seed)
 
     # Setup random tests
-    as = a .+ 2rng * (rand(ComplexF64, N) .- .5(1 + im))
-    bs = b .+ 2rng * (rand(ComplexF64, N) .- .5(1 + im))
-    cs = c .+ 2rng * (rand(ComplexF64, N) .- .5(1 + im))
-    zs = z .+ 2rng * (rand(ComplexF64, N) .- .5(1 + im))
-    collected_tests = [(a, b, c, z) for (a,b,c) ∈ zip(as, bs, cs)]
+    # as = a .+ 2rng * (randn(ComplexF64, N) .- .5(1 + im))
+    # bs = b .+ 2rng * (randn(ComplexF64, N) .- .5(1 + im))
+    # cs = c .+ 2rng * (randn(ComplexF64, N) .- .5(1 + im))
+    # zs = z .+ 2rng * (randn(ComplexF64, N) .- .5(1 + im))
+    as = a .+ 30 * randn(ComplexF64, N)
+    bs = b .+ 30 * randn(ComplexF64, N)
+    cs = c .+ 30 * randn(ComplexF64, N)
+    zs = z .+ 3  * randn(ComplexF64, N)
+    collected_tests = [(a,b,c,z) for (a,b,c,z) ∈ zip(as, bs, cs, zs)]
 
     # Evaluate each test for accuracy 
     print("Running accuracy tests... ")
@@ -151,7 +155,7 @@ function random_tests(a = 1, b = 2, c = 3, z = .5 + .5im; N = 10000, rng = 50, s
                                      bits = 512) for test ∈ collected_tests]
     taylor_vals      = [taylor_2f1(test...)      for test ∈ collected_tests]
     levin_vals       = [weniger_2f1(test...)     for test ∈ collected_tests]
-    mathematica_vals = [mathematica_2f1(test...) for test ∈ collected_tests]
+    mathematica_vals = @suppress_err [mathematica_2f1(test...) for test ∈ collected_tests]
     johansson_vals   = [johansson_2f1(test...,
                                      bits = 53)  for test ∈ collected_tests]
     print("done\nRunning time tests...\n")
@@ -165,7 +169,7 @@ function random_tests(a = 1, b = 2, c = 3, z = .5 + .5im; N = 10000, rng = 50, s
     print("done\n\tLevin... ")
     levin_times       = [average_time(test..., weniger_2f1)     for test ∈ collected_tests]
     print("done\n\tMathematica... ")
-    mathematica_times = [average_time(test..., mathematica_2f1) for test ∈ collected_tests]
+    mathematica_times = @suppress_err [average_time(test..., mathematica_2f1) for test ∈ collected_tests]
     print("done\n\tJohansson... ")
     johansson_times   = [average_time(test..., (a,b,c,z) -> 
                              johansson_2f1(a,b,c,z; bits = 53)) for test ∈ collected_tests]
@@ -213,15 +217,18 @@ function random_tests(a = 1, b = 2, c = 3, z = .5 + .5im; N = 10000, rng = 50, s
     print("Mathematica: "); print_error_and_time(mathematica)
 
     fig = Figure()
-    axt = Axis(fig[1,1], xscale = log10, title = "Taylor")
-    axl = Axis(fig[2,1], xscale = log10, title = "Levin-Type")
-    axj = Axis(fig[3,1], xscale = log10, title = "Johansson")
-    axm = Axis(fig[4,1], xscale = log10, title = "Mathematica")
+    axt = Axis(fig[1,1], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Taylor")
+    axl = Axis(fig[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Levin-Type")
+    axj = Axis(fig[2,1], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Johansson")
+    axm = Axis(fig[2,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Mathematica")
 
-    hist!(axt, taylor_error,      bins = 10.0 .^ (-17:1), color = :values, normalization = :probability)
-    hist!(axl, levin_error,       bins = 10.0 .^ (-17:1), color = :values, normalization = :probability)
-    hist!(axj, johansson_error,   bins = 10.0 .^ (-17:1), color = :values, normalization = :probability)
-    hist!(axm, mathematica_error, bins = 10.0 .^ (-17:1), color = :values, normalization = :probability)
+    bin = 10.0 .^ (-17:1)
+    # bin = 10.0 .^ (-17:2:1)
+
+    hist!(axt, taylor_error,      bins = bin, color = :values, normalization = :probability)
+    hist!(axl, levin_error,       bins = bin, color = :values, normalization = :probability)
+    hist!(axj, johansson_error,   bins = bin, color = :values, normalization = :probability)
+    hist!(axm, mathematica_error, bins = bin, color = :values, normalization = :probability)
 
     return (;taylor, levin, mathematica, johansson, fig)
 end
