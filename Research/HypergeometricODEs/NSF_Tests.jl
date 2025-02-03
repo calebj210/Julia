@@ -2,7 +2,7 @@
 # Tests and graphics for the NSF Grant
 #
 # Author: Caleb Jacobs
-# DLM: January 29, 2025
+# DLM: January 30, 2025
 =#
 
 include("Plotting.jl")
@@ -11,29 +11,30 @@ include("PaperTests/Johansson2F1.jl")
 include("PaperTests/Slevinsky2F1.jl")
 include("../Gregory/HypergeometricGrid.jl")
 
-using CairoMakie
+using CairoMakie, LaTeXStrings
 using BenchmarkTools
 using Random
 using Suppressor: @suppress_err
 
 # Used Test 1
-function levin_errors()
+function levin_errors(a = 1, b = -9/2, c = -9/4)
     z = ComplexGrid(range(-10,10,300), range(-10,10,300))
 
     print("Getting true solution...")
-    tru = johansson_2f1.(1, -9/2, -9/4, z, bits = 106)
+    tru = johansson_2f1.(a, b, c, z, bits = 106)
     println(" Done")
     print("\tJohansson...")
-    johansson = johansson_2f1.(1, -9/2, -9/4, z, bits = 53)
+    johansson = johansson_2f1.(a, b, c, z, bits = 53)
     println(" Done")
     print("\tMathematica...")
-    mathematica = mathematica_2f1.(1, -9/2, -9/4, z)
+    mathematica = mathematica_2f1.(a, b, c, z)
     println(" Done")
     print("\tLevin...")
-    levin = weniger_2f1.(1, -9/2, -9/4, z)
+    levin = weniger_2f1.(a, b, c, z)
     println(" Done")
     print("\tTaylor...")
-    taylor = taylor_2f1.(1, -9/2, -9/4, z)
+    # taylor = _2f1.(a, b, c, z)
+    taylor = taylor_2f1.(a, b, c, z)
     println(" Done")
 
     johansson_error = abs.((johansson - tru) ./ tru)
@@ -47,7 +48,7 @@ function levin_errors()
 
     set_theme!(theme_latexfonts())
     tp = heatmap(z.real, z.imag, taylor_error; colorscale = log10, colorrange = (1e-17, 1e-5))
-    tp.axis.title = L"Taylor Method Error for ${_2}F_1(1, -9/2; -9/4; z)$"
+    tp.axis.title = latexstring("Taylor Method Error for \${_2}F_1($(a), $(b), $(c); z)\$")
     tp.axis.xlabel = L"\mathrm{Re}(z)"
     tp.axis.ylabel = L"\mathrm{Im}(z)"
     Colorbar(tp.figure[1,2], tp.plot)
@@ -55,7 +56,7 @@ function levin_errors()
     resize_to_layout!(tp.figure)
 
     lp = heatmap(z.real, z.imag, levin_error; colorscale = log10, colorrange = (1e-17, 1e-5))
-    lp.axis.title = L"Levin-Type Error for ${_2}F_1(1, -9/2; -9/4; z)$"
+    lp.axis.title = latexstring("Levin-Type Error for \${_2}F_1($(a), $(b), $(c); z)\$")
     lp.axis.xlabel = L"\mathrm{Re}(z)"
     lp.axis.ylabel = L"\mathrm{Im}(z)"
     Colorbar(lp.figure[1,2], lp.plot)
@@ -63,7 +64,7 @@ function levin_errors()
     resize_to_layout!(lp.figure)
 
     jp = heatmap(z.real, z.imag, johansson_error; colorscale = log10, colorrange = (1e-17, 1e-5))
-    jp.axis.title = L"Johansson Error for ${_2}F_1(1, -9/2; -9/4; z)$"
+    jp.axis.title = latexstring("Johansson Error for \${_2}F_1($(a), $(b), $(c); z)\$")
     jp.axis.xlabel = L"\mathrm{Re}(z)"
     jp.axis.ylabel = L"\mathrm{Im}(z)"
     Colorbar(jp.figure[1,2], jp.plot)
@@ -71,7 +72,7 @@ function levin_errors()
     resize_to_layout!(jp.figure)
 
     mp = heatmap(z.real, z.imag, mathematica_error; colorscale = log10, colorrange = (1e-17, 1e-5))
-    mp.axis.title = L"Mathematica Error for ${_2}F_1(1, -9/2; -9/4; z)$"
+    mp.axis.title = latexstring("Mathematica Error for \${_2}F_1($(a), $(b), $(c); z)\$")
     mp.axis.xlabel = L"\mathrm{Re}(z)"
     mp.axis.ylabel = L"\mathrm{Im}(z)"
     Colorbar(mp.figure[1,2], mp.plot)
@@ -82,25 +83,26 @@ function levin_errors()
 end
 
 # Used Test 2
-function levin_timings()
+function levin_timings(a = 1, b = -9/2, c = -9/4)
     set_theme!(theme_latexfonts())
     z = ComplexGrid(range(-10,10,300), range(-10,10,300))
 
     println("Running Taylor")
-    taylor = average_time.(1, -9/2, -9/4, z, (a,b,c,x) -> taylor_2f1(a, b, c, x), microseconds = false)
+    # taylor = average_time.(a, b, c, z, (a,b,c,x) -> _2f1(a, b, c, x), microseconds = false)
+    taylor = average_time.(a, b, c, z, (a,b,c,x) -> taylor_2f1(a, b, c, x), microseconds = false)
     println("Running Levin-Type")
-    levin = average_time.(1, -9/2, -9/4, z, weniger_2f1, microseconds = false)
+    levin = average_time.(a, b, c, z, weniger_2f1, microseconds = false)
     println("Running Johansson")
-    johansson = average_time.(1, -9/2, -9/4, z, (a, b, c, z) -> johansson_2f1(a, b, c, z; bits = 53), microseconds = false)
+    johansson = average_time.(a, b, c, z, (a, b, c, z) -> johansson_2f1(a, b, c, z; bits = 53), microseconds = false)
     println("Running Mathematica")
-    mathematica = average_time.(1, -9/2, -9/4, z, mathematica_2f1, microseconds = false)
+    mathematica = average_time.(a, b, c, z, mathematica_2f1, microseconds = false)
 
     mintime = minimum([taylor levin johansson mathematica])
     maxtime = maximum([taylor levin johansson mathematica])
     cbounds = (mintime, maxtime)
 
     tp = heatmap(z.real, z.imag, taylor; colorscale = log10, colorrange = cbounds)
-    tp.axis.title = L"Taylor Method Times for ${_2}F_1(1, -9/2; -9/4; z)$"
+    tp.axis.title = latexstring("Taylor Method Times for \${_2}F_1($(a), $(b), $(c); z)\$")
     tp.axis.xlabel = L"\mathrm{Re}(z)"
     tp.axis.ylabel = L"\mathrm{Im}(z)"
     Colorbar(tp.figure[1,2], tp.plot)
@@ -108,7 +110,7 @@ function levin_timings()
     resize_to_layout!(tp.figure)
 
     lp = heatmap(z.real, z.imag, levin; colorscale = log10, colorrange = cbounds)
-    lp.axis.title = L"Levin-Type Times for ${_2}F_1(1, -9/2; -9/4; z)$"
+    lp.axis.title = latexstring("Levin-Type Times for \${_2}F_1($(a), $(b), $(c); z)\$")
     lp.axis.xlabel = L"\mathrm{Re}(z)"
     lp.axis.ylabel = L"\mathrm{Im}(z)"
     Colorbar(lp.figure[1,2], lp.plot)
@@ -116,7 +118,7 @@ function levin_timings()
     resize_to_layout!(lp.figure)
 
     jp = heatmap(z.real, z.imag, johansson; colorscale = log10, colorrange = cbounds)
-    jp.axis.title = L"Johansson Times for ${_2}F_1(1, -9/2; -9/4; z)$"
+    jp.axis.title = latexstring("Johansson Times for \${_2}F_1($(a), $(b), $(c); z)\$")
     jp.axis.xlabel = L"\mathrm{Re}(z)"
     jp.axis.ylabel = L"\mathrm{Im}(z)"
     Colorbar(jp.figure[1,2], jp.plot)
@@ -124,7 +126,7 @@ function levin_timings()
     resize_to_layout!(jp.figure)
 
     mp = heatmap(z.real, z.imag, mathematica; colorscale = log10, colorrange = cbounds)
-    mp.axis.title = L"Mathematica Times for ${_2}F_1(1, -9/2; -9/4; z)$"
+    mp.axis.title = latexstring("Mathematica Times for \${_2}F_1($(a), $(b), $(c); z)\$")
     mp.axis.xlabel = L"\mathrm{Re}(z)"
     mp.axis.ylabel = L"\mathrm{Im}(z)"
     Colorbar(mp.figure[1,2], mp.plot)
@@ -143,17 +145,18 @@ function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, rng = 10, seed = 99
     # bs = b .+ 2rng * (randn(ComplexF64, N) .- .5(1 + im))
     # cs = c .+ 2rng * (randn(ComplexF64, N) .- .5(1 + im))
     # zs = z .+ 2rng * (randn(ComplexF64, N) .- .5(1 + im))
-    as = a .+ 30 * randn(ComplexF64, N)
-    bs = b .+ 30 * randn(ComplexF64, N)
-    cs = c .+ 30 * randn(ComplexF64, N)
-    zs = z .+ 3  * randn(ComplexF64, N)
+    as = a .+ 20 * randn(ComplexF64, N)
+    bs = b .+ 20 * randn(ComplexF64, N)
+    cs = c .+ 20 * randn(ComplexF64, N)
+    zs = z .+ 5  * randn(ComplexF64, N)
     collected_tests = [(a,b,c,z) for (a,b,c,z) ∈ zip(as, bs, cs, zs)]
 
     # Evaluate each test for accuracy 
     print("Running accuracy tests... ")
     true_vals        = [johansson_2f1(test...,
                                      bits = 512) for test ∈ collected_tests]
-    taylor_vals      = [taylor_2f1(test...)      for test ∈ collected_tests]
+    # taylor_vals      = [taylor_2f1(test...)      for test ∈ collected_tests]
+    taylor_vals      = [_2f1(test...)      for test ∈ collected_tests]
     levin_vals       = [weniger_2f1(test...)     for test ∈ collected_tests]
     mathematica_vals = @suppress_err [mathematica_2f1(test...) for test ∈ collected_tests]
     johansson_vals   = [johansson_2f1(test...,
@@ -165,7 +168,8 @@ function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, rng = 10, seed = 99
     true_times        = [average_time(test..., (a,b,c,z) -> johansson_2f1(a,b,c,z, bits = 512))
                                                                 for test ∈ collected_tests]
     print("done\n\tTaylor... ")
-    taylor_times      = [average_time(test..., taylor_2f1)      for test ∈ collected_tests]
+    # taylor_times      = [average_time(test..., taylor_2f1)      for test ∈ collected_tests]
+    taylor_times      = [average_time(test..., _2f1)      for test ∈ collected_tests]
     print("done\n\tLevin... ")
     levin_times       = [average_time(test..., weniger_2f1)     for test ∈ collected_tests]
     print("done\n\tMathematica... ")
@@ -234,7 +238,7 @@ function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, rng = 10, seed = 99
 end
 
 # Used
-function count_errors(vals, true_values; good = 1e-14, fair = 1e-9, poor = 1e-1)
+function count_errors(vals, true_values; good = 1e-14, fair = 1e-9, poor = 1e-1)    
     goods = fairs = poors = fails = 0
 
     errs = abs.((vals - true_values) ./ true_values)
@@ -277,6 +281,54 @@ function average_time(a, b, c, z, f, N = 5; microseconds = true)
     end
 
     return time
+end
+
+# Used
+function mathematica_grid_error()
+    z = complex_square_grid(-2.5,2.5,300)
+    tru = johansson_2f1.(1.99,.9,2.9,z)
+    mathematica = mathematica_2f1.(1.99,.9,2.9,z)
+
+    err = abs.((mathematica - tru) ./ tru)
+    err[iszero.(err)] .= 1e-17
+
+    set_theme!(theme_latexfonts())
+    fig = Figure()
+    ax = Axis(fig[1,1], 
+              xlabel = L"\mathrm{Re}(z)",
+              ylabel = L"\mathrm{Im}(z)",
+              title = L"Mathematica Error in ${_2}F_1(1.99, 0.9; 2.9; z)$"
+             )
+
+    heatmap!(ax, z, err,
+             colorscale = log10
+            )
+    colsize!(fig.layout, 1, Aspect(1,1))
+    resize_to_layout!(fig)
+
+    return fig
+end
+
+function taylor_terms(a, b, c, z0, p, h)
+    coeffs = taylor_coefficients(a, b, c, z0, p)
+    cumsumalt = [Polynomial(coeffs[1:n])(h) for n ∈ 1:length(coeffs)]
+
+    terms = coeffs .* h.^(0:(p - 1))
+
+    fig = Figure()
+    axt = Axis(fig[1,1], ylabel = L"|S_n - P_n(h)|")
+    axs = Axis(fig[2,1], yscale = log10, ylabel = L"|S_n|")
+    axe = Axis(fig[3,1], yscale = log10, ylabel = L"\varepsilon(|S_n|)")
+    scatter!(axt, abs.(cumsum(terms) - cumsumalt))
+    scatter!(axs, abs.(cumsum(terms)), label = "Reg sum")
+    scatter!(axs, abs.(cumsumalt), label = "Pol sum")
+    scatter!(axe, abs.(terms), label = L"|a_n h^n|")
+    scatter!(axe, eps.(abs.(cumsum(terms))), label = L"\varepsilon(|S_n|)")
+    Legend(fig[2,2], axs)
+    Legend(fig[3,2], axe)
+    resize_to_layout!(fig)
+
+    return (fig, terms)
 end
 
 function slevinsky_comparison()
