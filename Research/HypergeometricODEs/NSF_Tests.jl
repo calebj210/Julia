@@ -2,7 +2,7 @@
 # Tests and graphics for the NSF Grant
 #
 # Author: Caleb Jacobs
-# DLM: January 30, 2025
+# DLM: February 3, 2025
 =#
 
 include("Plotting.jl")
@@ -11,6 +11,7 @@ include("PaperTests/Johansson2F1.jl")
 include("PaperTests/Slevinsky2F1.jl")
 include("../Gregory/HypergeometricGrid.jl")
 
+using ComplexVisuals
 using CairoMakie, LaTeXStrings
 using BenchmarkTools
 using Random
@@ -145,18 +146,18 @@ function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, rng = 10, seed = 99
     # bs = b .+ 2rng * (randn(ComplexF64, N) .- .5(1 + im))
     # cs = c .+ 2rng * (randn(ComplexF64, N) .- .5(1 + im))
     # zs = z .+ 2rng * (randn(ComplexF64, N) .- .5(1 + im))
-    as = a .+ 20 * randn(ComplexF64, N)
-    bs = b .+ 20 * randn(ComplexF64, N)
-    cs = c .+ 20 * randn(ComplexF64, N)
-    zs = z .+ 5  * randn(ComplexF64, N)
+    as = a .+ 30 * randn(ComplexF64, N)
+    bs = b .+ 30 * randn(ComplexF64, N)
+    cs = c .+ 30 * randn(ComplexF64, N)
+    zs = z .+ 4  * randn(ComplexF64, N)
     collected_tests = [(a,b,c,z) for (a,b,c,z) ∈ zip(as, bs, cs, zs)]
 
     # Evaluate each test for accuracy 
     print("Running accuracy tests... ")
     true_vals        = [johansson_2f1(test...,
                                      bits = 512) for test ∈ collected_tests]
-    # taylor_vals      = [taylor_2f1(test...)      for test ∈ collected_tests]
-    taylor_vals      = [_2f1(test...)      for test ∈ collected_tests]
+    taylor_vals      = [taylor_2f1(test...)      for test ∈ collected_tests]
+    trans_vals       = [_2f1(test...)      for test ∈ collected_tests]
     levin_vals       = [weniger_2f1(test...)     for test ∈ collected_tests]
     mathematica_vals = @suppress_err [mathematica_2f1(test...) for test ∈ collected_tests]
     johansson_vals   = [johansson_2f1(test...,
@@ -168,8 +169,9 @@ function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, rng = 10, seed = 99
     true_times        = [average_time(test..., (a,b,c,z) -> johansson_2f1(a,b,c,z, bits = 512))
                                                                 for test ∈ collected_tests]
     print("done\n\tTaylor... ")
-    # taylor_times      = [average_time(test..., taylor_2f1)      for test ∈ collected_tests]
-    taylor_times      = [average_time(test..., _2f1)      for test ∈ collected_tests]
+    taylor_times      = [average_time(test..., taylor_2f1)      for test ∈ collected_tests]
+    print("done\n\tTaylor Transform... ")
+    trans_times       = [average_time(test..., _2f1)      for test ∈ collected_tests]
     print("done\n\tLevin... ")
     levin_times       = [average_time(test..., weniger_2f1)     for test ∈ collected_tests]
     print("done\n\tMathematica... ")
@@ -186,6 +188,9 @@ function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, rng = 10, seed = 99
     taylor      = merge((; avg = round(mean(taylor_times), sigdigits = 2), 
                            med = round(median(taylor_times), sigdigits = 2)), 
                            count_errors(taylor_vals, true_vals))
+    trans       = merge((; avg = round(mean(trans_times), sigdigits = 2), 
+                           med = round(median(trans_times), sigdigits = 2)), 
+                           count_errors(trans_vals, true_vals))
     levin       = merge((; avg = round(mean(levin_times), sigdigits = 2), 
                            med = round(median(levin_times), sigdigits = 2)), 
                            count_errors(levin_vals, true_vals))
@@ -199,6 +204,10 @@ function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, rng = 10, seed = 99
     taylor_error = abs.((taylor_vals - true_vals) ./ true_vals)
     taylor_error[isnan.(taylor_error) .|| isinf.(taylor_error) .|| taylor_error .> 1] .= 1
     taylor_error[taylor_error .<= 1e-17] .= 1e-17
+
+    trans_error = abs.((trans_vals - true_vals) ./ true_vals)
+    trans_error[isnan.(trans_error) .|| isinf.(trans_error) .|| trans_error .> 1] .= 1
+    trans_error[trans_error .<= 1e-17] .= 1e-17
 
     levin_error = abs.((levin_vals - true_vals) ./ true_vals)
     levin_error[isnan.(levin_error) .|| isinf.(levin_error) .|| levin_error .> 1] .= 1
@@ -216,25 +225,33 @@ function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, rng = 10, seed = 99
     # Display result
     print("True:        "); print_error_and_time(true_jo)
     print("Taylor:      "); print_error_and_time(taylor)
+    print("Trans:       "); print_error_and_time(trans)
     print("Levin:       "); print_error_and_time(levin)
     print("Johansson:   "); print_error_and_time(johansson)
     print("Mathematica: "); print_error_and_time(mathematica)
 
     fig = Figure()
-    axt = Axis(fig[1,1], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Taylor")
-    axl = Axis(fig[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Levin-Type")
-    axj = Axis(fig[2,1], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Johansson")
-    axm = Axis(fig[2,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Mathematica")
+    top = GridLayout(fig[1,1])
+    bot = GridLayout(fig[2,1])
+    axt = Axis(top[1,1], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Taylor")
+    axr = Axis(top[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Taylor Transformations")
+    axl = Axis(bot[1,1], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Levin-Type")
+    axj = Axis(bot[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Johansson")
+    axm = Axis(bot[1,3], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Mathematica")
 
     bin = 10.0 .^ (-17:1)
     # bin = 10.0 .^ (-17:2:1)
 
     hist!(axt, taylor_error,      bins = bin, color = :values, normalization = :probability)
+    hist!(axr, trans_error,       bins = bin, color = :values, normalization = :probability)
     hist!(axl, levin_error,       bins = bin, color = :values, normalization = :probability)
     hist!(axj, johansson_error,   bins = bin, color = :values, normalization = :probability)
     hist!(axm, mathematica_error, bins = bin, color = :values, normalization = :probability)
+    
+    rowsize!(fig.layout, 1, Auto(1))
+    rowsize!(fig.layout, 2, Auto(1))
 
-    return (;taylor, levin, mathematica, johansson, fig)
+    return (;taylor, trans, levin, mathematica, johansson, fig)
 end
 
 # Used
@@ -285,8 +302,8 @@ end
 
 # Used
 function mathematica_grid_error()
-    z = complex_square_grid(-2.5,2.5,300)
-    tru = johansson_2f1.(1.99,.9,2.9,z)
+    z = complex_square_grid(2.5,300)
+    tru = johansson_2f1.(1.99,.9,2.9,z,bits = 256)
     mathematica = mathematica_2f1.(1.99,.9,2.9,z)
 
     err = abs.((mathematica - tru) ./ tru)
@@ -300,9 +317,10 @@ function mathematica_grid_error()
               title = L"Mathematica Error in ${_2}F_1(1.99, 0.9; 2.9; z)$"
              )
 
-    heatmap!(ax, z, err,
+    plt = heatmap!(ax, z, err,
              colorscale = log10
             )
+    Colorbar(fig[1,2], plt)
     colsize!(fig.layout, 1, Aspect(1,1))
     resize_to_layout!(fig)
 
