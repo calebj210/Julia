@@ -2,7 +2,7 @@
 #   ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: January 30, 2025
+# DLM: February 4, 2025
 =#
 
 using Polynomials
@@ -96,17 +96,19 @@ function recursive_2f1(a, b, c, z0, f0, h, N)
     return [S, dS]
 end
 
-function taylor_2f1(a, b, c, z::Number; H = Inf, N = 1000, order = 1000)
-    if abs(z) <= 0.3
-    # tmp = min(2abs(c / (a * b)), 0.3)
-    # if abs(z) <= tmp
+function taylor_2f1(a, b, c, z::Number; H = Inf, N = 1000, order = 1000, cutoff = 0.3)
+    cutoff = tanh(abs(c) / 50)
+    cutoff += 1 + tanh(-abs(a / 35))
+    cutoff += 1 + tanh(-abs(b / 35))
+    cutoff /= 3
+
+    if abs(z) <= cutoff
         return maclaurin_2f1(a, b, c, z, N)[1]
     end
 
-    # z0 = sign(z) * tmp
-    z0 = sign(z) * .3
+    z0 = sign(z) * cutoff
     if real(z) > 1
-        z0 += imag(z) > 0 ? 0.3im : -0.3im
+        z0 = imag(z) > 0 ? im * cutoff : -im * cutoff
     end
     dir = sign(z - z0)
 
@@ -116,8 +118,8 @@ function taylor_2f1(a, b, c, z::Number; H = Inf, N = 1000, order = 1000)
     n = 1
     while !isapprox(zn, z) && n < N
         r = abs(zn - 1)
-        h = dir * min(r / exp(2), abs(z - zn), H)           # Step size based on Jorba and Zou 2005
-        # h = dir * min(2abs(1/fn[2]), r / exp(2), abs(z - zn), H)
+        h = dir * min(cutoff * r / exp(2), abs(z - zn), H)           # Step size based on Jorba and Zou 2005
+        # h = dir * min(r / exp(2), abs(z - zn), H)           # Step size based on Jorba and Zou 2005
 
         fn = recursive_2f1(a, b, c, zn, fn, h, order + 1)   # Order increase so derivative hits the desired order
 
@@ -131,7 +133,7 @@ end
 function _2f1(a, b, c, z::Number; H = Inf, N = 1000, order = 1000)
     if real(z) >= 0.5 && abs(1 - z) <= 1
         if isinteger(c - a - b)
-            # f = int_abc_2f1(a, b, c, z)
+            f = int_abc_2f1(a, b, c, z)
             f = taylor_2f1(a, b, c, z, H = H, N = N, order = order)
         else
             f1 = taylor_2f1(a, a - c + 1, a + b - c + 1, 1 - 1 / z, H = H, N = N, order = order)
@@ -144,7 +146,7 @@ function _2f1(a, b, c, z::Number; H = Inf, N = 1000, order = 1000)
         end
     elseif  abs(z) >= 3 && abs(1 - z) >= 3
         if isinteger(b - a)
-            # f = int_ab_2f1(a, b, c, z)
+            f = int_ab_2f1(a, b, c, z)
             f = taylor_2f1(a, b, c, z, H = H, N = N, order = order)
         else
             f1 = taylor_2f1(a, a - c + 1,  a - b + 1, 1 / z, H = H, N = N, order = order)

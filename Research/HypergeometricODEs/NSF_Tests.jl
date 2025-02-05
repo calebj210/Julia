@@ -2,11 +2,11 @@
 # Tests and graphics for the NSF Grant
 #
 # Author: Caleb Jacobs
-# DLM: February 3, 2025
+# DLM: February 4, 2025
 =#
 
 include("Plotting.jl")
-include("pFq.jl")
+includet("pFq.jl")
 include("PaperTests/Johansson2F1.jl")
 include("PaperTests/Slevinsky2F1.jl")
 include("../Gregory/HypergeometricGrid.jl")
@@ -137,54 +137,60 @@ function levin_timings(a = 1, b = -9/2, c = -9/4)
     return (; taylor = tp, levin = lp, johansson = jp, mathematica = mp)
 end
 
+# Used
+function complexrand(N)
+    vals = -(1 + im) .+ 2rand(ComplexF64, N)
+end
 # Used Test 3
-function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, rng = 10, seed = 997)
+function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 30, brng = 30, crng = 30, zrng = 1, seed = 997)
     Random.seed!(seed)
 
     # Setup random tests
-    # as = a .+ 2rng * (randn(ComplexF64, N) .- .5(1 + im))
-    # bs = b .+ 2rng * (randn(ComplexF64, N) .- .5(1 + im))
-    # cs = c .+ 2rng * (randn(ComplexF64, N) .- .5(1 + im))
-    # zs = z .+ 2rng * (randn(ComplexF64, N) .- .5(1 + im))
-    as = a .+ 30 * randn(ComplexF64, N)
-    bs = b .+ 30 * randn(ComplexF64, N)
-    cs = c .+ 30 * randn(ComplexF64, N)
-    zs = z .+ 4  * randn(ComplexF64, N)
-    collected_tests = [(a,b,c,z) for (a,b,c,z) ∈ zip(as, bs, cs, zs)]
+    as = a .+ arng * complexrand(N)
+    bs = b .+ brng * complexrand(N)
+    cs = c .+ crng * complexrand(N)
+    zs = z .+ zrng * complexrand(N)
+
+    collected_tests = Vector{NTuple{4, ComplexF64}}()
+    true_vals = Vector{ComplexF64}()
+    for (a,b,c,z) ∈ zip(as, bs, cs, zs)
+        val = arb_2f1(ArbComplex.((a,b,c,z), bits = 512)...)
+        if isnan(val) || isinf(val) #|| abs(val) >= 1e16 || abs(val) <= 1e-16
+            continue
+        end
+        push!(collected_tests, (a,b,c,z))
+        push!(true_vals, convert(ComplexF64, val))
+    end
+    println("Test Count: $(length(collected_tests))")
 
     # Evaluate each test for accuracy 
     print("Running accuracy tests... ")
-    true_vals        = [johansson_2f1(test...,
-                                     bits = 512) for test ∈ collected_tests]
     taylor_vals      = [taylor_2f1(test...)      for test ∈ collected_tests]
     trans_vals       = [_2f1(test...)      for test ∈ collected_tests]
     levin_vals       = [weniger_2f1(test...)     for test ∈ collected_tests]
-    mathematica_vals = @suppress_err [mathematica_2f1(test...) for test ∈ collected_tests]
     johansson_vals   = [johansson_2f1(test...,
                                      bits = 53)  for test ∈ collected_tests]
+    # mathematica_vals = @suppress_err [mathematica_2f1(test...) for test ∈ collected_tests]
     print("done\nRunning time tests...\n")
 
     # Timings of each test
-    print("\tTrue... ")
-    true_times        = [average_time(test..., (a,b,c,z) -> johansson_2f1(a,b,c,z, bits = 512))
-                                                                for test ∈ collected_tests]
-    print("done\n\tTaylor... ")
+    print("\tTaylor... ")
     taylor_times      = [average_time(test..., taylor_2f1)      for test ∈ collected_tests]
     print("done\n\tTaylor Transform... ")
     trans_times       = [average_time(test..., _2f1)      for test ∈ collected_tests]
     print("done\n\tLevin... ")
     levin_times       = [average_time(test..., weniger_2f1)     for test ∈ collected_tests]
-    print("done\n\tMathematica... ")
-    mathematica_times = @suppress_err [average_time(test..., mathematica_2f1) for test ∈ collected_tests]
     print("done\n\tJohansson... ")
     johansson_times   = [average_time(test..., (a,b,c,z) -> 
                              johansson_2f1(a,b,c,z; bits = 53)) for test ∈ collected_tests]
+    # print("done\n\tMathematica... ")
+    # mathematica_times = @suppress_err [average_time(test..., mathematica_2f1) for test ∈ collected_tests]
     println("done")
 
     # Structure data
-    true_jo     = merge((; avg = round(mean(true_times), sigdigits = 2), 
-                           med = round(median(true_times), sigdigits = 2)), 
-                           count_errors(true_vals, true_vals))
+    # true_jo     = merge((; avg = round(mean(true_times), sigdigits = 2), 
+    #                        med = round(median(true_times), sigdigits = 2)), 
+    #                        count_errors(true_vals, true_vals))
     taylor      = merge((; avg = round(mean(taylor_times), sigdigits = 2), 
                            med = round(median(taylor_times), sigdigits = 2)), 
                            count_errors(taylor_vals, true_vals))
@@ -197,13 +203,15 @@ function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, rng = 10, seed = 99
     johansson   = merge((; avg = round(mean(johansson_times), sigdigits = 2), 
                            med = round(median(johansson_times), sigdigits = 2)), 
                            count_errors(johansson_vals, true_vals))
-    mathematica = merge((; avg = round(mean(mathematica_times), sigdigits = 2), 
-                           med = round(median(mathematica_times), sigdigits = 2)), 
-                           count_errors(mathematica_vals, true_vals))
+    # mathematica = merge((; avg = round(mean(mathematica_times), sigdigits = 2), 
+                           # med = round(median(mathematica_times), sigdigits = 2)), 
+                           # count_errors(mathematica_vals, true_vals))
 
     taylor_error = abs.((taylor_vals - true_vals) ./ true_vals)
     taylor_error[isnan.(taylor_error) .|| isinf.(taylor_error) .|| taylor_error .> 1] .= 1
     taylor_error[taylor_error .<= 1e-17] .= 1e-17
+
+    # return collected_tests[findall(isone,taylor_error)]
 
     trans_error = abs.((trans_vals - true_vals) ./ true_vals)
     trans_error[isnan.(trans_error) .|| isinf.(trans_error) .|| trans_error .> 1] .= 1
@@ -217,18 +225,17 @@ function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, rng = 10, seed = 99
     johansson_error[isnan.(johansson_error) .|| isinf.(johansson_error) .|| johansson_error .> 1] .= 1
     johansson_error[johansson_error .<= 1e-17] .= 1e-17
 
-    mathematica_error = abs.((mathematica_vals - true_vals) ./ true_vals)
-    mathematica_error[isnan.(mathematica_error) .|| isinf.(mathematica_error) .|| mathematica_error .> 1] .= 1
-    mathematica_error[mathematica_error .<= 1e-17] .= 1e-17
-
+    # mathematica_error = abs.((mathematica_vals - true_vals) ./ true_vals)
+    # mathematica_error[isnan.(mathematica_error) .|| isinf.(mathematica_error) .|| mathematica_error .> 1] .= 1
+    # mathematica_error[mathematica_error .<= 1e-17] .= 1e-17
 
     # Display result
-    print("True:        "); print_error_and_time(true_jo)
+    # print("True:        "); print_error_and_time(true_jo)
     print("Taylor:      "); print_error_and_time(taylor)
     print("Trans:       "); print_error_and_time(trans)
     print("Levin:       "); print_error_and_time(levin)
     print("Johansson:   "); print_error_and_time(johansson)
-    print("Mathematica: "); print_error_and_time(mathematica)
+    # print("Mathematica: "); print_error_and_time(mathematica)
 
     fig = Figure()
     top = GridLayout(fig[1,1])
@@ -237,7 +244,7 @@ function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, rng = 10, seed = 99
     axr = Axis(top[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Taylor Transformations")
     axl = Axis(bot[1,1], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Levin-Type")
     axj = Axis(bot[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Johansson")
-    axm = Axis(bot[1,3], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Mathematica")
+    # axm = Axis(bot[1,3], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Mathematica")
 
     bin = 10.0 .^ (-17:1)
     # bin = 10.0 .^ (-17:2:1)
@@ -246,12 +253,12 @@ function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, rng = 10, seed = 99
     hist!(axr, trans_error,       bins = bin, color = :values, normalization = :probability)
     hist!(axl, levin_error,       bins = bin, color = :values, normalization = :probability)
     hist!(axj, johansson_error,   bins = bin, color = :values, normalization = :probability)
-    hist!(axm, mathematica_error, bins = bin, color = :values, normalization = :probability)
+    # hist!(axm, mathematica_error, bins = bin, color = :values, normalization = :probability)
     
     rowsize!(fig.layout, 1, Auto(1))
     rowsize!(fig.layout, 2, Auto(1))
 
-    return (;taylor, trans, levin, mathematica, johansson, fig)
+    return fig
 end
 
 # Used
