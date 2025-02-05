@@ -97,18 +97,18 @@ function recursive_2f1(a, b, c, z0, f0, h, N)
 end
 
 function taylor_2f1(a, b, c, z::Number; H = Inf, N = 1000, order = 1000, cutoff = 0.3)
-    cutoff = tanh(abs(c) / 50)
-    cutoff += 1 + tanh(-abs(a / 35))
-    cutoff += 1 + tanh(-abs(b / 35))
-    cutoff /= 3
-
+    # cutoff = tanh(abs(c) / 50)
+    # cutoff += 1 + tanh(-abs(a / 35))
+    # cutoff += 1 + tanh(-abs(b / 35))
+    # cutoff /= 3
     if abs(z) <= cutoff
         return maclaurin_2f1(a, b, c, z, N)[1]
     end
 
-    z0 = sign(z) * cutoff
     if real(z) > 1
         z0 = imag(z) > 0 ? im * cutoff : -im * cutoff
+    else
+        z0 = sign(z) * cutoff
     end
     dir = sign(z - z0)
 
@@ -118,8 +118,8 @@ function taylor_2f1(a, b, c, z::Number; H = Inf, N = 1000, order = 1000, cutoff 
     n = 1
     while !isapprox(zn, z) && n < N
         r = abs(zn - 1)
-        h = dir * min(cutoff * r / exp(2), abs(z - zn), H)           # Step size based on Jorba and Zou 2005
-        # h = dir * min(r / exp(2), abs(z - zn), H)           # Step size based on Jorba and Zou 2005
+        # h = dir * min(cutoff * r / exp(2), abs(z - zn), H)           # Step size based on Jorba and Zou 2005
+        h = dir * min(r / exp(2), abs(z - zn), H)           # Step size based on Jorba and Zou 2005
 
         fn = recursive_2f1(a, b, c, zn, fn, h, order + 1)   # Order increase so derivative hits the desired order
 

@@ -2,7 +2,7 @@
 # Tests and graphics for the NSF Grant
 #
 # Author: Caleb Jacobs
-# DLM: February 4, 2025
+# DLM: February 5, 2025
 =#
 
 include("Plotting.jl")
@@ -334,24 +334,121 @@ function mathematica_grid_error()
     return fig
 end
 
-function taylor_terms(a, b, c, z0, p, h)
+function random_failed_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 30, brng = 30, crng = 30, zrng = 1, seed = 997)
+    Random.seed!(seed)
+
+    # Setup random tests
+    as = a .+ arng * complexrand(N)
+    bs = b .+ brng * complexrand(N)
+    cs = c .+ crng * complexrand(N)
+    zs = z .+ zrng * complexrand(N)
+
+    print("Getting tests... ")
+    tests = Vector{NTuple{4, ComplexF64}}()
+    tru = Vector{ComplexF64}()
+    for (a,b,c,z) ∈ zip(as, bs, cs, zs)
+        val = arb_2f1(ArbComplex.((a,b,c,z), bits = 512)...)
+        if isnan(val) || isinf(val)
+            continue
+        end
+        push!(tests, (a,b,c,z))
+        push!(tru, convert(ComplexF64, val))
+    end
+    println("done\nTest Count: $(length(tests))")
+
+    # Evaluate each test for accuracy 
+    println("\nRunning accuracy tests:")
+    print("\tTaylor: ")
+    ta = [taylor_2f1(test...)               for test ∈ tests]
+    tae = clean_error.(ta, tru)
+    taf = findall(isone, tae)
+    print("done\n\tTransforms: ")
+    tr = [_2f1(test...)                     for test ∈ tests]
+    tre = clean_error.(tr, tru)
+    trf = findall(isone, tre)
+    print("done\n\tLevin: ")
+    le = [weniger_2f1(test...)              for test ∈ tests]
+    lee = clean_error.(le, tru)
+    lef = findall(isone, lee)
+    print("done\n\tJohansson: ")
+    jo = [johansson_2f1(test..., bits = 53) for test ∈ tests]
+    joe = clean_error.(jo, tru)
+    jof = findall(isone, joe)
+    print("done\n\tMathematica: ")
+    ma = [mathematica_2f1(test...)          for test ∈ tests]
+    mae = clean_error.(ma, tru)
+    maf = findall(isone, mae)
+    println("done")
+    
+    print("Collecting tests: ")
+    cf = intersect(taf, trf, lef, jof, maf) # Collected failed indices
+    fails = (;taf,trf,lef,jof,maf,cf)
+    println("done")
+
+    # Generate histograms
+    fig = Figure()
+    top = GridLayout(fig[1,1])
+    bot = GridLayout(fig[2,1])
+    axt = Axis(top[1,1], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Taylor")
+    axr = Axis(top[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Taylor Transformations")
+    axl = Axis(bot[1,1], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Levin-Type")
+    axj = Axis(bot[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Johansson")
+    axm = Axis(bot[1,3], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Mathematica")
+
+    bin = 10.0 .^ (-17:1)
+
+    hist!(axt, tae, bins = bin, color = :values, normalization = :probability)
+    hist!(axr, tre, bins = bin, color = :values, normalization = :probability)
+    hist!(axl, lee, bins = bin, color = :values, normalization = :probability)
+    hist!(axj, joe, bins = bin, color = :values, normalization = :probability)
+    hist!(axm, mae, bins = bin, color = :values, normalization = :probability)
+    
+    rowsize!(fig.layout, 1, Auto(1))
+    rowsize!(fig.layout, 2, Auto(1))
+
+    return (; fig, fails, tests)
+end
+
+# Used
+function clean_error(f,t)
+    err = abs.((f - t) ./ t)
+
+    if err > 1 || isnan(err) || isinf(err)
+        err = 1
+    elseif err <= 1e-17
+        err = 1e-17
+    end
+
+    return err
+end
+
+function taylor_terms(a, b, c, z, p)
+    z0 = .1 * sign(z)
+    h = .1(z - z0) / abs(z - z0) * abs(z0 - 1) / exp(2)
+
     coeffs = taylor_coefficients(a, b, c, z0, p)
-    cumsumalt = [Polynomial(coeffs[1:n])(h) for n ∈ 1:length(coeffs)]
 
     terms = coeffs .* h.^(0:(p - 1))
 
     fig = Figure()
-    axt = Axis(fig[1,1], ylabel = L"|S_n - P_n(h)|")
-    axs = Axis(fig[2,1], yscale = log10, ylabel = L"|S_n|")
-    axe = Axis(fig[3,1], yscale = log10, ylabel = L"\varepsilon(|S_n|)")
-    scatter!(axt, abs.(cumsum(terms) - cumsumalt))
-    scatter!(axs, abs.(cumsum(terms)), label = "Reg sum")
-    scatter!(axs, abs.(cumsumalt), label = "Pol sum")
-    scatter!(axe, abs.(terms), label = L"|a_n h^n|")
-    scatter!(axe, eps.(abs.(cumsum(terms))), label = L"\varepsilon(|S_n|)")
+    axt = Axis(fig[1,1], yscale = log10)
+    axs = Axis(fig[2,1], yscale = log10)
+    axe = Axis(fig[3,1], yscale = log10)
+    lines!(axt, abs.(coeffs), label = L"|c_n|")
+    lines!(axs, abs.(cumsum(terms)), label = L"|S_n|")
+    lines!(axe, abs.(terms), label = L"|a_n h^n|")
+    lines!(axe, eps.(abs.(cumsum(terms))), label = L"\varepsilon(|S_n|)")
+    Legend(fig[1,2], axt)
     Legend(fig[2,2], axs)
     Legend(fig[3,2], axe)
     resize_to_layout!(fig)
+
+    init = maclaurin_2f1(a,b,c,z0)[1]
+    tru_init = johansson_2f1(a,b,c,z0)
+    err = abs.((init - tru_init) ./ tru_init)
+
+    print("Test (a,b,c,z):\n\ta = $(a)\n\tb = $(b)\n\tc = $(c)\n\tz = $(z)\n")
+    print("Initialization error = $(err)\n")
 
     return (fig, terms)
 end
