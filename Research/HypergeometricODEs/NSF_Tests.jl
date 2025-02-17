@@ -2,7 +2,7 @@
 # Tests and graphics for the NSF Grant
 #
 # Author: Caleb Jacobs
-# DLM: February 5, 2025
+# DLM: February 12, 2025
 =#
 
 include("Plotting.jl")
@@ -361,28 +361,29 @@ function random_failed_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 30, b
     print("\tTaylor: ")
     ta = [taylor_2f1(test...)               for test ∈ tests]
     tae = clean_error.(ta, tru)
-    taf = findall(isone, tae)
+    taf = tests[isone.(tae)]
     print("done\n\tTransforms: ")
     tr = [_2f1(test...)                     for test ∈ tests]
     tre = clean_error.(tr, tru)
-    trf = findall(isone, tre)
+    trf = tests[isone.(tre)]
     print("done\n\tLevin: ")
     le = [weniger_2f1(test...)              for test ∈ tests]
     lee = clean_error.(le, tru)
-    lef = findall(isone, lee)
+    lef = tests[isone.(lee)]
     print("done\n\tJohansson: ")
     jo = [johansson_2f1(test..., bits = 53) for test ∈ tests]
     joe = clean_error.(jo, tru)
-    jof = findall(isone, joe)
-    print("done\n\tMathematica: ")
-    ma = [mathematica_2f1(test...)          for test ∈ tests]
-    mae = clean_error.(ma, tru)
-    maf = findall(isone, mae)
+    jof = tests[isone.(joe)]
+    # print("done\n\tMathematica: ")
+    # ma = [mathematica_2f1(test...)          for test ∈ tests]
+    # mae = clean_error.(ma, tru)
+    # maf = tests[isone.(mae)]
     println("done")
     
     print("Collecting tests: ")
-    cf = intersect(taf, trf, lef, jof, maf) # Collected failed indices
-    fails = (;taf,trf,lef,jof,maf,cf)
+    # cf = intersect(taf, trf, lef, jof, maf) # Collected failed indices
+    # fails = (;taf,trf,lef,jof,maf,cf)
+    fls = taf
     println("done")
 
     # Generate histograms
@@ -393,7 +394,7 @@ function random_failed_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 30, b
     axr = Axis(top[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Taylor Transformations")
     axl = Axis(bot[1,1], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Levin-Type")
     axj = Axis(bot[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Johansson")
-    axm = Axis(bot[1,3], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Mathematica")
+    # axm = Axis(bot[1,3], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Mathematica")
 
     bin = 10.0 .^ (-17:1)
 
@@ -401,12 +402,13 @@ function random_failed_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 30, b
     hist!(axr, tre, bins = bin, color = :values, normalization = :probability)
     hist!(axl, lee, bins = bin, color = :values, normalization = :probability)
     hist!(axj, joe, bins = bin, color = :values, normalization = :probability)
-    hist!(axm, mae, bins = bin, color = :values, normalization = :probability)
+    # hist!(axm, mae, bins = bin, color = :values, normalization = :probability)
     
     rowsize!(fig.layout, 1, Auto(1))
     rowsize!(fig.layout, 2, Auto(1))
 
-    return (; fig, fails, tests)
+    # return (; fig, fails = fails.taf)
+    return (; fig, fls)
 end
 
 # Used
@@ -422,9 +424,10 @@ function clean_error(f,t)
     return err
 end
 
-function taylor_terms(a, b, c, z, p)
-    z0 = .1 * sign(z)
-    h = .1(z - z0) / abs(z - z0) * abs(z0 - 1) / exp(2)
+function taylor_terms(a, b, c, z, p, cutoff = .3)
+    cutoff = min(abs(c / (3 + a + b)), .7)
+    z0 = cutoff * sign(z)
+    h = cutoff * (z - z0) / abs(z - z0) * abs(z0 - 1) / exp(2)
 
     coeffs = taylor_coefficients(a, b, c, z0, p)
 
@@ -434,7 +437,7 @@ function taylor_terms(a, b, c, z, p)
     axt = Axis(fig[1,1], yscale = log10)
     axs = Axis(fig[2,1], yscale = log10)
     axe = Axis(fig[3,1], yscale = log10)
-    lines!(axt, abs.(coeffs), label = L"|c_n|")
+    lines!(axt, abs.(coeffs), label = L"|a_n|")
     lines!(axs, abs.(cumsum(terms)), label = L"|S_n|")
     lines!(axe, abs.(terms), label = L"|a_n h^n|")
     lines!(axe, eps.(abs.(cumsum(terms))), label = L"\varepsilon(|S_n|)")
@@ -444,7 +447,7 @@ function taylor_terms(a, b, c, z, p)
     resize_to_layout!(fig)
 
     init = maclaurin_2f1(a,b,c,z0)[1]
-    tru_init = johansson_2f1(a,b,c,z0)
+    tru_init = johansson_2f1(a,b,c,z0,bits = 1024)
     err = abs.((init - tru_init) ./ tru_init)
 
     print("Test (a,b,c,z):\n\ta = $(a)\n\tb = $(b)\n\tc = $(c)\n\tz = $(z)\n")

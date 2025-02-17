@@ -5,10 +5,10 @@
 # DLM: February 4, 2025
 =#
 
-using Polynomials
-using Polynomials.RationalFunctionFit: pade_fit
+# using Polynomials
+# using Polynomials.RationalFunctionFit: pade_fit
 
-using MathLink, SparseArrays
+# using MathLink, SparseArrays
 using SpecialFunctions
 using ArbNumerics: gamma, hypergeometric_2F1 as arb_2f1, ArbComplex, ArbFloat
 import SpecialFunctions.gamma
@@ -20,7 +20,7 @@ end
 gamma(z::Complex{BigFloat}) = gamma(ArbComplex(z))
 poc(a, n) = iszero(n) ? 1 : prod(a + k for k ∈ 0:n - 1)
 
-pade(p::AbstractPolynomial, m::Int, n::Int) = //(pade_fit(p, m, n)...)
+# pade(p::AbstractPolynomial, m::Int, n::Int) = //(pade_fit(p, m, n)...)
 
 mathematica_2f1(a, b, c, z) = 
     try 
@@ -36,9 +36,9 @@ mathematica_pfq(a, b, z) =
         Real(weval( W`N[HypergeometricPFQ[a,b,z]]`, a = a, b = b, z = z))
     end
 
-johansson_2f1(a, b, c, z; bits = 106)::ComplexF64 = arb_2f1(ArbComplex.((a, b, c, z), bits = bits)...)
+johansson_2f1(a, b, c, z; bits = 512)::ComplexF64 = arb_2f1(ArbComplex.((a, b, c, z), bits = bits)...)
 
-function maclaurin_2f1(a, b, c, z, N = 1000)
+function maclaurin_2f1(a, b, c, z, N = 1000; tol = eps())
     S = zn = coeff = 1.0
     dS = 0.0
 
@@ -48,7 +48,8 @@ function maclaurin_2f1(a, b, c, z, N = 1000)
         dS += coeff * zn * n
         zn *= z
         val = coeff * zn
-        if abs(val) <= eps(abs(S))
+        if abs(val / S) <= tol
+        # if abs(val) <= eps(abs(S))
             break
         end
         S += val
@@ -57,7 +58,7 @@ function maclaurin_2f1(a, b, c, z, N = 1000)
     return [S, dS]
 end
 
-function recursive_2f1(a, b, c, z0, f0, h, N)
+function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
     (a0, a1) = f0
 
     # 10 flop optimization for 3-term recurrence
@@ -75,8 +76,10 @@ function recursive_2f1(a, b, c, z0, f0, h, N)
         dS += coeff * hn * (n - 1)
         hn *= h
         val = coeff * hn
-        criteria = abs(val)
-        if criteria <= eps(abs(S))
+        # criteria = abs(val)
+        # if criteria <= eps(abs(S))
+        criteria = abs(val / S)
+        if criteria <= tol
             break
         elseif isnan(criteria) || isinf(criteria)
             # @warn "Method diverged"
@@ -96,11 +99,12 @@ function recursive_2f1(a, b, c, z0, f0, h, N)
     return [S, dS]
 end
 
-function taylor_2f1(a, b, c, z::Number; H = Inf, N = 1000, order = 1000, cutoff = 0.3)
+function taylor_2f1(a, b, c, z::Number; H = Inf, N = 1000, order = 1000, cutoff = 0.7)
     # cutoff = tanh(abs(c) / 50)
     # cutoff += 1 + tanh(-abs(a / 35))
     # cutoff += 1 + tanh(-abs(b / 35))
     # cutoff /= 3
+    cutoff = min(abs(c / (3 + a + b)), .7)
     if abs(z) <= cutoff
         return maclaurin_2f1(a, b, c, z, N)[1]
     end
@@ -118,8 +122,8 @@ function taylor_2f1(a, b, c, z::Number; H = Inf, N = 1000, order = 1000, cutoff 
     n = 1
     while !isapprox(zn, z) && n < N
         r = abs(zn - 1)
-        # h = dir * min(cutoff * r / exp(2), abs(z - zn), H)           # Step size based on Jorba and Zou 2005
-        h = dir * min(r / exp(2), abs(z - zn), H)           # Step size based on Jorba and Zou 2005
+        h = dir * min(cutoff * r / exp(2), abs(z - zn), cutoff * abs(z) / exp(2), H)        # Step size based on Jorba and Zou 2005
+        # h = dir * min(r / exp(2), abs(z - zn), H)           # Step size based on Jorba and Zou 2005
 
         fn = recursive_2f1(a, b, c, zn, fn, h, order + 1)   # Order increase so derivative hits the desired order
 
@@ -181,6 +185,16 @@ function taylor_coefficients(a,b,c,z0,p)
                    B0 * an[n - 1]) / C0)
     end
     return an
+end
+
+function As_Bs_and_Cs(a, b, c, z0, N = 50)
+    A(n) = -(a+n)*(b+n)
+    B(n) = (1+n)*(c-(1+a+b+2n)*z0+n)
+    C(n) = (1+n)*(2+n)*(1-z0)*z0
+
+    abcs = [A.(0:N) B.(0:N) C.(0:N)]
+
+    return abcs
 end
 
 """
@@ -283,19 +297,19 @@ function int_ab_2f1(a, b, c, z; N = 100, tol = 1e-15)
     return gamma(c) * (sum1 + sum2)
 end
 
-function sparse_taylor_coefficients(a, b, c, z0, h, c0, c1, N)
-    A(n) = -(n + a) * (n + b) * h^2
-    B(n) =  (n + 1) * (n + c  - (1 + a + b + 2n) * z0) * h
-    C(n) =  (n + 1) * (n + 2) * (1 - z0) * z0
-    s0 = c0
-    s1 = c1 * h
+# function sparse_taylor_coefficients(a, b, c, z0, h, c0, c1, N)
+#     A(n) = -(n + a) * (n + b) * h^2
+#     B(n) =  (n + 1) * (n + c  - (1 + a + b + 2n) * z0) * h
+#     C(n) =  (n + 1) * (n + 2) * (1 - z0) * z0
+#     s0 = c0
+#     s1 = c1 * h
 
-    As = A.(2:N - 2)
-    Bs = B.(1:N - 2)
-    Cs = C.(0:N - 2)
+#     As = A.(2:N - 2)
+#     Bs = B.(1:N - 2)
+#     Cs = C.(0:N - 2)
     
-    LHS = spdiagm(-2 => As, -1 => Bs, 0 => Cs)
-    RHS = sparsevec(Dict(1 => -A(0) * s0 - B(0) * s1, 2 => -A(1) * s1), N - 1)
+#     LHS = spdiagm(-2 => As, -1 => Bs, 0 => Cs)
+#     RHS = sparsevec(Dict(1 => -A(0) * s0 - B(0) * s1, 2 => -A(1) * s1), N - 1)
 
-    return [s0; s1; LHS\RHS]
-end
+#     return [s0; s1; LHS\RHS]
+# end
