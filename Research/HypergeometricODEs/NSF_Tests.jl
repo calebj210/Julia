@@ -2,7 +2,7 @@
 # Tests and graphics for the NSF Grant
 #
 # Author: Caleb Jacobs
-# DLM: February 12, 2025
+# DLM: February 18, 2025
 =#
 
 include("Plotting.jl")
@@ -140,6 +140,8 @@ end
 # Used
 function complexrand(N)
     vals = -(1 + im) .+ 2rand(ComplexF64, N)
+
+    return vals
 end
 # Used Test 3
 function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 30, brng = 30, crng = 30, zrng = 1, seed = 997)
@@ -334,83 +336,6 @@ function mathematica_grid_error()
     return fig
 end
 
-function random_failed_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 30, brng = 30, crng = 30, zrng = 1, seed = 997)
-    Random.seed!(seed)
-
-    # Setup random tests
-    as = a .+ arng * complexrand(N)
-    bs = b .+ brng * complexrand(N)
-    cs = c .+ crng * complexrand(N)
-    zs = z .+ zrng * complexrand(N)
-
-    print("Getting tests... ")
-    tests = Vector{NTuple{4, ComplexF64}}()
-    tru = Vector{ComplexF64}()
-    for (a,b,c,z) ∈ zip(as, bs, cs, zs)
-        val = arb_2f1(ArbComplex.((a,b,c,z), bits = 512)...)
-        if isnan(val) || isinf(val)
-            continue
-        end
-        push!(tests, (a,b,c,z))
-        push!(tru, convert(ComplexF64, val))
-    end
-    println("done\nTest Count: $(length(tests))")
-
-    # Evaluate each test for accuracy 
-    println("\nRunning accuracy tests:")
-    print("\tTaylor: ")
-    ta = [taylor_2f1(test...)               for test ∈ tests]
-    tae = clean_error.(ta, tru)
-    taf = tests[isone.(tae)]
-    print("done\n\tTransforms: ")
-    tr = [_2f1(test...)                     for test ∈ tests]
-    tre = clean_error.(tr, tru)
-    trf = tests[isone.(tre)]
-    print("done\n\tLevin: ")
-    le = [weniger_2f1(test...)              for test ∈ tests]
-    lee = clean_error.(le, tru)
-    lef = tests[isone.(lee)]
-    print("done\n\tJohansson: ")
-    jo = [johansson_2f1(test..., bits = 53) for test ∈ tests]
-    joe = clean_error.(jo, tru)
-    jof = tests[isone.(joe)]
-    # print("done\n\tMathematica: ")
-    # ma = [mathematica_2f1(test...)          for test ∈ tests]
-    # mae = clean_error.(ma, tru)
-    # maf = tests[isone.(mae)]
-    println("done")
-    
-    print("Collecting tests: ")
-    # cf = intersect(taf, trf, lef, jof, maf) # Collected failed indices
-    # fails = (;taf,trf,lef,jof,maf,cf)
-    fls = taf
-    println("done")
-
-    # Generate histograms
-    fig = Figure()
-    top = GridLayout(fig[1,1])
-    bot = GridLayout(fig[2,1])
-    axt = Axis(top[1,1], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Taylor")
-    axr = Axis(top[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Taylor Transformations")
-    axl = Axis(bot[1,1], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Levin-Type")
-    axj = Axis(bot[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Johansson")
-    # axm = Axis(bot[1,3], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Mathematica")
-
-    bin = 10.0 .^ (-17:1)
-
-    hist!(axt, tae, bins = bin, color = :values, normalization = :probability)
-    hist!(axr, tre, bins = bin, color = :values, normalization = :probability)
-    hist!(axl, lee, bins = bin, color = :values, normalization = :probability)
-    hist!(axj, joe, bins = bin, color = :values, normalization = :probability)
-    # hist!(axm, mae, bins = bin, color = :values, normalization = :probability)
-    
-    rowsize!(fig.layout, 1, Auto(1))
-    rowsize!(fig.layout, 2, Auto(1))
-
-    # return (; fig, fails = fails.taf)
-    return (; fig, fls)
-end
-
 # Used
 function clean_error(f,t)
     err = abs.((f - t) ./ t)
@@ -424,10 +349,23 @@ function clean_error(f,t)
     return err
 end
 
-function taylor_terms(a, b, c, z, p, cutoff = .3)
-    cutoff = min(abs(c / (3 + a + b)), .7)
-    z0 = cutoff * sign(z)
-    h = cutoff * (z - z0) / abs(z - z0) * abs(z0 - 1) / exp(2)
+function taylor_terms(a, b, c, z, p, step_max = Inf, init_max = exp(-1))
+    if real(z) > 1
+        z0 = imag(z) > 0 ? im * init_max : -im * init_max
+    else
+        z0 = sign(z) * init_max
+    end
+    dir = sign(z - z0)
+
+    h_opt = abs(z0 - 1) / exp(2)
+    # h_opt = abs(z0 - 1)
+    h_end = abs(z0 - z)
+    # h_ord = sqrt(abs(2zn * (1 - z0) / (a * b)))                    # sqrt(C / A)
+    # h_ord = abs(2zn * (1 - z0) / (c - (1 + a + b) * z0))                  # C
+    # h_ord = abs(2zn * (1 - z0) * (c - (1 + a + b) * z0) / (a * b))        # C B / A
+    h_ord = Inf
+
+    h = dir * min(h_opt, h_end, h_ord, step_max)        # Step size based on Jorba and Zou 2005
 
     coeffs = taylor_coefficients(a, b, c, z0, p)
 
