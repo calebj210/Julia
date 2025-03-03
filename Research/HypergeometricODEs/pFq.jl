@@ -2,7 +2,7 @@
 #   ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: February 25, 2025
+# DLM: February 26, 2025
 =#
 
 using MathLink
@@ -95,21 +95,21 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
         return maclaurin_2f1(a, b, c, z, N)[1]
     end
 
-    if real(z) > 1
+    # if real(z) > 1
         # z0 = init_max * im * (imag(z) > 0 ? 1 : -1)
         # znew = 2im * (imag(z) > 0 ? 1 : -1)
-        znew = 1 + 2(imag(z) > 0 ? im : -im)
-        z0 = init_max * sign(znew)
+        # znew = 1 + 2(imag(z) > 0 ? im : -im)
+        # z0 = init_max * sign(znew)
         # z0 = cispi((imag(z) > 0 ? 1 : -1) / 3) * init_max
-    else
+    # else
         z0 = sign(z) * init_max
-    end
+    # end
 
     fn = maclaurin_2f1(a, b, c, z0, N)
-    if real(z) > 1
-        fn = taylor_init(a, b, c, z0, znew, fn)
-        z0 = znew
-    end
+    # if real(z) > 1
+        # fn = taylor_init(a, b, c, z0, znew, fn)
+        # z0 = znew
+    # end
     dir = sign(z - z0)
 
     n = 1

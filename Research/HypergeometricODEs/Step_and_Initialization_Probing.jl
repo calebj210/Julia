@@ -2,7 +2,7 @@
 # Tests for inspecting failures of the Taylor method
 #
 # Author: Caleb Jacobs
-# DLM: February 25, 2025
+# DLM: February 26, 2025
 =#
 
 include("pFq.jl")
@@ -65,7 +65,7 @@ function global_error(a, b, c; z = nothing, tru = nothing)
     ax2 = Axis(fig[1,3], title = "Taylor Phase")
     ax3 = Axis(fig[1,4], title = "True Phase")
 
-    plt1 = heatmap!(ax1, z, errs, colorscale = log10)
+    plt1 = heatmap!(ax1, z, errs, colorscale = log10, colorrange = (1e-17,1))
     plt2 = phase!(ax2, z, val)
     plt3 = phase!(ax3, z, tru)
 
