@@ -2,7 +2,7 @@
 #   ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: February 26, 2025
+# DLM: March 4, 2025
 =#
 
 using MathLink
@@ -90,26 +90,28 @@ function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
 end
 
 function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = exp(-1))
-    # init_max = min(abs(c / (a * b)), init_max)
+    # if abs(a * b) > 5 || abs(c) < 1
+        init_max = min(abs(c / (a * b)), init_max)
+    # end
     if abs(z) <= init_max
         return maclaurin_2f1(a, b, c, z, N)[1]
     end
 
-    # if real(z) > 1
+    if real(z) > 1
         # z0 = init_max * im * (imag(z) > 0 ? 1 : -1)
-        # znew = 2im * (imag(z) > 0 ? 1 : -1)
-        # znew = 1 + 2(imag(z) > 0 ? im : -im)
-        # z0 = init_max * sign(znew)
-        # z0 = cispi((imag(z) > 0 ? 1 : -1) / 3) * init_max
-    # else
+        # znew = im * (imag(z) > 0 ? 1 : -1)
+        znew = 1 + 3(imag(z) > 0 ? im : -im)
+        z0 = init_max * sign(znew)
+        # z0 = init_max * im * (imag(z) > 0 ? 1 : -1)
+    else
         z0 = sign(z) * init_max
-    # end
+    end
 
     fn = maclaurin_2f1(a, b, c, z0, N)
-    # if real(z) > 1
-        # fn = taylor_init(a, b, c, z0, znew, fn)
-        # z0 = znew
-    # end
+    if real(z) > 1
+        fn = taylor_init(a, b, c, z0, znew, fn)
+        z0 = znew
+    end
     dir = sign(z - z0)
 
     n = 1
@@ -117,7 +119,8 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
         h_opt = abs(z0 - 1) / exp(2)
         # h_opt = abs(z0 - 1)
         h_end = abs(z0 - z)
-        h_ord = sqrt(abs(2z0 * (1 - z0) / (a * b)))                    # sqrt(C / A)
+        h_ord = abs(z0) / exp(2)
+        # h_ord = sqrt(abs(2z0 * (1 - z0) / (a * b)))                    # sqrt(C / A)
         # h_ord = Inf
         # h_ord = abs(2z0 * (1 - z0) / (c - (1 + a + b) * z0))                  # C
         # h_ord = abs(2z0 * (1 - z0) * (c - (1 + a + b) * z0) / (a * b))        # C B / A
@@ -140,7 +143,8 @@ function taylor_init(a, b, c, z0, z, f; max_step_size = Inf, max_steps = 1000, m
     while !isapprox(z0, z) && n < max_steps
         h_opt = abs(z0 - 1) / exp(2)
         h_end = abs(z0 - z)
-        h_ord = sqrt(abs(2z0 * (1 - z0) / (a * b)))             # sqrt(C / A)
+        h_ord = abs(z0) / exp(2)
+        # h_ord = sqrt(abs(2z0 * (1 - z0) / (a * b)))             # sqrt(C / A)
         # h_ord = Inf
 
         h = dir * min(h_opt, h_end, h_ord, max_step_size)       # Step size based on Jorba and Zou 2005

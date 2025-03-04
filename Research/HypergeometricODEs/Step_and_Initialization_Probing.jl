@@ -2,7 +2,7 @@
 # Tests for inspecting failures of the Taylor method
 #
 # Author: Caleb Jacobs
-# DLM: February 26, 2025
+# DLM: March 4, 2025
 =#
 
 include("pFq.jl")
@@ -83,6 +83,10 @@ function random_failed_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 30, b
     seed!(seed)
 
     # Setup random tests
+    # as = a .+ arng * (1 .- rand(N))
+    # bs = b .+ brng * (1 .- rand(N))
+    # cs = c .+ crng * (1 .- rand(N))
+    # zs = z .+ zrng * (1 .- rand(N))
     as = a .+ arng * complexrand(N)
     bs = b .+ brng * complexrand(N)
     cs = c .+ crng * complexrand(N)
