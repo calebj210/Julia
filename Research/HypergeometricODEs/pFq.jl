@@ -90,9 +90,7 @@ function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
 end
 
 function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = exp(-1))
-    # if abs(a * b) > 5 || abs(c) < 1
-        init_max = min(abs(c / (a * b)), init_max)
-    # end
+    # init_max = min(abs(c / (a * b)), init_max)
     if abs(z) <= init_max
         return maclaurin_2f1(a, b, c, z, N)[1]
     end
