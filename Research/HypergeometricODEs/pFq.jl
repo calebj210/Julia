@@ -113,7 +113,6 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
         fn = taylor_init(a, b, c, z0, znew, fn)
         z0 = znew
     end
-    dir = sign(z - z0)
 
     n = 1
     while !isapprox(z0, z) && n < N
@@ -126,7 +125,7 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
         # h_ord = abs(2z0 * (1 - z0) / (c - (1 + a + b) * z0))                  # C
         # h_ord = abs(2z0 * (1 - z0) * (c - (1 + a + b) * z0) / (a * b))        # C B / A
 
-        h = dir * min(h_opt, h_end, h_ord, step_max)        # Step size based on Jorba and Zou 2005
+        h = sign(z - z0) * min(h_opt, h_end, h_ord, step_max)        # Step size based on Jorba and Zou 2005
 
         fn = recursive_2f1(a, b, c, z0, fn, h, order + 1)   # Order increase so derivative hits the desired order
 
@@ -138,7 +137,6 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
 end
 
 function taylor_init(a, b, c, z0, z, f; max_step_size = Inf, max_steps = 1000, max_order = 1000)
-    dir = sign(z - z0)
     fn = f
     n = 1
     while !isapprox(z0, z) && n < max_steps
@@ -148,7 +146,7 @@ function taylor_init(a, b, c, z0, z, f; max_step_size = Inf, max_steps = 1000, m
         # h_ord = sqrt(abs(2z0 * (1 - z0) / (a * b)))             # sqrt(C / A)
         # h_ord = Inf
 
-        h = dir * min(h_opt, h_end, h_ord, max_step_size)       # Step size based on Jorba and Zou 2005
+        h = sign(z - z0) * min(h_opt, h_end, h_ord, max_step_size)       # Step size based on Jorba and Zou 2005
 
         fn = recursive_2f1(a, b, c, z0, fn, h, max_order + 1)   # Order increase so derivative hits the desired order
 
