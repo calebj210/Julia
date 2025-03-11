@@ -53,10 +53,10 @@ function global_error(a, b, c; z = nothing, tru = nothing)
     end
 
     print("Computing Taylor...")
-        val1 = taylor_2f1.(a, b, c, z, two_step = false)
-        val2 = taylor_2f1.(a, b, c, z, two_step = true)
-        # val1 = _2f1.(a, b, c, z, two_step = false)
-        # val2 = _2f1.(a, b, c, z, two_step = true)
+        # val1 = taylor_2f1.(a, b, c, z, two_step = false)
+        # val2 = taylor_2f1.(a, b, c, z, two_step = true)
+        val1 = _2f1.(a, b, c, z, two_step = false)
+        val2 = _2f1.(a, b, c, z, two_step = true)
     println("done!")
 
     errs1 = clean_error.(val1, tru)

@@ -9,6 +9,7 @@ using MathLink
 using SpecialFunctions
 using ArbNumerics: gamma, hypergeometric_2F1 as arb_2f1, ArbComplex, ArbFloat
 import SpecialFunctions.gamma
+using Polynomials
 
 function sgn(x)
     iszero(x) ? -one(x) : sign(x)
@@ -51,34 +52,35 @@ function maclaurin_2f1(a, b, c, z, N = 1000; tol = eps())
 end
 
 function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
+    p = Polynomial(f0)
     (c0, c1) = f0
-    c1 *= h
 
     # 10 flop optimization for 3-term recurrence
-    A0 = -a * b * h^2; A1 = (1 - a - b) * h^2; A2 = -2h^2
-    B0 = B1 = (c - (1 + a + b) * z0) * h; B2 = (2 - 4z0) * h
+    A0 = -a * b; A1 = (1 - a - b); A2 = -2
+    B0 = B1 = (c - (1 + a + b) * z0); B2 = (2 - 4z0)
     C0 = C1 = C2 = 2z0 * (z0 - 1)
     
-    S  = c0 + c1
-    dS = f0[2]
+    hn = h
+    S = c0 + c1 * h
     for n = 3:N + 1
         # Compute next coefficient
         coeff = (A0 * c0 + B0 * c1) / C0
 
-        dS += coeff / h * (n - 1)
         # criteria = abs(val)
         # if criteria <= eps(abs(S))
-        criteria = abs(coeff / S)
-        if criteria <= tol
+        hn *= h
+        criteria = abs(coeff * hn / S)
+        if criteria <= tol / 2
             break
         elseif isnan(criteria) || isinf(criteria)
             # @warn "Method diverged"
             break
         end
-        S += coeff
+        S += coeff * hn
 
         c0 = c1
         c1 = coeff
+        push!(p.coeffs, coeff)
 
         # Update recurrence values
         A1 += A2; A0 += A1
@@ -86,7 +88,7 @@ function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
         C1 += C2; C0 += C1
     end 
 
-    return [S, dS]
+    return p
 end
 
 function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .3, two_step = true)
@@ -95,84 +97,82 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
         return maclaurin_2f1(a, b, c, z, N)[1]
     end
 
-    if real(z) > 1
-        if two_step
-            znew = 1 + 2(imag(z) > 0 ? im : -im)
-            z0 = init_max * sign(znew)
-            # znew = 2im * (imag(z) > 0 ? 1 : -1)
-            # z0 = init_max * im * (imag(z) > 0 ? 1 : -1)
-        else
-            z0 = init_max * im * (imag(z) > 0 ? 1 : -1)
-        end
-    else
-        z0 = sign(z) * init_max
-    end
+    # if real(z) > 1
+    #     zs = init_max * cis.(-1:.25:1) * (imag(z) > 0 ? cis(2) : cis(-2))
+    # else
+        zs = init_max * cis.(-1:.25:1) * sign(z)
+    # end
+    z0 = argmin(x -> abs2(maclaurin_2f1(a, b, c, x, N)[1] - 1), zs)
 
     fn = maclaurin_2f1(a, b, c, z0, N)
-    if two_step && real(z) > 1
-        fn = taylor_init(a, b, c, z0, znew, fn)
-        z0 = znew
-    end
 
     n = 1
-    while !isapprox(z0, z) && n < N
+    while n < N
         h_opt = abs(z0 - 1) / exp(2)
-        # h_opt = abs(z0 - 1)
         h_end = abs(z0 - z)
         h_ord = abs(z0) / exp(2)
-        # h_ord = sqrt(abs(2z0 * (1 - z0) / (a * b)))                    # sqrt(C / A)
         # h_ord = Inf
-        # h_ord = abs(2z0 * (1 - z0) / (c - (1 + a + b) * z0))                  # C
-        # h_ord = abs(2z0 * (1 - z0) * (c - (1 + a + b) * z0) / (a * b))        # C B / A
+        
+        dirs = sign(z - z0) .* cispi.(-1/2n:1/4n:1/2n)
+        # dirs = sign(z - z0) .* cis.(-1:1/2:1)
+        step_size = min(h_opt, h_end, h_ord, step_max)        # Step size based on Jorba and Zou 2005
 
-        h = sign(z - z0) * min(h_opt, h_end, h_ord, step_max)        # Step size based on Jorba and Zou 2005
-
-        fn = recursive_2f1(a, b, c, z0, fn, h, order + 1)   # Order increase so derivative hits the desired order
-
-        z0 += h
-        n += 1
+        hs = dirs .* step_size
+        p = recursive_2f1(a, b, c, z0, fn, hs[3], order + 1)   # Order increase so derivative hits the desired order
+        dp = derivative(p)
+        if step_size !== h_end
+            h = argmin(x -> abs2(p(x)), hs)
+            # h = argmin(x -> abs2(dp(x)), hs)
+            # h = argmin(x -> abs(angle(p(x)) - angle(fn[1])), hs)
+            fn = (p(h), dp(h))
+            z0 += h
+            n += 1
+        else
+            h = sign(z - z0) * step_size
+            return p(h)
+        end
     end
 
     return fn[1]
 end
 
-function taylor_init(a, b, c, z0, z, f; max_step_size = Inf, max_steps = 1000, max_order = 1000)
-    fn = f
-    n = 1
-    while !isapprox(z0, z) && n < max_steps
-        h_opt = abs(z0 - 1) / exp(2)
-        h_end = abs(z0 - z)
-        h_ord = abs(z0) / exp(2)
-        # h_ord = sqrt(abs(2z0 * (1 - z0) / (a * b)))             # sqrt(C / A)
-        # h_ord = Inf
-
-        h = sign(z - z0) * min(h_opt, h_end, h_ord, max_step_size)       # Step size based on Jorba and Zou 2005
-
-        fn = recursive_2f1(a, b, c, z0, fn, h, max_order + 1)   # Order increase so derivative hits the desired order
-
-        z0 += h
-        n += 1
-    end
-
-    return fn
-end
+# function taylor_init(a, b, c, z0, z, f; max_step_size = Inf, max_steps = 1000, max_order = 1000)
+#     fn = f
+#     n = 1
+#     while !isapprox(z0, z) && n < max_steps
+#         h_opt = abs(z0 - 1) / exp(2)
+#         h_end = abs(z0 - z)
+#         h_ord = abs(z0) / exp(2)
+#         # h_ord = sqrt(abs(2z0 * (1 - z0) / (a * b)))             # sqrt(C / A)
+#         # h_ord = Inf
+#
+#         h = sign(z - z0) * min(h_opt, h_end, h_ord, max_step_size)       # Step size based on Jorba and Zou 2005
+#
+#         fn = recursive_2f1(a, b, c, z0, fn, h, max_order + 1)   # Order increase so derivative hits the desired order
+#
+#         z0 += h
+#         n += 1
+#     end
+#
+#     return fn
+# end
 
 function _2f1(a, b, c, z::Number; step_max = Inf, N = 1000, order = 1000, two_step = true)
-    # if real(z) >= 0.5 && abs(1 - z) <= 1
-    #     if isinteger(c - a - b)
-    #         f = int_abc_2f1(a, b, c, z)
-    #         f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order, two_step = two_step)
-    #     else
-    #         f1 = taylor_2f1(a, a - c + 1, a + b - c + 1, 1 - 1 / z, step_max = step_max, N = N, order = order, two_step = two_step)
-    #         f2 = taylor_2f1(c - a, 1 - a, c - a - b + 1, 1 - 1 / z, step_max = step_max, N = N, order = order, two_step = two_step)
-    #
-    #         g1 = gamma(c) / gamma(c - a) * gamma(c - a - b) / gamma(c - b) * z^(-a)
-    #         g2 = gamma(c) / gamma(a)     * gamma(a + b - c) / gamma(b)     * (1 - z)^(c - a - b) * z^(a - c)
-    #
-    #         f = g1 * f1 + g2 * f2
-    #     end
-    # elseif  abs(z) >= 1 && abs(1 - z) >= 1
-    if  abs(z) >= 1 && abs(1 - z) >= 1
+    if real(z) >= 0.5 && abs(1 - z) <= 1
+        if isinteger(c - a - b)
+            f = int_abc_2f1(a, b, c, z)
+            f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order, two_step = two_step)
+        else
+            f1 = taylor_2f1(a, a - c + 1, a + b - c + 1, 1 - 1 / z, step_max = step_max, N = N, order = order, two_step = two_step)
+            f2 = taylor_2f1(c - a, 1 - a, c - a - b + 1, 1 - 1 / z, step_max = step_max, N = N, order = order, two_step = two_step)
+
+            g1 = gamma(c) / gamma(c - a) * gamma(c - a - b) / gamma(c - b) * z^(-a)
+            g2 = gamma(c) / gamma(a)     * gamma(a + b - c) / gamma(b)     * (1 - z)^(c - a - b) * z^(a - c)
+
+            f = g1 * f1 + g2 * f2
+        end
+    elseif  abs(z) >= 1 && abs(1 - z) >= 1
+    # if abs(z) >= 1 && abs(1 - z) >= 1
         if isinteger(b - a)
             f = int_ab_2f1(a, b, c, z)
             f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order, two_step = two_step)
