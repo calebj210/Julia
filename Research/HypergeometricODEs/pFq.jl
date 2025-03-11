@@ -1,8 +1,8 @@
 #=
-#   ODE approach for computing hypergeometric functions
+# ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: March 4, 2025
+# DLM: March 11, 2025
 =#
 
 using MathLink
@@ -89,24 +89,27 @@ function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
     return [S, dS]
 end
 
-function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = exp(-1))
-    # init_max = min(abs(c / (a * b)), init_max)
+function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .3, two_step = true)
+    init_max = min(2abs(c / (a * b)), init_max)
     if abs(z) <= init_max
         return maclaurin_2f1(a, b, c, z, N)[1]
     end
 
     if real(z) > 1
-        # z0 = init_max * im * (imag(z) > 0 ? 1 : -1)
-        # znew = im * (imag(z) > 0 ? 1 : -1)
-        znew = 1 + 3(imag(z) > 0 ? im : -im)
-        z0 = init_max * sign(znew)
-        # z0 = init_max * im * (imag(z) > 0 ? 1 : -1)
+        if two_step
+            znew = 1 + 2(imag(z) > 0 ? im : -im)
+            z0 = init_max * sign(znew)
+            # znew = 2im * (imag(z) > 0 ? 1 : -1)
+            # z0 = init_max * im * (imag(z) > 0 ? 1 : -1)
+        else
+            z0 = init_max * im * (imag(z) > 0 ? 1 : -1)
+        end
     else
         z0 = sign(z) * init_max
     end
 
     fn = maclaurin_2f1(a, b, c, z0, N)
-    if real(z) > 1
+    if two_step && real(z) > 1
         fn = taylor_init(a, b, c, z0, znew, fn)
         z0 = znew
     end
@@ -156,27 +159,28 @@ function taylor_init(a, b, c, z0, z, f; max_step_size = Inf, max_steps = 1000, m
     return fn
 end
 
-function _2f1(a, b, c, z::Number; step_max = Inf, N = 1000, order = 1000)
-    if real(z) >= 0.5 && abs(1 - z) <= 1
-        if isinteger(c - a - b)
-            f = int_abc_2f1(a, b, c, z)
-            f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order)
-        else
-            f1 = taylor_2f1(a, a - c + 1, a + b - c + 1, 1 - 1 / z, step_max = step_max, N = N, order = order)
-            f2 = taylor_2f1(c - a, 1 - a, c - a - b + 1, 1 - 1 / z, step_max = step_max, N = N, order = order)
-
-            g1 = gamma(c) / gamma(c - a) * gamma(c - a - b) / gamma(c - b) * z^(-a)
-            g2 = gamma(c) / gamma(a)     * gamma(a + b - c) / gamma(b)     * (1 - z)^(c - a - b) * z^(a - c)
-
-            f = g1 * f1 + g2 * f2
-        end
-    elseif  abs(z) >= 3 && abs(1 - z) >= 3
+function _2f1(a, b, c, z::Number; step_max = Inf, N = 1000, order = 1000, two_step = true)
+    # if real(z) >= 0.5 && abs(1 - z) <= 1
+    #     if isinteger(c - a - b)
+    #         f = int_abc_2f1(a, b, c, z)
+    #         f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order, two_step = two_step)
+    #     else
+    #         f1 = taylor_2f1(a, a - c + 1, a + b - c + 1, 1 - 1 / z, step_max = step_max, N = N, order = order, two_step = two_step)
+    #         f2 = taylor_2f1(c - a, 1 - a, c - a - b + 1, 1 - 1 / z, step_max = step_max, N = N, order = order, two_step = two_step)
+    #
+    #         g1 = gamma(c) / gamma(c - a) * gamma(c - a - b) / gamma(c - b) * z^(-a)
+    #         g2 = gamma(c) / gamma(a)     * gamma(a + b - c) / gamma(b)     * (1 - z)^(c - a - b) * z^(a - c)
+    #
+    #         f = g1 * f1 + g2 * f2
+    #     end
+    # elseif  abs(z) >= 1 && abs(1 - z) >= 1
+    if  abs(z) >= 1 && abs(1 - z) >= 1
         if isinteger(b - a)
             f = int_ab_2f1(a, b, c, z)
-            f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order)
+            f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order, two_step = two_step)
         else
-            f1 = taylor_2f1(a, a - c + 1,  a - b + 1, 1 / z, step_max = step_max, N = N, order = order)
-            f2 = taylor_2f1(b, b - c + 1, -a + b + 1, 1 / z, step_max = step_max, N = N, order = order)
+            f1 = taylor_2f1(a, a - c + 1,  a - b + 1, 1 / z, step_max = step_max, N = N, order = order, two_step = two_step)
+            f2 = taylor_2f1(b, b - c + 1, -a + b + 1, 1 / z, step_max = step_max, N = N, order = order, two_step = two_step)
 
             g1 = gamma(b - a) / gamma(b) * gamma(c) / gamma(c - a) * (-z)^(-a)
             g2 = gamma(a - b) / gamma(a) * gamma(c) / gamma(c - b) * (-z)^(-b)
@@ -184,7 +188,7 @@ function _2f1(a, b, c, z::Number; step_max = Inf, N = 1000, order = 1000)
             f = g1 * f1 + g2 * f2
         end
     else
-        f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order)
+        f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order, two_step = two_step)
     end
 
     return f

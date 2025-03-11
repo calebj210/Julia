@@ -18,6 +18,7 @@ export ComplexSurface,
 using MakieCore, Makie
 
 include("complex_grids.jl")
+include("complex_range.jl")
 include("color_wheel.jl")
 include("complex_plots_2d.jl")
 include("complex_plots_3d.jl")
