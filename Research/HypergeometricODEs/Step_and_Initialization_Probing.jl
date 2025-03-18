@@ -2,7 +2,7 @@
 # Tests for inspecting failures of the Taylor method
 #
 # Author: Caleb Jacobs
-# DLM: March 11, 2025
+# DLM: March 12, 2025
 =#
 
 include("pFq.jl")
@@ -53,10 +53,8 @@ function global_error(a, b, c; z = nothing, tru = nothing)
     end
 
     print("Computing Taylor...")
-        # val1 = taylor_2f1.(a, b, c, z, two_step = false)
-        # val2 = taylor_2f1.(a, b, c, z, two_step = true)
-        val1 = _2f1.(a, b, c, z, two_step = false)
-        val2 = _2f1.(a, b, c, z, two_step = true)
+        val1 = taylor_2f1.(a, b, c, z)
+        val2 = _2f1.(a, b, c, z)
     println("done!")
 
     errs1 = clean_error.(val1, tru)
@@ -67,10 +65,10 @@ function global_error(a, b, c; z = nothing, tru = nothing)
 
     errs = GridLayout(fig[1,1])
     phases = GridLayout(fig[2,1])
-    ax11 = Axis(errs[1,1], xautolimitmargin = (0,0), yautolimitmargin = (0,0), title = "Single Step Error", ylabel = L"Im(z)")
-    ax12 = Axis(errs[1,2], xautolimitmargin = (0,0), yautolimitmargin = (0,0), title = "Two Step Error")
-    ax21 = Axis(phases[1,1], xautolimitmargin = (0,0), yautolimitmargin = (0,0), title = "Single Step Phase", xlabel = L"Re(z)", ylabel = L"Im(z)")
-    ax22 = Axis(phases[1,2], xautolimitmargin = (0,0), yautolimitmargin = (0,0), title = "Two Step Phase", xlabel = L"Re(z)")
+    ax11 = Axis(errs[1,1], xautolimitmargin = (0,0), yautolimitmargin = (0,0), title = "Relative Error Taylor", ylabel = L"Im(z)")
+    ax12 = Axis(errs[1,2], xautolimitmargin = (0,0), yautolimitmargin = (0,0), title = "Relative Error Transformations")
+    ax21 = Axis(phases[1,1], xautolimitmargin = (0,0), yautolimitmargin = (0,0), title = "Taylor Phase", xlabel = L"Re(z)", ylabel = L"Im(z)")
+    ax22 = Axis(phases[1,2], xautolimitmargin = (0,0), yautolimitmargin = (0,0), title = "Transofrmation Phase", xlabel = L"Re(z)")
     ax3 = Axis(phases[1,3], xautolimitmargin = (0,0), yautolimitmargin = (0,0), title = "True Phase", xlabel = L"Re(z)")
 
     plt11 = heatmap!(ax11, z, errs1, colorscale = log10, colorrange = (1e-17,1))
