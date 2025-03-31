@@ -2,7 +2,7 @@
 # ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: March 17, 2025
+# DLM: March 31, 2025
 =#
 
 using MathLink
@@ -101,15 +101,20 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
 
     if real(z) > 0
         if imag(z) > 0
-            angs = cispi.(0:.125:.25)
+            # angs = cispi.(0:.125:.25)
             # angs = cispi.(0:.1:.4)
+            angs = cispi.(0:.15:.3)
+            # angs = [cispi(.3)]
         else
-            angs = cispi.(-.25:.125:0)
+            # angs = cispi.(-.25:.125:0)
             # angs = cispi.(-.4:.1:0)
+            angs = cispi.(-.3:.15:0)
+            # angs = [cispi(-.3)]
         end
     else
         # angs = cispi.(-.25:.25:.25)
         angs = cispi.(-.125:.125:.125)
+        # angs = [1.0]
     end
     zs = init_max * angs * sign(z)
     z0 = argmin(x -> abs2(maclaurin_2f1(a, b, c, x, N)[2]), zs)
@@ -120,22 +125,29 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
     while n < N
         h_opt = abs(z0 - 1) / exp(2)
         h_end = abs(z0 - z)
+
         h_ord = abs(z0) / exp(2)
         # h_ord = Inf
+
+        # ddf = (-a * b * fn[1] + (c - (1 + a + b) * z0) * fn[2]) / (2z0 * (z0 - 1))
+        # h_root = abs(2fn[1] * fn[2] / (2(fn[2]^2) - fn[1] * ddf)) * .5
+        # h_root = abs(fn[1] / fn[2]) * exp(-2)
+        h_root = Inf
         
         dirs = sign(z - z0) .* angs
-        step_size = min(h_opt, h_end, h_ord, step_max)        # Step size based on Jorba and Zou 2005
+        step_size = min(h_opt, h_end, h_ord, h_root, step_max)
 
         hs = dirs .* step_size
         p = recursive_2f1(a, b, c, z0, fn, hs[3], order + 1)   # Order increase so derivative hits the desired order
         dp = derivative(p)
         if step_size !== h_end
-            # h = argmin(x -> abs2(p(x) - fn[1]), hs)
-            if real(z) > 0
-                h = argmax(x -> abs2(z0 + x - 1), hs)
-            else
-                h = argmin(x -> abs2(dp(x)), hs)
-            end
+            h = argmin(x -> abs2(p(x) - fn[1]), hs)
+            # h = argmin(x -> abs2(dp(x)), hs)
+            # if real(z) > 0
+            #     h = argmax(x -> abs2(z0 + x - 1), hs)
+            # else
+            #     h = argmin(x -> abs2(dp(x)), hs)
+            # end
             fn = (p(h), dp(h))
             z0 += h
             n += 1
@@ -149,21 +161,20 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
 end
 
 function _2f1(a, b, c, z::Number; step_max = Inf, N = 1000, order = 1000, two_step = true)
-    # if real(z) >= 0.5 && abs(1 - z) <= 1
-    #     if isinteger(c - a - b)
-    #         f = int_abc_2f1(a, b, c, z)
-    #         f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order, two_step = two_step)
-    #     else
-    #         f1 = taylor_2f1(a, a - c + 1, a + b - c + 1, 1 - 1 / z, step_max = step_max, N = N, order = order, two_step = two_step)
-    #         f2 = taylor_2f1(c - a, 1 - a, c - a - b + 1, 1 - 1 / z, step_max = step_max, N = N, order = order, two_step = two_step)
-    #
-    #         g1 = gamma(c) / gamma(c - a) * gamma(c - a - b) / gamma(c - b) * z^(-a)
-    #         g2 = gamma(c) / gamma(a)     * gamma(a + b - c) / gamma(b)     * (1 - z)^(c - a - b) * z^(a - c)
-    #
-    #         f = g1 * f1 + g2 * f2
-    #     end
-    # elseif  abs(z) >= 1 && abs(1 - z) >= 1
-    if  abs(z) >= 1 && abs(1 - z) >= 1
+    if real(z) >= 0.5 && abs(1 - z) <= 1
+        if isinteger(c - a - b)
+            f = int_abc_2f1(a, b, c, z)
+            f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order, two_step = two_step)
+        else
+            f1 = taylor_2f1(a, a - c + 1, a + b - c + 1, 1 - 1 / z, step_max = step_max, N = N, order = order, two_step = two_step)
+            f2 = taylor_2f1(c - a, 1 - a, c - a - b + 1, 1 - 1 / z, step_max = step_max, N = N, order = order, two_step = two_step)
+
+            g1 = gamma(c) / gamma(c - a) * gamma(c - a - b) / gamma(c - b) * z^(-a)
+            g2 = gamma(c) / gamma(a)     * gamma(a + b - c) / gamma(b)     * (1 - z)^(c - a - b) * z^(a - c)
+
+            f = g1 * f1 + g2 * f2
+        end
+    elseif abs(z) >= 1 && abs(1 - z) >= 1
     # if abs(z) >= 1 && abs(1 - z) >= 1
         if isinteger(b - a)
             f = int_ab_2f1(a, b, c, z)

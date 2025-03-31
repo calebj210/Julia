@@ -2,7 +2,7 @@
 # Tests for inspecting failures of the Taylor method
 #
 # Author: Caleb Jacobs
-# DLM: March 12, 2025
+# DLM: March 31, 2025
 =#
 
 include("pFq.jl")
@@ -125,7 +125,6 @@ function random_failed_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 30, b
     print("\tTaylor: ")
     ta = [taylor_2f1(test..., two_step = two_step)               for test ∈ tests]
     tae = clean_error.(ta, tru)
-    taf = tests[isone.(tae)]
     print("done\n\tTransforms: ")
     tr = [_2f1(test..., two_step = two_step)                     for test ∈ tests]
     tre = clean_error.(tr, tru)
@@ -142,7 +141,7 @@ function random_failed_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 30, b
     println("done")
     
     print("Collecting tests: ")
-    fls = taf
+    fls = tests[isone.(tae)]
     println("done")
 
     # Generate histograms
