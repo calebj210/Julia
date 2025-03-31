@@ -35,15 +35,21 @@ function maclaurin_2f1(a, b, c, z, N = 1000; tol = eps())
     S = zn = coeff = 1.0
     dS = 0.0
 
+    crit_flag = false
     for n ∈ 1:N
         coeff *= (a + n - 1) / (c + n - 1) * (b + n - 1) / n
 
         dS += coeff * zn * n
         zn *= z
         val = coeff * zn
-        if abs(val / S) <= tol
-        # if abs(val) <= eps(abs(S))
-            break
+        if abs(val / S) <= tol / 2
+            if crit_flag
+                break
+            else
+                crit_flag = true
+            end
+        elseif crit_flag
+            crit_flag = false
         end
         S += val
     end
@@ -64,6 +70,7 @@ function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
     
     hn = h
     S = c0 + c1 * h
+    crit_flag = false
     for n = 3:N + 1
         # Compute next coefficient
         coeff = (A0 * c0 + B0 * c1) / C0
@@ -73,10 +80,16 @@ function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
         hn *= h
         criteria = abs(coeff * hn / S)
         if criteria <= tol / 2
-            break
+            if crit_flag
+                break
+            else
+                crit_flag = true
+            end
         elseif isnan(criteria) || isinf(criteria)
             # @warn "Method diverged"
             break
+        elseif crit_flag
+            crit_flag = false
         end
         S += coeff * hn
 
@@ -93,8 +106,8 @@ function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
     return p
 end
 
-function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .3, two_step = true)
-    init_max = min(2abs(c / (a * b)), init_max)             # Initialize Maclaurin ensuring slow growth of terms
+function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = .5, init_max = .3, two_step = true)
+    init_max = min(2abs(c / (a * b)), init_max)
     if abs(z) <= init_max
         return maclaurin_2f1(a, b, c, z, N)[1]
     end
@@ -103,18 +116,18 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
         if imag(z) > 0
             # angs = cispi.(0:.125:.25)
             # angs = cispi.(0:.1:.4)
-            angs = cispi.(0:.15:.3)
-            # angs = [cispi(.3)]
+            # angs = cispi.(0:.15:.3)
+            angs = cispi(.2)
         else
             # angs = cispi.(-.25:.125:0)
             # angs = cispi.(-.4:.1:0)
-            angs = cispi.(-.3:.15:0)
-            # angs = [cispi(-.3)]
+            # angs = cispi.(-.3:.15:0)
+            angs = cispi(-.2)
         end
     else
         # angs = cispi.(-.25:.25:.25)
-        angs = cispi.(-.125:.125:.125)
-        # angs = [1.0]
+        # angs = cispi.(-.125:.125:.125)
+        angs = 1.0
     end
     zs = init_max * angs * sign(z)
     z0 = argmin(x -> abs2(maclaurin_2f1(a, b, c, x, N)[2]), zs)
@@ -123,33 +136,33 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
 
     n = 1
     while n < N
-        h_opt = abs(z0 - 1) / exp(2)
+        h_opt = abs(z0 - 1) * exp(-2)
         h_end = abs(z0 - z)
 
-        h_ord = abs(z0) / exp(2)
+        h_ord = abs(z0) * exp(-2)
         # h_ord = Inf
 
         # ddf = (-a * b * fn[1] + (c - (1 + a + b) * z0) * fn[2]) / (2z0 * (z0 - 1))
-        # h_root = abs(2fn[1] * fn[2] / (2(fn[2]^2) - fn[1] * ddf)) * .5
+        # h_root = abs(2fn[1] * fn[2] / (2(fn[2]^2) - fn[1] * ddf)) * exp(-2)
         # h_root = abs(fn[1] / fn[2]) * exp(-2)
         h_root = Inf
         
         dirs = sign(z - z0) .* angs
         step_size = min(h_opt, h_end, h_ord, h_root, step_max)
 
-        hs = dirs .* step_size
-        p = recursive_2f1(a, b, c, z0, fn, hs[3], order + 1)   # Order increase so derivative hits the desired order
+        hs = dirs * step_size
+        p = recursive_2f1(a, b, c, z0, fn, last(hs), order + 1)   # Order increase so derivative hits the desired order
         dp = derivative(p)
         if step_size !== h_end
-            h = argmin(x -> abs2(p(x) - fn[1]), hs)
-            # h = argmin(x -> abs2(dp(x)), hs)
+            # h = argmin(x -> abs2(p(x) - fn[1]), hs)
             # if real(z) > 0
-            #     h = argmax(x -> abs2(z0 + x - 1), hs)
+                # h = argmax(x -> abs2(z0 + x - 1), hs)
             # else
-            #     h = argmin(x -> abs2(dp(x)), hs)
+                # h = argmin(x -> abs2(dp(x)), hs)
             # end
-            fn = (p(h), dp(h))
-            z0 += h
+            h = hs[1]
+            fn = (p(h * .8), dp(h * .8))
+            z0 += h * .8
             n += 1
         else
             h = z - z0
