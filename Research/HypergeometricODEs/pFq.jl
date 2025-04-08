@@ -2,7 +2,7 @@
 # ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: March 31, 2025
+# DLM: April 8, 2025
 =#
 
 using MathLink
@@ -30,6 +30,23 @@ mathematica_pfq(a, b, z) =
     end
 
 johansson_2f1(a, b, c, z; bits = 512)::ComplexF64 = arb_2f1(ArbComplex.((a, b, c, z), bits = bits)...)
+
+function get_direction(z0, z, f, df, branch = false)
+    if branch && real(z) > 1 && real(z0) < 1 
+        h_str = angle(1 + 2sgn(imag(z)) * im - z0)  # Go to 1 ± i first when navigating the branch point
+    else
+        h_str = angle(z - z0)                       # Straight path direction
+        branch = false
+    end
+    h_arg = angle(im * f / df)                           # Constant phase direction
+    if h_arg < 0
+        h_arg += π
+    end
+
+    h_dif = argmin(h -> abs2(h), h_arg - h_str .+ (-2:1) * π)
+
+    return (cis(h_str + .6h_dif), branch)
+end
 
 function maclaurin_2f1(a, b, c, z, N = 1000; tol = eps())
     S = zn = coeff = 1.0
@@ -106,35 +123,36 @@ function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
     return p
 end
 
-function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = .5, init_max = .3, two_step = true)
+function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .3)
     init_max = min(2abs(c / (a * b)), init_max)
     if abs(z) <= init_max
         return maclaurin_2f1(a, b, c, z, N)[1]
     end
 
-    if real(z) > 0
-        if imag(z) > 0
-            # angs = cispi.(0:.125:.25)
-            # angs = cispi.(0:.1:.4)
-            # angs = cispi.(0:.15:.3)
-            angs = cispi(.2)
-        else
-            # angs = cispi.(-.25:.125:0)
-            # angs = cispi.(-.4:.1:0)
-            # angs = cispi.(-.3:.15:0)
-            angs = cispi(-.2)
-        end
-    else
-        # angs = cispi.(-.25:.25:.25)
-        # angs = cispi.(-.125:.125:.125)
-        angs = 1.0
-    end
-    zs = init_max * angs * sign(z)
-    z0 = argmin(x -> abs2(maclaurin_2f1(a, b, c, x, N)[2]), zs)
+    # angs = cispi((imag(z) > 0 && real(z) > 0 ? 1 : -1) * 0.20)
+    # angs = cispi(-.1)
+    # if real(z) > 0
+    #     if imag(z) > 0
+    #         # angs = cispi.(0:.15:.3)
+    #         angs = cispi(.25)
+    #     else
+    #         # angs = cispi.(-.3:.15:0)
+    #         angs = cispi(-.25)
+    #     end
+    # else
+    #     # angs = cispi.(-.125:.125:.125)
+    #     angs = 1.0
+    # end
+    # zs = init_max * angs * sign(z)
+    # z0 = argmin(x -> abs2(maclaurin_2f1(a, b, c, x, N)[2]), zs)
+
+    # z0 = init_max * angs * sign(z)
+    z0 = init_max * sign(z)
 
     fn = maclaurin_2f1(a, b, c, z0, N)
 
     n = 1
+    branch = true
     while n < N
         h_opt = abs(z0 - 1) * exp(-2)
         h_end = abs(z0 - z)
@@ -142,27 +160,20 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = .5, i
         h_ord = abs(z0) * exp(-2)
         # h_ord = Inf
 
-        # ddf = (-a * b * fn[1] + (c - (1 + a + b) * z0) * fn[2]) / (2z0 * (z0 - 1))
-        # h_root = abs(2fn[1] * fn[2] / (2(fn[2]^2) - fn[1] * ddf)) * exp(-2)
-        # h_root = abs(fn[1] / fn[2]) * exp(-2)
-        h_root = Inf
+        # h_rat = max(abs(1 / fn[2]), .01)
+        h_rat = Inf
         
-        dirs = sign(z - z0) .* angs
-        step_size = min(h_opt, h_end, h_ord, h_root, step_max)
+        # dirs = sign(z - z0) .* angs
+        dirs, branch = get_direction(z0, z, fn..., branch)
+        step_size = min(h_opt, h_end, h_ord, h_rat, step_max)
 
         hs = dirs * step_size
-        p = recursive_2f1(a, b, c, z0, fn, last(hs), order + 1)   # Order increase so derivative hits the desired order
+        p = recursive_2f1(a, b, c, z0, fn, last(hs), order)
         dp = derivative(p)
         if step_size !== h_end
-            # h = argmin(x -> abs2(p(x) - fn[1]), hs)
-            # if real(z) > 0
-                # h = argmax(x -> abs2(z0 + x - 1), hs)
-            # else
-                # h = argmin(x -> abs2(dp(x)), hs)
-            # end
-            h = hs[1]
-            fn = (p(h * .8), dp(h * .8))
-            z0 += h * .8
+            h = hs
+            fn = (p(h), dp(h))
+            z0 += h
             n += 1
         else
             h = z - z0
@@ -173,14 +184,14 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = .5, i
     return fn[1]
 end
 
-function _2f1(a, b, c, z::Number; step_max = Inf, N = 1000, order = 1000, two_step = true)
+function _2f1(a, b, c, z::Number; step_max = Inf, N = 1000, order = 1000)
     if real(z) >= 0.5 && abs(1 - z) <= 1
         if isinteger(c - a - b)
             f = int_abc_2f1(a, b, c, z)
-            f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order, two_step = two_step)
+            f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order)
         else
-            f1 = taylor_2f1(a, a - c + 1, a + b - c + 1, 1 - 1 / z, step_max = step_max, N = N, order = order, two_step = two_step)
-            f2 = taylor_2f1(c - a, 1 - a, c - a - b + 1, 1 - 1 / z, step_max = step_max, N = N, order = order, two_step = two_step)
+            f1 = taylor_2f1(a, a - c + 1, a + b - c + 1, 1 - 1 / z, step_max = step_max, N = N, order = order)
+            f2 = taylor_2f1(c - a, 1 - a, c - a - b + 1, 1 - 1 / z, step_max = step_max, N = N, order = order)
 
             g1 = gamma(c) / gamma(c - a) * gamma(c - a - b) / gamma(c - b) * z^(-a)
             g2 = gamma(c) / gamma(a)     * gamma(a + b - c) / gamma(b)     * (1 - z)^(c - a - b) * z^(a - c)
@@ -191,10 +202,10 @@ function _2f1(a, b, c, z::Number; step_max = Inf, N = 1000, order = 1000, two_st
     # if abs(z) >= 1 && abs(1 - z) >= 1
         if isinteger(b - a)
             f = int_ab_2f1(a, b, c, z)
-            f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order, two_step = two_step)
+            f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order)
         else
-            f1 = taylor_2f1(a, a - c + 1,  a - b + 1, 1 / z, step_max = step_max, N = N, order = order, two_step = two_step)
-            f2 = taylor_2f1(b, b - c + 1, -a + b + 1, 1 / z, step_max = step_max, N = N, order = order, two_step = two_step)
+            f1 = taylor_2f1(a, a - c + 1,  a - b + 1, 1 / z, step_max = step_max, N = N, order = order)
+            f2 = taylor_2f1(b, b - c + 1, -a + b + 1, 1 / z, step_max = step_max, N = N, order = order)
 
             g1 = gamma(b - a) / gamma(b) * gamma(c) / gamma(c - a) * (-z)^(-a)
             g2 = gamma(a - b) / gamma(a) * gamma(c) / gamma(c - b) * (-z)^(-b)
@@ -202,39 +213,10 @@ function _2f1(a, b, c, z::Number; step_max = Inf, N = 1000, order = 1000, two_st
             f = g1 * f1 + g2 * f2
         end
     else
-        f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order, two_step = two_step)
+        f = taylor_2f1(a, b, c, z, step_max = step_max, N = N, order = order)
     end
 
     return f
-end
-
-function taylor_coefficients(a,b,c,z0,p)
-    F, dF = maclaurin_2f1(a,b,c,z0)
-
-    A0 = a + b - a * b - 1; A1 =  3 - a - b; A2 = -2    # Initial A(n)
-    B0 = 0; B1 = c - (a + b - 3) * z0 - 2; B2 = 2 - 4z0 # Initial B(n)
-    C0 = C1 = 0; C2 = 2z0 * (z0 - 1)                    # Initial C(n)
-    an = [F, dF]                                        # a_0 and a_1
-    
-    # 10-flop recursion
-    for n = 3:p
-        A1 += A2; A0 += A1                              # Update A(n)
-        B1 += B2; B0 += B1                              # Update B(n)
-        C1 += C2; C0 += C1                              # Update C(n)
-        push!(an, (A0 * an[n - 2]  +                    # Next a_n
-                   B0 * an[n - 1]) / C0)
-    end
-    return an
-end
-
-function As_Bs_and_Cs(a, b, c, z0, N = 50)
-    A(n) = -(a+n)*(b+n)
-    B(n) = (1+n)*(c-(1+a+b+2n)*z0+n)
-    C(n) = (1+n)*(2+n)*(1-z0)*z0
-
-    abcs = [A.(0:N) B.(0:N) C.(0:N)]
-
-    return abcs
 end
 
 """
