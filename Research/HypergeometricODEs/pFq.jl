@@ -123,30 +123,12 @@ function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
     return p
 end
 
-function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .3)
-    init_max = min(2abs(c / (a * b)), init_max)
+function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .9)
+    # init_max = min(2abs(c / (a * b)), init_max)
     if abs(z) <= init_max
         return maclaurin_2f1(a, b, c, z, N)[1]
     end
 
-    # angs = cispi((imag(z) > 0 && real(z) > 0 ? 1 : -1) * 0.20)
-    # angs = cispi(-.1)
-    # if real(z) > 0
-    #     if imag(z) > 0
-    #         # angs = cispi.(0:.15:.3)
-    #         angs = cispi(.25)
-    #     else
-    #         # angs = cispi.(-.3:.15:0)
-    #         angs = cispi(-.25)
-    #     end
-    # else
-    #     # angs = cispi.(-.125:.125:.125)
-    #     angs = 1.0
-    # end
-    # zs = init_max * angs * sign(z)
-    # z0 = argmin(x -> abs2(maclaurin_2f1(a, b, c, x, N)[2]), zs)
-
-    # z0 = init_max * angs * sign(z)
     z0 = init_max * sign(z)
 
     fn = maclaurin_2f1(a, b, c, z0, N)
@@ -157,21 +139,19 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
         h_opt = abs(z0 - 1) * exp(-2)
         h_end = abs(z0 - z)
 
-        h_ord = abs(z0) * exp(-2)
-        # h_ord = Inf
+        # h_ord = abs(z0) * exp(-2)
+        h_ord = Inf
 
         # h_rat = max(abs(1 / fn[2]), .01)
         h_rat = Inf
         
-        # dirs = sign(z - z0) .* angs
-        dirs, branch = get_direction(z0, z, fn..., branch)
+        dir, branch = get_direction(z0, z, fn..., branch)
         step_size = min(h_opt, h_end, h_ord, h_rat, step_max)
 
-        hs = dirs * step_size
-        p = recursive_2f1(a, b, c, z0, fn, last(hs), order)
+        h = dir * step_size
+        p = recursive_2f1(a, b, c, z0, fn, h, order)
         dp = derivative(p)
         if step_size !== h_end
-            h = hs
             fn = (p(h), dp(h))
             z0 += h
             n += 1
