@@ -154,7 +154,7 @@ function random_failed_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 30, b
     axj = Axis(bot[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Johansson")
     # axm = Axis(bot[1,3], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Mathematica")
 
-    bin = 10.0 .^ (-17:1)
+    bin = 10.0 .^ (-16:2:2)
 
     hist!(axt, tae, bins = bin, color = :values, normalization = :probability)
     hist!(axr, tre, bins = bin, color = :values, normalization = :probability)
@@ -314,8 +314,8 @@ function clean_error(f,t)
 
     if err > 1 || isnan(err) || isinf(err)
         err = 1
-    elseif err <= 1e-17
-        err = 1e-17
+    elseif err <= 1e-16
+        err = 1e-16
     end
 
     return err
