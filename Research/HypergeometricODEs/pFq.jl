@@ -2,11 +2,12 @@
 # ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: April 8, 2025
+# DLM: April 14, 2025
 =#
 
 using MathLink
 using SpecialFunctions
+using LinearAlgebra
 using ArbNumerics: gamma, hypergeometric_2F1 as arb_2f1, ArbComplex, ArbFloat
 import SpecialFunctions.gamma
 using Polynomials
@@ -74,6 +75,24 @@ function maclaurin_2f1(a, b, c, z, N = 1000; tol = eps())
     return [S, dS]
 end
 
+function correct_taylor(a, b, c, f0, f1, h, z1; order = 1000, tol = eps(), max_iter = 5)
+    f = recursive_2f1(a, b, c, z1, f1, -h, order)
+    f10 = recursive_2f1(a, b, c, z1, [1.0, 0.0im], -h, order)
+    f01 = recursive_2f1(a, b, c, z1, [0.0im, 1.0], -h, order)
+    
+    J = [f10(-h) f01(-h); derivative(f10)(-h) derivative(f01)(-h)]
+    for _ ∈ 1:max_iter
+        F = [f(-h); derivative(f)(-h)] - f0
+        f1 -= J \ F
+        if norm(F) / norm(f0) <= tol
+            break
+        end
+        f = recursive_2f1(a, b, c, z1, f1, -h, order)
+    end
+
+    return f1
+end
+
 function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
     p = Polynomial(f0)
     sizehint!(p.coeffs, 50, shrink = false)
@@ -134,15 +153,15 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
     fn = maclaurin_2f1(a, b, c, z0, N)
 
     branch = true
-    for n ∈ 1:N
+    for _ ∈ 1:N
         h_opt = .1abs(z0 - 1) * exp(-2)
         h_end = abs(z0 - z)
 
         h_ord = .1abs(z0) * exp(-2)
         # h_ord = Inf
 
-        h_rat = abs(fn[1] / fn[2])
-        # h_rat = Inf
+        # h_rat = abs(fn[1] / fn[2])
+        h_rat = Inf
         
         dir, branch = get_direction(z0, z, fn..., branch)
         step_size = min(h_opt, h_end, h_ord, h_rat, step_max)
@@ -151,13 +170,16 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
         p = recursive_2f1(a, b, c, z0, fn, h, order)
         dp = derivative(p)
         if step_size !== h_end
-            fn = (p(h), dp(h))
+            # fn = [p(h), dp(h)]
             z0 += h
-            n += 1
+            fn = correct_taylor(a, b, c, fn, [p(h), dp(h)], h, z0, max_iter = 20)
         else
             h = z - z0
-            return p(h)
+            fn = correct_taylor(a, b, c, fn, [p(h), dp(h)], h, z, max_iter = 20)
+            return fn[1]
+            # return p(h)
         end
+        
     end
 
     return fn[1]
