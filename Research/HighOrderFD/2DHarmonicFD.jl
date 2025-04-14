@@ -49,6 +49,19 @@ function getA(n = 3, N = 7)
     return A
 end
 
+function solvable(A, b)
+    ker = nullspace(A')
+    if isapprox(ker' * b, zeros(size(ker, 2)), atol = sqrt(eps(BigFloat)))
+        println("Solvable!")
+        # display(ker' * b)
+        return true
+    else
+        println("Not solvable :(")
+        # display(ker' * b)
+        return false
+    end
+end
+
 """
     getΔWeights(Z, N = 7)
 
@@ -65,84 +78,22 @@ function getΔWeights(n, N = 7)
     b = zeros(size(A, 1))                  # Construct Laplacian RHS
     b[1] = 1
 
+    solvable(A, b)
+
     ω = A \ b                                       # Compute weights
 
-    return (Z, reshape(ω, isqrt(length(ω)), :))     # Return weights in Fornberg stencil form
+    return reshape(ω, isqrt(length(ω)), :)     # Return weights in Fornberg stencil form
 end
 
-"""
-    getD1Weights(Z, N = 7)
+function Dd_stencil(n, N, d)
+    A = getA(n, N)
+    b = 2N + 1
 
-Compute stencil weights for first x-derivative at stencil nodes `Z` up to order `N` if possible.
-"""
-function getD1Weights(n, N = 7)
-    Z = get_centered_stencil(n)
-    A = getA(n, N)                          # Construct LHS
+    b = zeros(2N + 1)
+    b[2d] = factorial(d)
 
-    b = zeros(size(A, 1))
-    b[2] = 1
-
-    ω = A \ b                               # Compute weights
-    # ω = pinv(A) * b
-
-    return (Z, reshape(ω, isqrt(length(ω)), :))  # Return weights in Fornberg stencil form
-end
-
-"""
-    getD2Weights(Z, N = 7)
-
-Compute stencil weights for second x-derivative at stencil nodes `Z` up to order `N` if possible.
-"""
-function getD2Weights(Z, N = 7)
-    cent = ceil(Int64, length(Z) / 2)
-    zrs = zeros(1, length(Z))
-    zrs[cent] = 1
-
-    A = [getA(Z, N); zrs]                   # Construct LHS
-
-    b = zeros(size(A, 1))
-    b[end] = 1
-    b[3] = 2 
-
-    ω = A \ b                               # Compute weights
-
-    return reshape(ω, isqrt(length(ω)), :)  # Return weights in Fornberg stencil form
-end
-
-"""
-    getD3Weights(Z, N = 7)
-
-Compute stencil weights for first x-derivative at stencil nodes `Z` up to order `N` if possible.
-"""
-function getD3Weights(Z, N = 7)
-    cent = ceil(Int64, length(Z) / 2)
-    zrs = zeros(Int64((size(Z, 1) - 1) / 2), length(Z))
-    for i = 0 : size(zrs, 1) - 1
-        zrs[i + 1, cent + i] = 1
-    end
-
-    A = [getA(Z, N); zrs]                   # Construct LHS
-
-    b = zeros(size(A, 1))
-    b[4] = 6 
-
-    ω = A \ b                               # Compute weights
-
-    return reshape(ω, isqrt(length(ω)), :)  # Return weights in Fornberg stencil form
-end
-
-"""
-    getD4Weights(Z, N = 7)
-
-Compute stencil weights for second x-derivative at stencil nodes `Z` up to order `N` if possible.
-"""
-function getD4Weights(Z, N = 7)
-
-    A = getA(Z, N)                          # Construct LHS
-
-    b = zeros(size(A, 1))
-    b[5] = 24 
-
+    solvable(A, b)
+    
     ω = A \ b                               # Compute weights
 
     return reshape(ω, isqrt(length(ω)), :)  # Return weights in Fornberg stencil form
