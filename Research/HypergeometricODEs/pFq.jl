@@ -2,7 +2,7 @@
 # ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: April 14, 2025
+# DLM: April 15, 2025
 =#
 
 using MathLink
@@ -49,6 +49,24 @@ function get_direction(z0, z, f, df, branch = false)
     return (cis(h_str + .1h_dif), branch)
 end
 
+function correct_taylor(a, b, c, f0, f1, h, z1; order = 1000, tol = eps(), max_iter = 5)
+    f = recursive_2f1(a, b, c, z1, f1, -h, order)
+    f10 = recursive_2f1(a, b, c, z1, [1.0, 0.0im], -h, order)
+    f01 = recursive_2f1(a, b, c, z1, [0.0im, 1.0], -h, order)
+    
+    J = [f10(-h) f01(-h); derivative(f10)(-h) derivative(f01)(-h)]
+    for _ ∈ 1:max_iter
+        F = [f(-h); derivative(f)(-h)] - f0
+        f1 -= J \ F
+        if norm(F) / norm(f0) <= tol / 2
+            break
+        end
+        f = recursive_2f1(a, b, c, z1, f1, -h, order)
+    end
+
+    return f1
+end
+
 function maclaurin_2f1(a, b, c, z, N = 1000; tol = eps())
     S = zn = coeff = 1.0
     dS = 0.0
@@ -73,24 +91,6 @@ function maclaurin_2f1(a, b, c, z, N = 1000; tol = eps())
     end
 
     return [S, dS]
-end
-
-function correct_taylor(a, b, c, f0, f1, h, z1; order = 1000, tol = eps(), max_iter = 5)
-    f = recursive_2f1(a, b, c, z1, f1, -h, order)
-    f10 = recursive_2f1(a, b, c, z1, [1.0, 0.0im], -h, order)
-    f01 = recursive_2f1(a, b, c, z1, [0.0im, 1.0], -h, order)
-    
-    J = [f10(-h) f01(-h); derivative(f10)(-h) derivative(f01)(-h)]
-    for _ ∈ 1:max_iter
-        F = [f(-h); derivative(f)(-h)] - f0
-        f1 -= J \ F
-        if norm(F) / norm(f0) <= tol
-            break
-        end
-        f = recursive_2f1(a, b, c, z1, f1, -h, order)
-    end
-
-    return f1
 end
 
 function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
@@ -142,7 +142,7 @@ function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
     return p
 end
 
-function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .3)
+function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .3, backward = false)
     init_max = min(3abs(c / (a * b)), init_max)
     if abs(z) <= init_max
         return maclaurin_2f1(a, b, c, z, N)[1]
@@ -170,14 +170,21 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
         p = recursive_2f1(a, b, c, z0, fn, h, order)
         dp = derivative(p)
         if step_size !== h_end
-            # fn = [p(h), dp(h)]
-            z0 += h
-            fn = correct_taylor(a, b, c, fn, [p(h), dp(h)], h, z0, max_iter = 20)
+            if !backward
+                fn = [p(h), dp(h)]
+                z0 += h
+            else
+                z0 += h
+                fn = correct_taylor(a, b, c, fn, [p(h), dp(h)], h, z0, max_iter = 20)
+            end
         else
             h = z - z0
-            fn = correct_taylor(a, b, c, fn, [p(h), dp(h)], h, z, max_iter = 20)
-            return fn[1]
-            # return p(h)
+            if backward
+                fn = correct_taylor(a, b, c, fn, [p(h), dp(h)], h, z, max_iter = 20)
+                return fn[1]
+            else
+                return p(h)
+            end
         end
         
     end

@@ -98,3 +98,9 @@ function Dd_stencil(n, N, d)
 
     return reshape(ω, isqrt(length(ω)), :)  # Return weights in Fornberg stencil form
 end
+
+function nullvectors(n, N)
+    A = getA(n, N)
+
+    return abs.(nullspace(A)')') .> eps()
+end
