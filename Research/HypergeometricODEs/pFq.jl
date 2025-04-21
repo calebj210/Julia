@@ -154,10 +154,10 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
 
     branch = true
     for _ ∈ 1:N
-        h_opt = .1abs(z0 - 1) * exp(-2)
+        h_opt = abs(z0 - 1) * exp(-2)
         h_end = abs(z0 - z)
 
-        h_ord = .1abs(z0) * exp(-2)
+        h_ord = abs(z0) * exp(-2)
         # h_ord = Inf
 
         # h_rat = abs(fn[1] / fn[2])
