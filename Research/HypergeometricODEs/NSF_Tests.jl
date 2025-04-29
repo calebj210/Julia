@@ -2,7 +2,7 @@
 # Tests and graphics for the NSF Grant
 #
 # Author: Caleb Jacobs
-# DLM: February 18, 2025
+# DLM: April 27, 2025
 =#
 
 include("Plotting.jl")
@@ -38,49 +38,82 @@ function levin_errors(a = 1, b = -9/2, c = -9/4)
     taylor = taylor_2f1.(a, b, c, z)
     println(" Done")
 
-    johansson_error = abs.((johansson - tru) ./ tru)
-    johansson_error[iszero.(johansson_error)] .= 1e-17
-    mathematica_error = abs.((mathematica - tru) ./ tru)
-    mathematica_error[iszero.(mathematica_error)] .= 1e-17
-    levin_error = abs.((levin - tru) ./ tru)
-    levin_error[iszero.(levin_error)] .= 1e-17
-    taylor_error = abs.((taylor - tru) ./ tru)
-    taylor_error[iszero.(taylor_error)] .= 1e-17
+    taylor_error = clean_error.(taylor, tru)
+    levin_error = clean_error.(levin, tru)
+    johansson_error = clean_error.(johansson, tru)
+    mathematica_error = clean_error.(mathematica, tru)
 
     set_theme!(theme_latexfonts())
-    tp = heatmap(z.real, z.imag, taylor_error; colorscale = log10, colorrange = (1e-17, 1e-5))
-    tp.axis.title = latexstring("Taylor Method Error for \${_2}F_1($(a), $(b), $(c); z)\$")
-    tp.axis.xlabel = L"\mathrm{Re}(z)"
-    tp.axis.ylabel = L"\mathrm{Im}(z)"
-    Colorbar(tp.figure[1,2], tp.plot)
-    colsize!(tp.figure.layout, 1, Aspect(1, 1))
-    resize_to_layout!(tp.figure)
+    ticks = (-15:3:-6, [latexstring("10^{", p, "}") for p ∈ -15:3:-6])
 
-    lp = heatmap(z.real, z.imag, levin_error; colorscale = log10, colorrange = (1e-17, 1e-5))
-    lp.axis.title = latexstring("Levin-Type Error for \${_2}F_1($(a), $(b), $(c); z)\$")
-    lp.axis.xlabel = L"\mathrm{Re}(z)"
-    lp.axis.ylabel = L"\mathrm{Im}(z)"
-    Colorbar(lp.figure[1,2], lp.plot)
-    colsize!(lp.figure.layout, 1, Aspect(1, 1))
-    resize_to_layout!(lp.figure)
+    fig = Figure()
+    axt = Axis3(fig[1,1],
+        xlabel = L"\mathrm{Re}(z)",
+        ylabel = L"\mathrm{Im}(z)",
+        zlabel = "Relative Error",
+        title = "Taylor Error",
+        zticks = ticks,
+        xticklabelsize = 12,
+        yticklabelsize = 12,
+        zticklabelsize = 12,
+        zlabelsize = 12,
+        xlabeloffset = 25,
+        ylabeloffset = 25,
+        zlabeloffset = 45,
+        limits = (nothing, nothing, (-16,-5)),
+    )
+    axl = Axis3(fig[1,2],
+        xlabel = L"\mathrm{Re}(z)",
+        ylabel = L"\mathrm{Im}(z)",
+        zlabel = "Relative Error",
+        title = "Levin-Type Error",
+        zticks = ticks,
+        xticklabelsize = 12,
+        yticklabelsize = 12,
+        zticklabelsize = 12,
+        zlabelsize = 12,
+        xlabeloffset = 25,
+        ylabeloffset = 25,
+        zlabeloffset = 45,
+        limits = (nothing, nothing, (-16,-5)),
+    )
+    axj = Axis3(fig[2,1],
+        xlabel = L"\mathrm{Re}(z)",
+        ylabel = L"\mathrm{Im}(z)",
+        zlabel = "Relative Error",
+        title = "Johansson Error",
+        zticks = ticks,
+        xticklabelsize = 12,
+        yticklabelsize = 12,
+        zticklabelsize = 12,
+        zlabelsize = 12,
+        xlabeloffset = 25,
+        ylabeloffset = 25,
+        zlabeloffset = 45,
+        limits = (nothing, nothing, (-16,-5)),
+    )
+    axm = Axis3(fig[2,2],
+        xlabel = L"\mathrm{Re}(z)",
+        ylabel = L"\mathrm{Im}(z)",
+        zlabel = "Relative Error",
+        title = "Mathematica Error",
+        zticks = ticks,
+        xticklabelsize = 12,
+        yticklabelsize = 12,
+        zticklabelsize = 12,
+        zlabelsize = 12,
+        xlabeloffset = 25,
+        ylabeloffset = 25,
+        zlabeloffset = 45,
+        limits = (nothing, nothing, (-16,-5)),
+    )
 
-    jp = heatmap(z.real, z.imag, johansson_error; colorscale = log10, colorrange = (1e-17, 1e-5))
-    jp.axis.title = latexstring("Johansson Error for \${_2}F_1($(a), $(b), $(c); z)\$")
-    jp.axis.xlabel = L"\mathrm{Re}(z)"
-    jp.axis.ylabel = L"\mathrm{Im}(z)"
-    Colorbar(jp.figure[1,2], jp.plot)
-    colsize!(jp.figure.layout, 1, Aspect(1, 1))
-    resize_to_layout!(jp.figure)
+    tp = surface!(axt, reim(z)..., log10.(taylor_error),        colorrange = (-16,-6))
+    lp = surface!(axl, reim(z)..., log10.(levin_error),         colorrange = (-16,-6))
+    jp = surface!(axj, reim(z)..., log10.(johansson_error),     colorrange = (-16,-6))
+    mp = surface!(axm, reim(z)..., log10.(mathematica_error),   colorrange = (-16,-6))
 
-    mp = heatmap(z.real, z.imag, mathematica_error; colorscale = log10, colorrange = (1e-17, 1e-5))
-    mp.axis.title = latexstring("Mathematica Error for \${_2}F_1($(a), $(b), $(c); z)\$")
-    mp.axis.xlabel = L"\mathrm{Re}(z)"
-    mp.axis.ylabel = L"\mathrm{Im}(z)"
-    Colorbar(mp.figure[1,2], mp.plot)
-    colsize!(mp.figure.layout, 1, Aspect(1, 1))
-    resize_to_layout!(mp.figure)
-
-    return (; taylor = tp, levin = lp, johansson = jp, mathematica = mp)
+    return fig
 end
 
 # Used Test 2
@@ -100,41 +133,113 @@ function levin_timings(a = 1, b = -9/2, c = -9/4)
 
     mintime = minimum([taylor levin johansson mathematica])
     maxtime = maximum([taylor levin johansson mathematica])
-    cbounds = (mintime, maxtime)
+    cbounds = (log10(mintime), log10(maxtime))
 
-    tp = heatmap(z.real, z.imag, taylor; colorscale = log10, colorrange = cbounds)
-    tp.axis.title = latexstring("Taylor Method Times for \${_2}F_1($(a), $(b), $(c); z)\$")
-    tp.axis.xlabel = L"\mathrm{Re}(z)"
-    tp.axis.ylabel = L"\mathrm{Im}(z)"
-    Colorbar(tp.figure[1,2], tp.plot)
-    colsize!(tp.figure.layout, 1, Aspect(1, 1))
-    resize_to_layout!(tp.figure)
+    rng = ceil(Int, cbounds[1]):2:floor(Int, cbounds[2])
+    ticks = (rng, [latexstring("10^{", p, "}") for p ∈ rng])
 
-    lp = heatmap(z.real, z.imag, levin; colorscale = log10, colorrange = cbounds)
-    lp.axis.title = latexstring("Levin-Type Times for \${_2}F_1($(a), $(b), $(c); z)\$")
-    lp.axis.xlabel = L"\mathrm{Re}(z)"
-    lp.axis.ylabel = L"\mathrm{Im}(z)"
-    Colorbar(lp.figure[1,2], lp.plot)
-    colsize!(lp.figure.layout, 1, Aspect(1, 1))
-    resize_to_layout!(lp.figure)
+    set_theme!(theme_latexfonts())
+    fig = Figure()
+    axt = Axis3(fig[1,1],
+        xlabel = L"\mathrm{Re}(z)",
+        ylabel = L"\mathrm{Im}(z)",
+        zlabel = "Time (s)",
+        title = "Taylor Time",
+        zticks = ticks,
+        xticklabelsize = 12,
+        yticklabelsize = 12,
+        zticklabelsize = 12,
+        zlabelsize = 12,
+        xlabeloffset = 25,
+        ylabeloffset = 25,
+        zlabeloffset = 45,
+        limits = (nothing, nothing, cbounds),
+    )
+    axl = Axis3(fig[1,2],
+        xlabel = L"\mathrm{Re}(z)",
+        ylabel = L"\mathrm{Im}(z)",
+        zlabel = "Time (s)",
+        title = "Levin-Type Time",
+        zticks = ticks,
+        xticklabelsize = 12,
+        yticklabelsize = 12,
+        zticklabelsize = 12,
+        zlabelsize = 12,
+        xlabeloffset = 25,
+        ylabeloffset = 25,
+        zlabeloffset = 45,
+        limits = (nothing, nothing, cbounds),
+    )
+    axj = Axis3(fig[2,1],
+        xlabel = L"\mathrm{Re}(z)",
+        ylabel = L"\mathrm{Im}(z)",
+        zlabel = "Time (s)",
+        title = "Johansson Time",
+        zticks = ticks,
+        xticklabelsize = 12,
+        yticklabelsize = 12,
+        zticklabelsize = 12,
+        zlabelsize = 12,
+        xlabeloffset = 25,
+        ylabeloffset = 25,
+        zlabeloffset = 45,
+        limits = (nothing, nothing, cbounds),
+    )
+    axm = Axis3(fig[2,2],
+        xlabel = L"\mathrm{Re}(z)",
+        ylabel = L"\mathrm{Im}(z)",
+        zlabel = "Time (s)",
+        title = "Mathematica Time",
+        zticks = ticks,
+        xticklabelsize = 12,
+        yticklabelsize = 12,
+        zticklabelsize = 12,
+        zlabelsize = 12,
+        xlabeloffset = 25,
+        ylabeloffset = 25,
+        zlabeloffset = 45,
+        limits = (nothing, nothing, cbounds),
+    )
 
-    jp = heatmap(z.real, z.imag, johansson; colorscale = log10, colorrange = cbounds)
-    jp.axis.title = latexstring("Johansson Times for \${_2}F_1($(a), $(b), $(c); z)\$")
-    jp.axis.xlabel = L"\mathrm{Re}(z)"
-    jp.axis.ylabel = L"\mathrm{Im}(z)"
-    Colorbar(jp.figure[1,2], jp.plot)
-    colsize!(jp.figure.layout, 1, Aspect(1, 1))
-    resize_to_layout!(jp.figure)
+    tp = surface!(axt, reim(z)..., log10.(taylor),        colorrange = cbounds)
+    lp = surface!(axl, reim(z)..., log10.(levin),         colorrange = cbounds)
+    jp = surface!(axj, reim(z)..., log10.(johansson),     colorrange = cbounds)
+    mp = surface!(axm, reim(z)..., log10.(mathematica),   colorrange = cbounds)
 
-    mp = heatmap(z.real, z.imag, mathematica; colorscale = log10, colorrange = cbounds)
-    mp.axis.title = latexstring("Mathematica Times for \${_2}F_1($(a), $(b), $(c); z)\$")
-    mp.axis.xlabel = L"\mathrm{Re}(z)"
-    mp.axis.ylabel = L"\mathrm{Im}(z)"
-    Colorbar(mp.figure[1,2], mp.plot)
-    colsize!(mp.figure.layout, 1, Aspect(1, 1))
-    resize_to_layout!(mp.figure)
+    # tp = heatmap(z.real, z.imag, taylor; colorscale = log10, colorrange = cbounds)
+    # tp.axis.title = latexstring("Taylor Method Times for \${_2}F_1($(a), $(b), $(c); z)\$")
+    # tp.axis.xlabel = L"\mathrm{Re}(z)"
+    # tp.axis.ylabel = L"\mathrm{Im}(z)"
+    # Colorbar(tp.figure[1,2], tp.plot)
+    # colsize!(tp.figure.layout, 1, Aspect(1, 1))
+    # resize_to_layout!(tp.figure)
+    #
+    # lp = heatmap(z.real, z.imag, levin; colorscale = log10, colorrange = cbounds)
+    # lp.axis.title = latexstring("Levin-Type Times for \${_2}F_1($(a), $(b), $(c); z)\$")
+    # lp.axis.xlabel = L"\mathrm{Re}(z)"
+    # lp.axis.ylabel = L"\mathrm{Im}(z)"
+    # Colorbar(lp.figure[1,2], lp.plot)
+    # colsize!(lp.figure.layout, 1, Aspect(1, 1))
+    # resize_to_layout!(lp.figure)
+    #
+    # jp = heatmap(z.real, z.imag, johansson; colorscale = log10, colorrange = cbounds)
+    # jp.axis.title = latexstring("Johansson Times for \${_2}F_1($(a), $(b), $(c); z)\$")
+    # jp.axis.xlabel = L"\mathrm{Re}(z)"
+    # jp.axis.ylabel = L"\mathrm{Im}(z)"
+    # Colorbar(jp.figure[1,2], jp.plot)
+    # colsize!(jp.figure.layout, 1, Aspect(1, 1))
+    # resize_to_layout!(jp.figure)
+    #
+    # mp = heatmap(z.real, z.imag, mathematica; colorscale = log10, colorrange = cbounds)
+    # mp.axis.title = latexstring("Mathematica Times for \${_2}F_1($(a), $(b), $(c); z)\$")
+    # mp.axis.xlabel = L"\mathrm{Re}(z)"
+    # mp.axis.ylabel = L"\mathrm{Im}(z)"
+    # Colorbar(mp.figure[1,2], mp.plot)
+    # colsize!(mp.figure.layout, 1, Aspect(1, 1))
+    # resize_to_layout!(mp.figure)
 
-    return (; taylor = tp, levin = lp, johansson = jp, mathematica = mp)
+    # return (; taylor = tp, levin = lp, johansson = jp, mathematica = mp)
+    return fig
 end
 
 # Used
@@ -143,119 +248,104 @@ function complexrand(N)
 
     return vals
 end
+
 # Used Test 3
-function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 30, brng = 30, crng = 30, zrng = 1, seed = 997)
+function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 25, brng = 25, crng = 25, zrng = 1, seed = 997, complextest = false)
     Random.seed!(seed)
 
     # Setup random tests
-    as = a .+ arng * complexrand(N)
-    bs = b .+ brng * complexrand(N)
-    cs = c .+ crng * complexrand(N)
+    if complextest
+        as = a .+ arng * complexrand(N)
+        bs = b .+ brng * complexrand(N)
+        cs = c .+ crng * complexrand(N)
+    else
+        as = a .+ arng * (1 .- 2rand(N))
+        bs = b .+ brng * (1 .- 2rand(N))
+        cs = c .+ crng * (1 .- 2rand(N))
+    end
     zs = z .+ zrng * complexrand(N)
 
-    collected_tests = Vector{NTuple{4, ComplexF64}}()
-    true_vals = Vector{ComplexF64}()
+    tests = Vector{NTuple{4, ComplexF64}}()
+    tru = Vector{ComplexF64}()
     for (a,b,c,z) ∈ zip(as, bs, cs, zs)
         val = arb_2f1(ArbComplex.((a,b,c,z), bits = 512)...)
-        if isnan(val) || isinf(val) #|| abs(val) >= 1e16 || abs(val) <= 1e-16
+        if isnan(val) || isinf(val)
             continue
         end
-        push!(collected_tests, (a,b,c,z))
-        push!(true_vals, convert(ComplexF64, val))
+        push!(tests, (a,b,c,z))
+        push!(tru, convert(ComplexF64, val))
     end
-    println("Test Count: $(length(collected_tests))")
+    println("Test Count: $(length(tests))")
 
     # Evaluate each test for accuracy 
     print("Running accuracy tests... ")
-    taylor_vals      = [taylor_2f1(test...)      for test ∈ collected_tests]
-    trans_vals       = [_2f1(test...)      for test ∈ collected_tests]
-    levin_vals       = [weniger_2f1(test...)     for test ∈ collected_tests]
-    johansson_vals   = [johansson_2f1(test...,
-                                     bits = 53)  for test ∈ collected_tests]
-    # mathematica_vals = @suppress_err [mathematica_2f1(test...) for test ∈ collected_tests]
+    ta = [taylor_2f1(test...)                    for test ∈ tests]
+    # tr = [_2f1(test...)                          for test ∈ tests]
+    le = [weniger_2f1(test...)                   for test ∈ tests]
+    jo = [johansson_2f1(test..., bits = 53)      for test ∈ tests]
+    ma = @suppress_err [mathematica_2f1(test...) for test ∈ tests]
     print("done\nRunning time tests...\n")
 
     # Timings of each test
     print("\tTaylor... ")
-    taylor_times      = [average_time(test..., taylor_2f1)      for test ∈ collected_tests]
-    print("done\n\tTaylor Transform... ")
-    trans_times       = [average_time(test..., _2f1)      for test ∈ collected_tests]
+    tt  = [average_time(test..., taylor_2f1)  for test ∈ tests]
+    # print("done\n\tTaylor Transform... ")
+    # trt = [average_time(test..., _2f1)        for test ∈ tests]
     print("done\n\tLevin... ")
-    levin_times       = [average_time(test..., weniger_2f1)     for test ∈ collected_tests]
+    lt  = [average_time(test..., weniger_2f1) for test ∈ tests]
     print("done\n\tJohansson... ")
-    johansson_times   = [average_time(test..., (a,b,c,z) -> 
-                             johansson_2f1(a,b,c,z; bits = 53)) for test ∈ collected_tests]
-    # print("done\n\tMathematica... ")
-    # mathematica_times = @suppress_err [average_time(test..., mathematica_2f1) for test ∈ collected_tests]
+    jt  = [average_time(test..., (a,b,c,z) -> 
+                             johansson_2f1(a,b,c,z; bits = 53)) for test ∈ tests]
+    print("done\n\tMathematica... ")
+    mt = @suppress_err [average_time(test..., mathematica_2f1) for test ∈ tests]
     println("done")
 
     # Structure data
-    # true_jo     = merge((; avg = round(mean(true_times), sigdigits = 2), 
-    #                        med = round(median(true_times), sigdigits = 2)), 
-    #                        count_errors(true_vals, true_vals))
-    taylor      = merge((; avg = round(mean(taylor_times), sigdigits = 2), 
-                           med = round(median(taylor_times), sigdigits = 2)), 
-                           count_errors(taylor_vals, true_vals))
-    trans       = merge((; avg = round(mean(trans_times), sigdigits = 2), 
-                           med = round(median(trans_times), sigdigits = 2)), 
-                           count_errors(trans_vals, true_vals))
-    levin       = merge((; avg = round(mean(levin_times), sigdigits = 2), 
-                           med = round(median(levin_times), sigdigits = 2)), 
-                           count_errors(levin_vals, true_vals))
-    johansson   = merge((; avg = round(mean(johansson_times), sigdigits = 2), 
-                           med = round(median(johansson_times), sigdigits = 2)), 
-                           count_errors(johansson_vals, true_vals))
-    # mathematica = merge((; avg = round(mean(mathematica_times), sigdigits = 2), 
-                           # med = round(median(mathematica_times), sigdigits = 2)), 
-                           # count_errors(mathematica_vals, true_vals))
+    taylor      = merge((; avg = round(mean(tt), sigdigits = 2), 
+                           med = round(median(tt), sigdigits = 2)), 
+                           count_errors(ta, tru))
+    # trans       = merge((; avg = round(mean(trt), sigdigits = 2), 
+    #                        med = round(median(trt), sigdigits = 2)), 
+    #                        count_errors(tr, tru))
+    levin       = merge((; avg = round(mean(lt), sigdigits = 2), 
+                           med = round(median(lt), sigdigits = 2)), 
+                           count_errors(le, tru))
+    johansson   = merge((; avg = round(mean(jt), sigdigits = 2), 
+                           med = round(median(jt), sigdigits = 2)), 
+                           count_errors(jo, tru))
+    mathematica = merge((; avg = round(mean(mt), sigdigits = 2), 
+                           med = round(median(mt), sigdigits = 2)), 
+                           count_errors(ma, tru))
 
-    taylor_error = abs.((taylor_vals - true_vals) ./ true_vals)
-    taylor_error[isnan.(taylor_error) .|| isinf.(taylor_error) .|| taylor_error .> 1] .= 1
-    taylor_error[taylor_error .<= 1e-17] .= 1e-17
-
-    # return collected_tests[findall(isone,taylor_error)]
-
-    trans_error = abs.((trans_vals - true_vals) ./ true_vals)
-    trans_error[isnan.(trans_error) .|| isinf.(trans_error) .|| trans_error .> 1] .= 1
-    trans_error[trans_error .<= 1e-17] .= 1e-17
-
-    levin_error = abs.((levin_vals - true_vals) ./ true_vals)
-    levin_error[isnan.(levin_error) .|| isinf.(levin_error) .|| levin_error .> 1] .= 1
-    levin_error[levin_error .<= 1e-17] .= 1e-17
-
-    johansson_error = abs.((johansson_vals - true_vals) ./ true_vals)
-    johansson_error[isnan.(johansson_error) .|| isinf.(johansson_error) .|| johansson_error .> 1] .= 1
-    johansson_error[johansson_error .<= 1e-17] .= 1e-17
-
-    # mathematica_error = abs.((mathematica_vals - true_vals) ./ true_vals)
-    # mathematica_error[isnan.(mathematica_error) .|| isinf.(mathematica_error) .|| mathematica_error .> 1] .= 1
-    # mathematica_error[mathematica_error .<= 1e-17] .= 1e-17
+    tae = clean_error.(ta, tru)
+    # tre = clean_error.(tr, tru)
+    lee = clean_error.(le, tru)
+    joe = clean_error.(jo, tru)
+    mae = clean_error.(ma, tru)
 
     # Display result
-    # print("True:        "); print_error_and_time(true_jo)
     print("Taylor:      "); print_error_and_time(taylor)
-    print("Trans:       "); print_error_and_time(trans)
+    # print("Trans:       "); print_error_and_time(trans)
     print("Levin:       "); print_error_and_time(levin)
     print("Johansson:   "); print_error_and_time(johansson)
-    # print("Mathematica: "); print_error_and_time(mathematica)
+    print("Mathematica: "); print_error_and_time(mathematica)
 
     fig = Figure()
     top = GridLayout(fig[1,1])
     bot = GridLayout(fig[2,1])
     axt = Axis(top[1,1], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Taylor")
-    axr = Axis(top[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Taylor Transformations")
-    axl = Axis(bot[1,1], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Levin-Type")
-    axj = Axis(bot[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Johansson")
-    # axm = Axis(bot[1,3], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Mathematica")
+    # axr = Axis(top[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Taylor Transformations")
+    axl = Axis(top[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Levin-Type")
+    axj = Axis(bot[1,1], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Johansson")
+    axm = Axis(bot[1,2], limits = (nothing, (0,1)), xscale = log10, xlabel = "Relative Error", title = "Mathematica")
 
-    bin = 10.0 .^ (-17:1)
-    # bin = 10.0 .^ (-17:2:1)
+    bin = 10.0 .^ (-16:2:2)
 
-    hist!(axt, taylor_error,      bins = bin, color = :values, normalization = :probability)
-    hist!(axr, trans_error,       bins = bin, color = :values, normalization = :probability)
-    hist!(axl, levin_error,       bins = bin, color = :values, normalization = :probability)
-    hist!(axj, johansson_error,   bins = bin, color = :values, normalization = :probability)
-    # hist!(axm, mathematica_error, bins = bin, color = :values, normalization = :probability)
+    hist!(axt, tae, bins = bin, color = :values, normalization = :probability)
+    # hist!(axr, tre, bins = bin, color = :values, normalization = :probability)
+    hist!(axl, lee, bins = bin, color = :values, normalization = :probability)
+    hist!(axj, joe, bins = bin, color = :values, normalization = :probability)
+    hist!(axm, mae, bins = bin, color = :values, normalization = :probability)
     
     rowsize!(fig.layout, 1, Auto(1))
     rowsize!(fig.layout, 2, Auto(1))
@@ -342,8 +432,8 @@ function clean_error(f,t)
 
     if err > 1 || isnan(err) || isinf(err)
         err = 1
-    elseif err <= 1e-17
-        err = 1e-17
+    elseif err <= 1e-16
+        err = 1e-16
     end
 
     return err

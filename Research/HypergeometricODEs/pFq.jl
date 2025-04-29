@@ -2,7 +2,7 @@
 # ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: April 15, 2025
+# DLM: April 24, 2025
 =#
 
 using MathLink
@@ -46,7 +46,7 @@ function get_direction(z0, z, f, df, branch = false)
 
     h_dif = argmin(h -> abs2(h), h_arg - h_str .+ (-2:1) * π)
 
-    return (cis(h_str + .1h_dif), branch)
+    return (cis(h_str + .25h_dif), branch)
 end
 
 function correct_taylor(a, b, c, f0, f1, h, z1; order = 1000, tol = eps(), max_iter = 5)
@@ -94,9 +94,6 @@ function maclaurin_2f1(a, b, c, z, N = 1000; tol = eps())
 end
 
 function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
-    p = Polynomial(f0)
-    sizehint!(p.coeffs, 50, shrink = false)
-
     (c0, c1) = f0
 
     # 10 flop optimization for 3-term recurrence
@@ -106,13 +103,15 @@ function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
     
     hn = h
     S = c0 + c1 * h
+    dS = c1
     crit_flag = false
-    for n = 3:N + 1
+    for n = 2:N
         # Compute next coefficient
         coeff = (A0 * c0 + B0 * c1) / C0
 
         # criteria = abs(val)
         # if criteria <= eps(abs(S))
+        dS += coeff * hn * n
         hn *= h
         criteria = abs(coeff * hn / S)
         if criteria <= tol / 2
@@ -131,7 +130,7 @@ function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
 
         c0 = c1
         c1 = coeff
-        push!(p.coeffs, coeff)
+        # push!(p.coeffs, coeff)
 
         # Update recurrence values
         A1 += A2; A0 += A1
@@ -139,7 +138,8 @@ function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
         C1 += C2; C0 += C1
     end 
 
-    return p
+    # return p
+    return [S, dS]
 end
 
 function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .3, backward = false)
@@ -166,27 +166,34 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
         dir, branch = get_direction(z0, z, fn..., branch)
         step_size = min(h_opt, h_end, h_ord, h_rat, step_max)
 
-        h = dir * step_size
-        p = recursive_2f1(a, b, c, z0, fn, h, order)
-        dp = derivative(p)
-        if step_size !== h_end
-            if !backward
-                fn = [p(h), dp(h)]
-                z0 += h
-            else
-                z0 += h
-                fn = correct_taylor(a, b, c, fn, [p(h), dp(h)], h, z0, max_iter = 20)
-            end
+        if step_size != h_end
+            h = dir * step_size
+            fn = recursive_2f1(a, b, c, z0, fn, h, order)
+            z0 += h
         else
             h = z - z0
-            if backward
-                fn = correct_taylor(a, b, c, fn, [p(h), dp(h)], h, z, max_iter = 20)
-                return fn[1]
-            else
-                return p(h)
-            end
+            return recursive_2f1(a, b, c, z0, fn, h, order)[1]
         end
-        
+
+        # if step_size !== h_end
+            # if !backward
+                # fn = [p(h), dp(h)]
+                # z0 += h
+            # else
+                # z0 += h
+                # fn = correct_taylor(a, b, c, fn, [p(h), dp(h)], h, z0, max_iter = 20)
+            # end
+        # else
+        #     h = z - z0
+            # if backward
+                # fn = correct_taylor(a, b, c, fn, [p(h), dp(h)], h, z, max_iter = 20)
+                # return fn[1]
+            # else
+                # return fn[1]
+                # return p(h)
+            # end
+        #     break
+        # end
     end
 
     return fn[1]

@@ -94,17 +94,17 @@ function global_error(a, b, c; z = nothing, tru = nothing)
     return (fig, z, tru)
 end
 
-function random_failed_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 30, brng = 30, crng = 30, zrng = 1, seed = 997)
+function random_failed_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 25, brng = 25, crng = 25, zrng = 1, seed = 997)
     seed!(seed)
 
     # Setup random tests
-    as = a .+ arng * (1 .- 2rand(N))
-    bs = b .+ brng * (1 .- 2rand(N))
-    cs = c .+ crng * (1 .- 2rand(N))
-    # zs = z .+ zrng * (1 .- rand(N))
-    # as = a .+ arng * complexrand(N)
-    # bs = b .+ brng * complexrand(N)
-    # cs = c .+ crng * complexrand(N)
+    # as = a .+ arng * (1 .- 2rand(N))
+    # bs = b .+ brng * (1 .- 2rand(N))
+    # cs = c .+ crng * (1 .- 2rand(N))
+    # zs = z .+ zrng * (1 .- 2rand(N))
+    as = a .+ arng * complexrand(N)
+    bs = b .+ brng * complexrand(N)
+    cs = c .+ crng * complexrand(N)
     zs = z .+ zrng * complexrand(N)
 
     print("Getting tests... ")
@@ -198,12 +198,12 @@ function random_histograms(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 30, brn
     # Evaluate each test for accuracy 
     println("\nRunning accuracy tests:")
     print("\tOne Step Taylor: ")
-    ta1 = [taylor_2f1(test..., two_step = false)     for test ∈ tests]
+    ta1 = [taylor_2f1(test...)     for test ∈ tests]
     ta1e = clean_error.(ta1, tru)
     println("done")
 
     print("\tTwo Step Taylor: ")
-    ta2 = [taylor_2f1(test..., two_step = true)      for test ∈ tests]
+    ta2 = [taylor_2f1(test...)      for test ∈ tests]
     ta2e = clean_error.(ta2, tru)
     println("done")
     
