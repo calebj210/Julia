@@ -35,18 +35,27 @@ johansson_2f1(a, b, c, z; bits = 512)::ComplexF64 = arb_2f1(ArbComplex.((a, b, c
 function get_initialization(a, b, c, z)
     if abs(z) < .3
         z0 = z
-        f, df = maclaurin_2f1(a, b, c, z0)
-    elseif abs(z) >= .3 
-        z0 = real(z) + im * 3.3sgn(imag(z))
-        f = oneoverz_2f1(a, b, c, z0)
-        df = a * b / c * oneoverz_2f1(a + 1, b + 1, c + 1, z0)
-    elseif real(z) > 1
-        z0 = 1 + .3sign(z - 1)
-        f = oneminusz_2f1(a, b, c, z0)
-        df = a * b / c * oneminusz_2f1(a + 1, b + 1, c + 1, z0)
+        fn = maclaurin_2f1(a, b, c, z0)
+    elseif abs(z - 1) < 1#real(z) > .5 #&& abs(z - 1) < 2
+        if abs(z - 1) < .1
+            z0 = z
+        else
+            z0 = 1 + .1sign(z - 1)
+        end
+        fn = oneminusz_2f1(a, b, c, z0)
+    elseif abs(z) >= .3 # && abs(z - 1) >= 1
+        if abs(z) >= 3.3
+            z0 = z
+        else
+            z0 = 4.3sign(z - argmin(zb -> abs2(z - zb), [0, 1]))
+        end
+        fn = oneoverz_2f1(a, b, c, z0)
+    else
+        z0 = .3sign(z)
+        fn = maclaurin_2f1(a, b, c, z0)
     end
 
-    return (z0, [f, df])
+    return (z0, fn)
 end
 
 function get_direction(z0, z, f, df, branch = false)
@@ -162,20 +171,20 @@ function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
 end
 
 function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .3, backward = false)
-    # init_max = min(3abs(c / (a * b)), init_max)
-    # if abs(z) <= init_max
-    #     return maclaurin_2f1(a, b, c, z, N)[1]
-    # end
-    #
-    # z0 = init_max * sign(z)
-    #
-    # fn = maclaurin_2f1(a, b, c, z0, N)
-
-    z0, fn = get_initialization(a, b, c, z)
-
-    if z0 == z
-        return fn[1]
+    init_max = min(3abs(c / (a * b)), init_max)
+    if abs(z) <= init_max
+        return maclaurin_2f1(a, b, c, z, N)[1]
     end
+
+    z0 = init_max * sign(z)
+
+    fn = maclaurin_2f1(a, b, c, z0, N)
+
+    # z0, fn = get_initialization(a, b, c, z)
+    #
+    # if z0 == z
+    #     return fn[1]
+    # end
 
     branch = true
     for _ ∈ 1:N
@@ -360,47 +369,48 @@ function int_ab_2f1(a, b, c, z; N = 100, tol = 1e-15)
 end
 
 function oneoverz_2f1(a, b, c, z)
-    f1 = maclaurin_2f1(a, a - c + 1, a - b + 1, 1 / z)[1]
-    f2 = maclaurin_2f1(b, b - c + 1, b - a + 1, 1 / z)[1]
+    f1, df1 = maclaurin_2f1(a, a - c + 1, a - b + 1, 1 / z)
+    f2, df2 = maclaurin_2f1(b, b - c + 1, b - a + 1, 1 / z)
 
-    # g1 = π / sinpi(b - a) / gamma(b) / gamma(c - a) * (-z)^(-a)
-    # g2 = π / sinpi(a - b) / gamma(a) / gamma(c - b) * (-z)^(-b)
     g1 = gamma(b - a) / gamma(b) * gamma(c) / gamma(c - a) * (-z)^(-a)
     g2 = gamma(a - b) / gamma(a) * gamma(c) / gamma(c - b) * (-z)^(-b)
 
-    return g1 * f1 + g2 * f2
+
+    return [
+        g1 * f1 + g2 * f2, 
+        g1 * (-a * f1 - df1 / z) / z + 
+        g2 * (-b * f2 - df2 / z) / z
+    ]
 end
 
 function oneminusoneoverz_2f1(a, b, c, z)
     f1 = maclaurin_2f1(a, a - c + 1, a + b - c + 1, 1 - 1 / z)[1]
     f2 = maclaurin_2f1(c - a, 1 - a, c - a - b + 1, 1 - 1 / z)[1]
 
-    # g1 = π / sinpi(c - a - b) / gamma(c - a) / gamma(c - b) * z^(-a)
-    # g2 = π / sinpi(a + b - c) / gamma(a) / gamma(b) * (1 - z)^(c - a - b) * z^(a - c)
     g1 = gamma(c) / gamma(c - a) * gamma(c - a - b) / gamma(c - b) * z^(-a)
-    g2 = gamma(c) / gamma(a)     * gamma(a + b - c) / gamma(b)     * (1 - z)^(c - a - b) * z^(a - c)
+    g2 = gamma(c) / gamma(a) * gamma(a + b - c) / gamma(b) * (1 - z)^(c - a - b) * z^(a - c)
 
     return g1 * f1 + g2 * f2
 end
 
 function oneminusz_2f1(a, b, c, z)
-    f1 = maclaurin_2f1(a, b,         a + b - c + 1, 1 - z)[1]
-    f2 = maclaurin_2f1(c - a, c - b, c - a - b + 1, 1 - z)[1]
+    f1, df1 = maclaurin_2f1(a, b,         a + b - c + 1, 1 - z)
+    f2, df2 = maclaurin_2f1(c - a, c - b, c - a - b + 1, 1 - z)
     
-    # g1 = π / sinpi(c - a - b) / gamma(c - a) / gamma(c - b)
-    # g2 = π / sinpi(a + b - c) / gamma(a) / gamma(b) * (1 - z)^(c - a - b)
     g1 = gamma(c - a - b) * gamma(c) / gamma(c - a) / gamma(c - b)
     g2 = gamma(a + b - c) * gamma(c) / gamma(a) / gamma(b) * (1 - z)^(c - a - b)
 
-    return g1 * f1 + g2 * f2
+    return [
+        g1 * f1 + g2 * f2,
+        -g1 * df1 + 
+        g2 * ((a + b - c) / (1 - z) * f2 - df2)
+    ]
 end
 
 function oneoveroneminusz_2f1(a, b, c, z)
     f1 = maclaurin_2f1(a, c - b, a - b + 1, 1 / (1 - z))[1]
     f2 = maclaurin_2f1(b, c - a, b - a + 1, 1 / (1 - z))[1]
 
-    # g1 = π / sinpi(b - a) / gamma(b) / gamma(c - a) * (1 - z)^(-a)
-    # g2 = π / sinpi(a - b) / gamma(a) / gamma(c - b) * (1 - z)^(-b)
     g1 = gamma(b - a) * gamma(c) / gamma(b) / gamma(c - a) * (1 - z)^(-a)
     g2 = gamma(a - b) * gamma(c) / gamma(a) / gamma(c - b) * (1 - z)^(-b)
 

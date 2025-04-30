@@ -5,8 +5,50 @@
 # DLM: April 28, 2025
 =#
 
-using CairoMakie, ComplexVisuals
+using CairoMakie, ComplexVisuals, LaTeXStrings
 include("pFq.jl")
+
+function failed_test(tru = nothing)
+    a, b, c = (-19.139483726210333, -14.134535062801518, -24.30112282763963)
+    z = complex_square_grid(2, 300)
+
+    if isnothing(tru)
+        tru = johansson_2f1.(a, b, c, z)
+    end
+    f = taylor_2f1.(a, b, c, z)
+
+    errs = clean_error.(f, tru)
+
+    ticks = ( -16:4:0, [latexstring("10^{", p, "}") for p ∈ -16:4:0])
+    set_theme!(theme_latexfonts())
+    fig1 = Figure()
+    fig2 = Figure()
+    ax1 = Axis3(fig1[1,1],
+        title = L"Relative Error in ${_2}F_1(a,b;c;z)$",
+        titlesize = 20,
+        xlabel = L"\mathrm{Re}(z)",
+        ylabel = L"\mathrm{Im}(z)",
+        zlabel = "Relative Error",
+        limits = (nothing, nothing, (-17,2)),
+        zticks = ticks,
+        protrusions = (60, 30, 30, 30)
+    )
+    ax2 = Axis3(fig2[1,1],
+        title = L"Abs-Arg of ${_2}F_1(a,b;c;z)$",
+        titlesize = 20,
+        xlabel = L"\mathrm{Re}(z)",
+        ylabel = L"\mathrm{Im}(z)",
+        zlabel = L"pseudolog$_{10}|f(z)|$",
+        zlabeloffset = 30,
+    )
+    p1 = surface!(ax1, reim(z)..., log10.(errs), colorrange = (-17,1))
+    complexsurface!(ax2, z, Makie.pseudolog10.(tru))
+
+    Colorbar(fig1[1,2], p1, ticks = ticks)
+    resize_to_layout!(fig1)
+
+    return (fig1, fig2, tru)
+end
 
 function failed_mapping(tru = nothing)
     a, b, c = (-19.139483726210333, -14.134535062801518, -24.30112282763963)
@@ -23,26 +65,31 @@ function failed_mapping(tru = nothing)
 
     ax0 = Axis(fig[1,1],
         title = L"z \mapsto z",
+        ylabel = L"\mathrm{Re}(z)",
         limits = ((-3,3), (-3,3)),
     )
     ax1 = Axis(fig[1,2],
         title = L"z \mapsto \frac{1}{z}",
         limits = ((-3,3), (-3,3)),
     )
-    ax2 = Axis(fig[1,3],
+    ax2 = Axis(fig[2,1],
+        title = L"z \mapsto \frac{1}{1 - z}",
+        ylabel = L"\mathrm{Re}(z)",
+        limits = ((-3,3), (-3,3)),
+    )
+    ax3 = Axis(fig[2,2],
         title = L"z \mapsto 1 - z",
         limits = ((-3,3), (-3,3)),
     )
-    ax3 = Axis(fig[2,1],
+    ax4 = Axis(fig[3,1],
         title = L"z \mapsto 1 - \frac{1}{z}",
+        xlabel = L"\mathrm{Im}(z)",
+        ylabel = L"\mathrm{Re}(z)",
         limits = ((-3,3), (-3,3)),
     )
-    ax4 = Axis(fig[2,2],
-        title = L"z \mapsto \frac{1}{1 - z}",
-        limits = ((-3,3), (-3,3)),
-    )
-    ax5 = Axis(fig[2,3],
+    ax5 = Axis(fig[3,2],
         title = L"z \mapsto \frac{z}{z - 1}",
+        xlabel = L"\mathrm{Im}(z)",
         limits = ((-3,3), (-3,3)),
     )
 
@@ -56,17 +103,17 @@ function failed_mapping(tru = nothing)
         colorrange = (1e-16, 1e1),
         levels = 10.0 .^ (-16:1),
     )
-    contour!(ax2, reim(1 .- z)..., errs,
+    contour!(ax2, reim(1 ./ (1 .- z))..., errs,
         colorscale = log10,
         colorrange = (1e-16, 1e1),
         levels = 10.0 .^ (-16:1),
     )
-    contour!(ax3, reim(1 .- 1 ./ z)..., errs,
+    contour!(ax3, reim(1 .- z)..., errs,
         colorscale = log10,
         colorrange = (1e-16, 1e1),
         levels = 10.0 .^ (-16:1),
     )
-    contour!(ax4, reim(1 ./ (1 .- z))..., errs,
+    contour!(ax4, reim(1 .- 1 ./ z)..., errs,
         colorscale = log10,
         colorrange = (1e-16, 1e1),
         levels = 10.0 .^ (-16:1),
@@ -77,11 +124,18 @@ function failed_mapping(tru = nothing)
         levels = 10.0 .^ (-16:1),
     )
 
-    colsize!(fig.layout, 1, Aspect(1, 1))
-    colsize!(fig.layout, 2, Aspect(1, 1))
-    colsize!(fig.layout, 3, Aspect(1, 1))
+    # colsize!(fig.layout, 1, Aspect(1, 1))
+    # colsize!(fig.layout, 2, Aspect(1, 1))
+    # colsize!(fig.layout, 3, Aspect(1, 1))
 
-    # Colorbar(fig[1,3], ax0)
+    rowsize!(fig.layout, 1, Aspect(1, 1))
+    rowsize!(fig.layout, 2, Aspect(1, 1))
+    rowsize!(fig.layout, 3, Aspect(1, 1))
+
+    ticks = (-15:3:0, [latexstring("10^{", p, "}") for p ∈ -15:3:0])
+    Colorbar(fig[1,3], limits = (-16, 1), colormap = :viridis, ticks = ticks, label = "Relative Error", labelrotation = -π/2)
+    Colorbar(fig[2,3], limits = (-16, 1), colormap = :viridis, ticks = ticks, label = "Relative Error", labelrotation = -π/2)
+    Colorbar(fig[3,3], limits = (-16, 1), colormap = :viridis, ticks = ticks, label = "Relative Error", labelrotation = -π/2)
 
     resize_to_layout!(fig)
 
