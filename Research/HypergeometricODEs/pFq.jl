@@ -171,20 +171,20 @@ function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
 end
 
 function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .3, backward = false)
-    init_max = min(3abs(c / (a * b)), init_max)
-    if abs(z) <= init_max
-        return maclaurin_2f1(a, b, c, z, N)[1]
-    end
-
-    z0 = init_max * sign(z)
-
-    fn = maclaurin_2f1(a, b, c, z0, N)
-
-    # z0, fn = get_initialization(a, b, c, z)
-    #
-    # if z0 == z
-    #     return fn[1]
+    # init_max = min(3abs(c / (a * b)), init_max)
+    # if abs(z) <= init_max
+    #     return maclaurin_2f1(a, b, c, z, N)[1]
     # end
+    #
+    # z0 = init_max * sign(z)
+    #
+    # fn = maclaurin_2f1(a, b, c, z0, N)
+
+    z0, fn = get_initialization(a, b, c, z)
+
+    if z0 == z
+        return fn[1]
+    end
 
     branch = true
     for _ ∈ 1:N
