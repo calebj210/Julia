@@ -20,7 +20,8 @@ function get_centered_stencil(n = 3)
     end
 
     nL = floor(Int64, n / 2)                        # Lower bound on stencil
-    Z = [[x, y] for y ∈ -nL:nL, x ∈ -nL:nL] / nL    # Stencil nodes
+    # Z = [[x, y] for y ∈ -nL:nL, x ∈ -nL:nL] / nL    # Stencil nodes
+    Z = [[x, y] for y ∈ -nL:nL, x ∈ -nL:nL]    # Stencil nodes
 
     return Z
 end
@@ -78,7 +79,7 @@ function getΔWeights(n, N = 7)
     b = zeros(size(A, 1))                  # Construct Laplacian RHS
     b[1] = 1
 
-    solvable(A, b)
+    # solvable(A, b)
 
     ω = A \ b                                       # Compute weights
 
@@ -102,5 +103,5 @@ end
 function nullvectors(n, N)
     A = getA(n, N)
 
-    return abs.(nullspace(A)')') .> eps()
+    return abs.(nullspace(A)')' .> eps()
 end
