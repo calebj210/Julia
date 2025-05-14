@@ -33,48 +33,80 @@ mathematica_pfq(a, b, z) =
 johansson_2f1(a, b, c, z; bits = 512)::ComplexF64 = arb_2f1(ArbComplex.((a, b, c, z), bits = bits)...)
 
 function get_initialization(a, b, c, z)
-    if abs(z) < .3
-        z0 = z
-        fn = maclaurin_2f1(a, b, c, z0)
-    elseif abs(z - 1) < 1#real(z) > .5 #&& abs(z - 1) < 2
-        if abs(z - 1) < .1
+    # if abs(z) > .3 && real(z) < .5
+        # if abs(z) >= 4
+        #     z0 = z
+        # else
+        #     # offset = real(z) > .5 ? 0 : 1
+        #     # z0 = offset + 4sign(z - offset)
+        #     # z0 = 1 + 4sign(z - 1)
+        #     z0 = 4sign(z)
+        # end
+        # fn = oneoverz_2f1(a, b, c, z0)
+        # # fn = oneoveroneminusz_2f1(a, b, c, z0)
+    # if real(z) >= .5
+    #     if abs(z - 1) < .3
+    #         z0 = z
+    #     else
+    #         z0 = 1 + .3sign(z - 1)
+    #     end
+    #     # fn = oneminusz_2f1(a, b, c, z0)
+    #     fn = oneminusoneoverz_2f1(a, b, c, z0)
+    # else
+        step = min(2abs(c / a / b), 0.3)
+        # step = .5
+        if abs(z) < step
             z0 = z
         else
-            z0 = 1 + .1sign(z - 1)
+            z0 = step * sign(z)
         end
-        fn = oneminusz_2f1(a, b, c, z0)
-    elseif abs(z) >= .3 # && abs(z - 1) >= 1
-        if abs(z) >= 3.3
-            z0 = z
-        else
-            z0 = 4.3sign(z - argmin(zb -> abs2(z - zb), [0, 1]))
-        end
-        fn = oneoverz_2f1(a, b, c, z0)
-    else
-        z0 = .3sign(z)
         fn = maclaurin_2f1(a, b, c, z0)
-    end
+    # end
+
+    # if abs(z) < 1
+    #     if abs(z) < .3
+    #         z0 = z
+    #     else
+    #         z0 = .3sign(z)
+    #     end
+    #     fn = maclaurin_2f1(a, b, c, z0)
+    # elseif abs(z - 1) < 2
+    #     if abs(z - 1) < .1
+    #         z0 = z
+    #     else
+    #         z0 = 1 + .1sign(z - 1)
+    #     end
+    #     fn = oneminusz_2f1(a, b, c, z0)
+    # elseif abs(z) >= 1 # && abs(z - 1) >= 1
+    #     if abs(z) >= 4.3
+    #         z0 = z
+    #     else
+    #         z0 = 4.3sign(z - argmin(zb -> abs2(z - zb), [0, 1]))
+    #     end
+    #     fn = oneoverz_2f1(a, b, c, z0)
+    # end
 
     return (z0, fn)
 end
 
 function get_direction(z0, z, f, df, branch = false)
     # if branch && real(z) > 1 && real(z0) < 1 
-        # h_str = angle(1 + 2sgn(imag(z)) * im - z0)  # Go to 1 ± i first when navigating the branch point
+    #     h_str = angle(1 + 2sgn(imag(z)) * im - z0)  # Go to 1 ± i first when navigating the branch point
     # else
-        # h_str = angle(z - z0)                       # Straight path direction
-        # branch = false
+    #     h_str = angle(z - z0)                       # Straight path direction
+    #     branch = false
     # end
 
-    h_str = angle(z - z0)                       # Straight path direction
-    h_arg = angle(im * f / df)                  # Constant phase direction
-    if h_arg < 0
-        h_arg += π
-    end
-
-    h_dif = argmin(h -> abs2(h), h_arg - h_str .+ (-2:1) * π)
-
-    return (cis(h_str + .25h_dif), branch)
+    # h_str = angle(z - z0)                       # Straight path direction
+    # h_arg = angle(im * f / df)                  # Constant phase direction
+    # if h_arg < 0
+    #     h_arg += π
+    # end
+    #
+    # h_dif = argmin(h -> abs2(h), h_arg - h_str .+ (-2:1) * π)
+    #
+    # return (cis(h_str + .25h_dif), branch)
+    return (sign(z - z0), false)
 end
 
 function correct_taylor(a, b, c, f0, f1, h, z1; order = 1000, tol = eps(), max_iter = 5)
@@ -95,7 +127,7 @@ function correct_taylor(a, b, c, f0, f1, h, z1; order = 1000, tol = eps(), max_i
     return f1
 end
 
-function maclaurin_2f1(a, b, c, z, N = 1000; tol = eps())
+function maclaurin_2f1(a, b, c, z, N = 1000; tol = eps() / 2)
     S = zn = coeff = 1.0
     dS = 0.0
 
@@ -170,7 +202,7 @@ function recursive_2f1(a, b, c, z0, f0, h, N; tol = eps())
     return [S, dS]
 end
 
-function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .3, backward = false)
+function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .3)
     # init_max = min(3abs(c / (a * b)), init_max)
     # if abs(z) <= init_max
     #     return maclaurin_2f1(a, b, c, z, N)[1]
@@ -188,19 +220,14 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
 
     branch = true
     for _ ∈ 1:N
-        h_opt = abs(z0 - 1) * exp(-2)
-        h_end = abs(z0 - z)
+        h_0 = abs(z0) * exp(-2)
+        h_1 = abs(z0 - 1) * exp(-2)
+        h_f = abs(z0 - z)
 
-        h_ord = abs(z0) * exp(-2)
-        # h_ord = Inf
-
-        # h_rat = abs(fn[1] / fn[2])
-        h_rat = Inf
-        
         dir, branch = get_direction(z0, z, fn..., branch)
-        step_size = min(h_opt, h_end, h_ord, h_rat, step_max)
+        step_size = min(h_1, h_f, h_0, step_max)
 
-        if step_size != h_end
+        if step_size != h_f
             h = dir * step_size
             fn = recursive_2f1(a, b, c, z0, fn, h, order)
             z0 += h
@@ -208,26 +235,6 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
             h = z - z0
             return recursive_2f1(a, b, c, z0, fn, h, order)[1]
         end
-
-        # if step_size !== h_end
-            # if !backward
-                # fn = [p(h), dp(h)]
-                # z0 += h
-            # else
-                # z0 += h
-                # fn = correct_taylor(a, b, c, fn, [p(h), dp(h)], h, z0, max_iter = 20)
-            # end
-        # else
-        #     h = z - z0
-            # if backward
-                # fn = correct_taylor(a, b, c, fn, [p(h), dp(h)], h, z, max_iter = 20)
-                # return fn[1]
-            # else
-                # return fn[1]
-                # return p(h)
-            # end
-        #     break
-        # end
     end
 
     return fn[1]
@@ -368,29 +375,18 @@ function int_ab_2f1(a, b, c, z; N = 100, tol = 1e-15)
     return gamma(c) * (sum1 + sum2)
 end
 
-function oneoverz_2f1(a, b, c, z)
-    f1, df1 = maclaurin_2f1(a, a - c + 1, a - b + 1, 1 / z)
-    f2, df2 = maclaurin_2f1(b, b - c + 1, b - a + 1, 1 / z)
+function oneminusoneoverz_2f1(a, b, c, z)
+    f1, df1 = maclaurin_2f1(a, a - c + 1, a + b - c + 1, 1 - 1 / z)
+    f2, df2 = maclaurin_2f1(c - a, 1 - a, c - a - b + 1, 1 - 1 / z)
 
-    g1 = gamma(b - a) / gamma(b) * gamma(c) / gamma(c - a) * (-z)^(-a)
-    g2 = gamma(a - b) / gamma(a) * gamma(c) / gamma(c - b) * (-z)^(-b)
-
+    g1 = gamma(c - a - b) * gamma(c) / gamma(c - a) / gamma(c - b) * z^(-a)
+    g2 = gamma(a + b - c) * gamma(c) / gamma(a) / gamma(b) * (1 - z)^(c - a - b) * z^(a - c)
 
     return [
-        g1 * f1 + g2 * f2, 
-        g1 * (-a * f1 - df1 / z) / z + 
-        g2 * (-b * f2 - df2 / z) / z
+        g1 * f1 + g2 * f2,
+        g1 * (-a * f1 + df1 / z) / z +
+        g2 * ((a + b - c) * f2 / (1 - z) + ((a - c) * f2 + df2 / z) / z)
     ]
-end
-
-function oneminusoneoverz_2f1(a, b, c, z)
-    f1 = maclaurin_2f1(a, a - c + 1, a + b - c + 1, 1 - 1 / z)[1]
-    f2 = maclaurin_2f1(c - a, 1 - a, c - a - b + 1, 1 - 1 / z)[1]
-
-    g1 = gamma(c) / gamma(c - a) * gamma(c - a - b) / gamma(c - b) * z^(-a)
-    g2 = gamma(c) / gamma(a) * gamma(a + b - c) / gamma(b) * (1 - z)^(c - a - b) * z^(a - c)
-
-    return g1 * f1 + g2 * f2
 end
 
 function oneminusz_2f1(a, b, c, z)
@@ -407,12 +403,63 @@ function oneminusz_2f1(a, b, c, z)
     ]
 end
 
+function oneoverz_2f1(a, b, c, z)
+    f1, df1 = maclaurin_2f1(a, a - c + 1, a - b + 1, 1 / z)
+    f2, df2 = maclaurin_2f1(b, b - c + 1, b - a + 1, 1 / z)
+
+    g1 = gamma(b - a) / gamma(b) * gamma(c) / gamma(c - a) * (-z)^(-a)
+    g2 = gamma(a - b) / gamma(a) * gamma(c) / gamma(c - b) * (-z)^(-b)
+
+    return [
+        g1 * f1 + g2 * f2, 
+        (g1 * (-a * f1 - df1 / z) + 
+         g2 * (-b * f2 - df2 / z)) / z
+    ]
+end
+
 function oneoveroneminusz_2f1(a, b, c, z)
-    f1 = maclaurin_2f1(a, c - b, a - b + 1, 1 / (1 - z))[1]
-    f2 = maclaurin_2f1(b, c - a, b - a + 1, 1 / (1 - z))[1]
+    f1, df1 = maclaurin_2f1(a, c - b, a - b + 1, 1 / (1 - z))
+    f2, df2 = maclaurin_2f1(b, c - a, b - a + 1, 1 / (1 - z))
 
     g1 = gamma(b - a) * gamma(c) / gamma(b) / gamma(c - a) * (1 - z)^(-a)
     g2 = gamma(a - b) * gamma(c) / gamma(a) / gamma(c - b) * (1 - z)^(-b)
 
-    return g1 * f1 + g2 * f2
+    return [
+        g1 * f1 + g2 * f2,
+        (g1 * (a * f1 + df1 / (1 - z)) +
+         g2 * (b * f2 + df2 / (1 - z))) / (1 - z)
+    ]
+end
+
+function zoverzminus1a_2f1(a, b, c, z)
+    f, df = maclaurin_2f1(a, c - b, c, z / (z - 1))
+
+    g = (1 - z)^(-a)
+
+    return [
+        g * f,
+        g * (a * f - df / (1 - z)) / (1 - z)
+    ]
+end
+
+function zoverzminus1b_2f1(a, b, c, z)
+    f, df = maclaurin_2f1(c - a, b, c, z / (z - 1))
+
+    g = (1 - z)^(-b)
+
+    return [
+        g * f,
+        g * (b * f - df / (1 - z)) / (1 - z)
+    ]
+end
+
+function zalt_2f1(a, b, c, z)
+    f, df = maclaurin_2f1(c - a, c - b, c, z)
+
+    g = (1 - z)^(c - a - b)
+
+    return [
+        g * f,
+        g * ((a + b - c) * f / (1 - z) + df)
+    ]
 end

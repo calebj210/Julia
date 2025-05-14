@@ -113,6 +113,8 @@ function levin_errors(a = 1, b = -9/2, c = -9/4)
     jp = surface!(axj, reim(z)..., log10.(johansson_error),     colorrange = (-16,-6))
     mp = surface!(axm, reim(z)..., log10.(mathematica_error),   colorrange = (-16,-6))
 
+    # Colorbar(fig[1:2,3], tp, ticks = ticks)
+
     return fig
 end
 
@@ -258,14 +260,16 @@ function random_tests(a = 0, b = 0, c = 0, z = 0; N = 10000, arng = 25, brng = 2
         as = a .+ arng * complexrand(N)
         bs = b .+ brng * complexrand(N)
         cs = c .+ crng * complexrand(N)
+        tests = Vector{NTuple{4, ComplexF64}}()
     else
         as = a .+ arng * (1 .- 2rand(N))
         bs = b .+ brng * (1 .- 2rand(N))
         cs = c .+ crng * (1 .- 2rand(N))
+        tests = Vector{Tuple{Float64, Float64, Float64, ComplexF64}}()
     end
     zs = z .+ zrng * complexrand(N)
 
-    tests = Vector{NTuple{4, ComplexF64}}()
+
     tru = Vector{ComplexF64}()
     for (a,b,c,z) ∈ zip(as, bs, cs, zs)
         val = arb_2f1(ArbComplex.((a,b,c,z), bits = 512)...)

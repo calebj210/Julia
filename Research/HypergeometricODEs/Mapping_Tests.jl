@@ -9,7 +9,7 @@ using CairoMakie, ComplexVisuals, LaTeXStrings
 include("pFq.jl")
 
 function failed_test(tru = nothing)
-    a, b, c = (-19.139483726210333, -14.134535062801518, -24.30112282763963)
+    a, b, c = (19.139483726210333, -14.134535062801518, 24.30112282763963)
     z = complex_square_grid(2, 300)
 
     if isnothing(tru)
