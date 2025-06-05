@@ -2,14 +2,14 @@
 # Code to show the interaction of various 2F1 transformations
 #
 # Author: Caleb Jacobs
-# DLM: April 28, 2025
+# DLM: May 27, 2025
 =#
 
 using CairoMakie, ComplexVisuals, LaTeXStrings
 include("pFq.jl")
 
-function failed_test(tru = nothing)
-    a, b, c = (19.139483726210333, -14.134535062801518, 24.30112282763963)
+function sign_test(asign = -1, bsign = -1, csign = -1; tru = nothing, transformation = "")
+    a, b, c = (asign * 19.139483726210333, bsign * 14.134535062801518, csign * 24.30112282763963)
     z = complex_square_grid(2, 300)
 
     if isnothing(tru)
@@ -24,7 +24,14 @@ function failed_test(tru = nothing)
     fig1 = Figure()
     fig2 = Figure()
     ax1 = Axis3(fig1[1,1],
-        title = L"Relative Error in ${_2}F_1(a,b;c;z)$",
+        title = latexstring(
+            "\${_2}F_1(", 
+                (asign == -1 ? "-a," : "a,"), 
+                (bsign == -1 ? "-b;" : "b;"), 
+                (csign == -1 ? "-c;" : "c;"), 
+            "z)\$ via ",
+            transformation
+        ),
         titlesize = 20,
         xlabel = L"\mathrm{Re}(z)",
         ylabel = L"\mathrm{Im}(z)",
