@@ -2,12 +2,11 @@
 # Tests and graphics for the NSF Grant
 #
 # Author: Caleb Jacobs
-# DLM: April 27, 2025
+# DLM: June 10, 2025
 =#
 
 include("Plotting.jl")
-includet("pFq.jl")
-include("PaperTests/Johansson2F1.jl")
+include("pFq.jl")
 include("PaperTests/Slevinsky2F1.jl")
 include("../Gregory/HypergeometricGrid.jl")
 

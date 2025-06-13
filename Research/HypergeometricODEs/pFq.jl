@@ -2,7 +2,7 @@
 # ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: June 5, 2025
+# DLM: June 10, 2025
 =#
 
 using MathLink

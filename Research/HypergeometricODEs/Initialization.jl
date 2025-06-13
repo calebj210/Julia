@@ -53,41 +53,6 @@ function get_radii(a, b, c, z, maxr = 0.5)
     return (;r, in_radii)
 end
 
-# Should delete once initialize is working
-function get_initialization(a, b, c, z)
-    # Inward
-    if abs(z-1) >= 6
-    # if abs(z) >= 4
-        z0 = z
-    else
-        z0 = 1 + 6sign(z - 1)
-        # z0 = 4sign(z)
-    end
-    # fn = oneoverz_2f1(a, b, c, z0)
-    fn = oneoveroneminusz_2f1(a, b, c, z0)
-
-    # Outward
-    # if real(z) > 1
-    #     if abs(z - 1) < .5
-    #         z0 = z
-    #     else
-    #         z0 = 1 + .5sign(z - 1)
-    #     end
-    #     fn = oneminusz_2f1(a, b, c, z0)
-    #     # fn = oneminusoneoverz_2f1(a, b, c, z0)
-    # else
-    #     step = .5
-    #     if abs(z) < step
-    #         z0 = z
-    #     else
-    #         z0 = step * sign(z)
-    #     end
-    #     fn = maclaurin_2f1(a, b, c, z0)
-    # end
-    
-    return (z0, fn)
-end
-
 function inward_init(a, b, c, z, r, maxr)
     if r.oneoverz >= r.oneoveroneminusz
         # 1 / z
