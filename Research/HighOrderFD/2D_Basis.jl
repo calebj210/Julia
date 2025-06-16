@@ -1,12 +1,49 @@
 #=
-#   Visualization for the 2D harmonic basis
+#   2D Harmonic basis definitions
 #
 # Author: Caleb Jacobs
-# DLM: June 12, 2025
+# DLM: June 15, 2025
 =#
 
 using LinearAlgebra, GenericLinearAlgebra
-using GLMakie
+
+function gridnodes(N::T; scale = false) where T <: Integer
+    n = N ÷ 2
+    if scale
+        return nodes = collect(zip(repeat(-n:n, inner = N) / n, repeat(n:-1:-n, outer = N) / n))
+    else
+        return nodes = collect(zip(repeat(-n:n, inner = N), repeat(n:-1:-n, outer = N)))
+    end
+    
+    return nodes
+end
+
+function getlinearlyindependentterms(N)
+    nodes = gridnodes(N)
+    terms = [1]
+    term = 1
+
+    while length(terms) < N^2
+        term += 1
+
+        A = ([big(float(harmonic(n, big(float(x)), big(float(y))))) for (x, y) ∈ nodes, n ∈ [terms; term]])
+        print(term, ": ")
+        if rank(A) > length(terms)
+            push!(terms, term)
+            println(length(terms))
+        else
+            println()
+        end
+    end
+
+    print("terms = [1")
+    for i ∈ terms[2:end]
+        print(',', i)
+    end
+    println(']')
+
+    return terms
+end
 
 function linearlyindependent(N)
     if N == 3
@@ -24,46 +61,6 @@ function linearlyindependent(N)
     else
         terms = getlinearlyindependentterms(N)
     end
-
-    return terms
-end
-
-function getlinearlyindependentterms(N)
-    nodes = gridnodes(N)
-    terms = [1]
-    term = 1
-
-    while length(terms) < N^2
-        term += 1
-
-        # A = [harmonic(n, x, y) for (x, y) ∈ nodes, n ∈ terms]
-        # while true
-        #     b = [harmonic(term, x, y) for (x, y) ∈ nodes]
-        #     println("Current term = ", term)
-        #     sol = A \ b
-        #     if !isapprox(A * sol, b)
-        #         push!(terms, term)
-        #         println("Added term:", terms)
-        #         break
-        #     end
-        #     term += 1
-        # end
-
-        A = ([big(float(harmonic(n, big(float(x)), big(float(y))))) for (x, y) ∈ nodes, n ∈ [terms; term]])
-        print(term, ": ")
-        if rank(A) > length(terms)
-            push!(terms, term)
-            println(length(terms))
-        else
-            println()
-        end
-    end
-
-    print("terms = [1")
-    for i ∈ terms[2:end]
-        print(',', i)
-    end
-    println(']')
 
     return terms
 end
@@ -87,102 +84,18 @@ function harmonic(N::T, x, y) where T <: Integer
     end
 end
 
-function cardinalweights(N)
+function cardinalweights(N::T)::Matrix{Float64} where T<: Integer
     nodes = gridnodes(N)
     terms = linearlyindependent(N)
 
     A = big.(float([harmonic(n, big(float(x)), big(float(y))) for (x, y) ∈ nodes, n ∈ terms]))
-    # A = [harmonic(n, x, y) for (x, y) ∈ nodes, n ∈ terms]
     B = diagm(ones(N^2))
 
-    return convert.(Float64, A \ B)
+    return A \ B
 end
 
 function cardinal(N::T, w, x, y) where T <: Integer
     terms = linearlyindependent(N)
 
     return sum(w .* harmonic.(terms, x, y))
-end
-
-function gridnodes(N::T) where T <: Integer
-    n = N ÷ 2
-    return collect(zip(repeat(-n:n, inner = N), repeat(n:-1:-n, outer = N)))
-end
-
-function plotbasisfunction(N)
-    x = range(-1, 1, 100)
-    y = range(-1, 1, 100)
-
-    fig = Figure()
-    ax = Axis3(fig[1,1],
-        xlabel = "x",
-        ylabel = "y",
-        zlabel = "f(x,y)",
-    )
-    surface!(ax, x, y, (x,y) -> harmonic(N, x, y))
-
-    return fig
-end
-
-function plotcardinalfunction(N, n = N^2 ÷ 2 + 1)
-    x = range(-N ÷ 2, N ÷ 2, 300)
-    w = cardinalweights(N)[:, n]
-
-    fig = Figure()
-    ax = Axis3(fig[1,1],
-        xlabel = "x",
-        ylabel = "y",
-        zlabel = "f(x,y)",
-    )
-    surface!(ax, x, x, (x, y) -> log10.(abs(cardinal(N, w, x, y))))
-
-    return fig
-end
-
-function plotcardinalfunctions(N)
-    x = range(-N ÷ 2, N ÷ 2, 100)
-    w = cardinalweights(N)
-    nodes = gridnodes(N)
-
-    fig = Figure()
-    for i ∈ 1:N, j ∈ 1:N
-        ax = Axis3(fig[i,j],
-            xlabel = "x",
-            ylabel = "y",
-            zlabel = "f(x,y)",
-        )
-        surface!(ax, x, x, (x,y) -> cardinal(N, w[:, i + (j - 1) * N], x, y))
-    end
-
-    for i ∈ 1:N
-        colsize!(fig.layout, i, Aspect(1, 1))
-    end
-    resize_to_layout!(fig)
-
-    return fig
-end
-
-function plotcardinalfunctionzeros(N)
-    x = range(-N ÷ 2, N ÷ 2, 100)
-    w = cardinalweights(N)
-    # nodes = gridnodes(N)
-
-    fig = Figure()
-    for i ∈ 1:N, j ∈ 1:N
-        ax = Axis(fig[i,j])
-        contour!(ax, x, x, (x,y) -> cardinal(N, w[:, i + (j - 1) * N], x, y),
-            levels = [0],
-            color = :black,
-        )
-        # colors = repeat([:green], N^2)
-        # colors[i + (j - 1) * N] = :red
-        # scatter!(ax, first.(nodes), last.(nodes), color = colors)
-    end
-
-    for i ∈ 1:N
-        colsize!(fig.layout, i, Aspect(1, 1))
-    end
-    resize_to_layout!(fig)
-
-    return fig
 end

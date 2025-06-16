@@ -8,20 +8,23 @@ using CairoMakie
 using LaTeXStrings
 using LinearAlgebra
 
-include("2DHarmonicFD.jl")
+CairoMakie.activate!()
+
+include("2D_Harmonic.jl")
 
 """
     distancePlot2D(Z, D)
 Create a log plot of the absolute value of the stencil weights in `D` as a function of distance from the origin for nodes in `Z`.
 """
-function distancePlot2D(Z, D)
-    ω = vec(Float64.(abs.(D)))
-    z = vec(norm.(Z))
+function distanceplot2d(N, n)
+    ω = convert.(Float64, abs.(∂xweights(N, n, prec = 512, matrixform = false)))
+    Z = gridnodes(N)
+    z = norm.(Z)
 
-    ω[ω .== 0] .= ω[1]
+    ω[ω .< 1e-16] .= 0
 
-    x = range(0, maximum(z), length = 100)
-    y = maximum(ω) * exp.(-π / 2 * x.^2)
+    x = range(0, sqrt(2(N ÷ 2)^2), length = 100)
+    y = maximum(ω) * exp.(-x.^2)
 
     set_theme!(theme_latexfonts())
     fig = Figure()
@@ -31,12 +34,15 @@ function distancePlot2D(Z, D)
         # xlabelsize = 15,
         # ylabelsize = 15,
         yscale = log10,
+        # limits = (nothing, (1e-10, 1e12)),
+        title = latexstring("\$", N, "\\times", N, "\$ FD Weights"),
+        titlesize = 20,
     )
 
     lines!(ax, x, y,
         linestyle = :dash,
         color = :black,
-        label = L"C e^{-\frac{x^2}{2}}",
+        label = L"C e^{-r^2}",
     )
 
     scatter!(ax, z, ω,
