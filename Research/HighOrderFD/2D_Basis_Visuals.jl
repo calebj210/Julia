@@ -102,7 +102,7 @@ function plotcardinalfunctionzeros(N; colorcontours = false, shownodes = true)
         hidedecorations!(ax)
         if colorcontours
             contourf!(ax, x, x, (x,y) -> Makie.pseudolog10(cardinal(N, w[:, i + (j - 1) * N], x, y)),
-                levels = -20:2:20,
+                levels = -10:2:10,
             )
         else
             contour!(ax, x, x, (x,y) -> cardinal(N, w[:, i + (j - 1) * N], x, y),
@@ -118,12 +118,12 @@ function plotcardinalfunctionzeros(N; colorcontours = false, shownodes = true)
     end
     if colorcontours
         Colorbar(fig[N ÷ 2:N ÷ 2 + 2, N + 1], 
-            limits = (-20,20), 
+            limits = (-10,10), 
             size = 35,
             colormap = cgrad(:viridis, 20, categorical = true),
-            ticks = (-20:10:20, [p == 0 ? "0" : p < 0 ? 
+            ticks = (-10:10:10, [p == 0 ? "0" : p < 0 ? 
                 latexstring("1 - 10^{", -p, "}") : latexstring("10^{", p, "} - 1") 
-                for p ∈ -20:10:20]
+                for p ∈ -10:10:10]
             ),
             ticklabelsize = 25,
         )

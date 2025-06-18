@@ -45,8 +45,10 @@ function getlinearlyindependentterms(N)
     return terms
 end
 
-function linearlyindependent(N)
-    if N == 3
+function linearlyindependent(N; reduced = true)
+    if reduced
+        terms = collect(1:(11-4N+N^2))
+    elseif N == 3
         terms = [1,2,3,4,5,6,7,8,16]
     elseif N == 5
         terms = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,18,19,20,21,22,23,24,32,40]
