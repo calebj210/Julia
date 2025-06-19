@@ -1,7 +1,7 @@
 module ComplexVisuals
 
-export complex_color_wheel,
-       complex_color_wheel!,
+export Colorwheel,
+       axiscolorwheel,
        complex_theme
 
 export ComplexGrid,
