@@ -122,13 +122,15 @@ function slevinsky_grid_test(tru = nothing)
     ax = Axis3(ph[1,1];
         xlabel = L"\mathrm{Re}(z)",
         ylabel = L"\mathrm{Im}(z)",
-        zlabel = L"|f|",
+        zlabel = L"\text{abs}(f)",
+        title = L"\text{Abs-Arg of } {_2}F_1(1,-9/2;-9/4;z)",
         elevation = 0.2π,
         xticklabelsize = 10, yticklabelsize = 10, zticklabelsize = 10,
-        xlabeloffset = 20, ylabeloffset = 20, zlabeloffset = 40,
+        xlabeloffset = 20, ylabeloffset = 20, zlabeloffset = 53,
 
     )
     complexsurface!(ax, z, tru)
+    axiscolorwheel(ax, width = Relative(.15), height = Relative(.15), halign = .85)
 
     return (;errors, timings, ph, tru)
 end
@@ -189,6 +191,58 @@ function random_test(;N = 10000, arng = 25, brng = 25, crng = 25, zrng = 2, seed
             normalization = :probability
         )
     end
+
+    return fig
+end
+
+# Alternate branch
+function alternate_branch(a = 1.1, b = .5, c = 1.2)
+    z = complex_square_grid(2, 300)
+
+    f1 = taylor_2f1.(a, b, c, z)
+    f2 = [π * gamma(c) / sinpi(b - a) * (
+        cispi((imag(z) < 0 ? 1 : -1) * a) * z^(-a) / gamma(b) / gamma(c - a) / gamma(a - b + 1) *
+        taylor_2f1(a, a - c + 1, a - b + 1, 1 / z) -
+        cispi((imag(z) < 0 ? 1 : -1) * b) * z^(-b) / gamma(a) / gamma(c - b) / gamma(b - a + 1) *
+        taylor_2f1(b, b - c + 1, b - a + 1, 1 / z)
+    ) for z ∈ z]
+
+    zlims = (min(minimum(abs.(f1)), minimum(abs.(f2))), 2.5)
+
+    set_theme!(theme_latexfonts())
+    fig = Figure()
+    ax1 = Axis3(fig[1,1],
+        title = "Principal Sheet",
+        titlesize = 15,
+        xlabel = L"\mathrm{Re}(z)",
+        ylabel = L"\mathrm{Im}(z)",
+        zlabel = L"\text{abs}($f$)",
+        zlabelsize = 12,
+        xticklabelsize = 10, yticklabelsize = 10, zticklabelsize = 10,
+        xlabeloffset = 20, ylabeloffset = 20, zlabeloffset = 32,
+        limits = (nothing, nothing, zlims),
+    )
+    ax2 = Axis3(fig[1,2],
+        title = "Second Sheet",
+        titlesize = 15,
+        zlabelsize = 12,
+        xlabel = L"\mathrm{Re}(z)", ylabel = L"\mathrm{Im}(z)", zlabel = L"\text{abs}($f$)",
+        xticklabelsize = 10, yticklabelsize = 10, zticklabelsize = 10,
+        xlabeloffset = 20, ylabeloffset = 20, zlabeloffset = 32,
+        limits = (nothing, nothing, zlims),
+    )
+
+    complexsurface!(ax1, z, f1)
+    complexsurface!(ax2, z, f2)
+
+    lines!(ax1, reim(z[:,150])..., abs.(f1[:,150]), color = :black)
+    lines!(ax2, reim(z[:,150])..., abs.(f2[:,150]), color = :black)
+
+    axiscolorwheel(ax1, width = Relative(.15), height = Relative(.15),)
+    axiscolorwheel(ax2, width = Relative(.15), height = Relative(.15),)
+    rowsize!(fig.layout, 1, Aspect(1,1))
+
+    resize_to_layout!(fig)
 
     return fig
 end
