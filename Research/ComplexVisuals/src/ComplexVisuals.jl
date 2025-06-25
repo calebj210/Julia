@@ -15,7 +15,7 @@ export ComplexSurface,
        complexsurface,
        complexsurface!
 
-using MakieCore, Makie
+using Makie
 
 include("complex_grids.jl")
 include("complex_range.jl")

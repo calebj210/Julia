@@ -2,7 +2,7 @@
 #   Functions for generating graphics in the paper
 #
 # Author: Caleb Jacobs
-# DLM: June 18, 2025
+# DLM: June 23, 2025
 =#
 
 using CairoMakie, ComplexVisuals, LaTeXStrings
@@ -197,7 +197,7 @@ end
 
 # Alternate branch
 function alternate_branch(a = 1.1, b = .5, c = 1.2)
-    z = complex_square_grid(2, 300)
+    z = ComplexGrid(range(-1,2,301), range(-1.5,1.5,301))
 
     f1 = taylor_2f1.(a, b, c, z)
     f2 = [π * gamma(c) / sinpi(b - a) * (
@@ -207,39 +207,61 @@ function alternate_branch(a = 1.1, b = .5, c = 1.2)
         taylor_2f1(b, b - c + 1, b - a + 1, 1 / z)
     ) for z ∈ z]
 
-    zlims = (min(minimum(abs.(f1)), minimum(abs.(f2))), 2.5)
+    # f1[isnan.(f1)] .= 0
+    # f2[isnan.(f2)] .= 0
+
+    relims = (-2,2)
+    imlims = (-2,2)
+
+    # f1[(real(z) .>= 1) .&& (imag(z) .== 0)] .= NaN + NaN * im
+    # f2[(imag(z) .== 0)] .= NaN + NaN * im
 
     set_theme!(theme_latexfonts())
     fig = Figure()
     ax1 = Axis3(fig[1,1],
-        title = "Principal Sheet",
-        titlesize = 15,
+        title = "Real Part",
+        titlesize = 25,
         xlabel = L"\mathrm{Re}(z)",
         ylabel = L"\mathrm{Im}(z)",
         zlabel = L"\text{abs}($f$)",
-        zlabelsize = 12,
-        xticklabelsize = 10, yticklabelsize = 10, zticklabelsize = 10,
-        xlabeloffset = 20, ylabeloffset = 20, zlabeloffset = 32,
-        limits = (nothing, nothing, zlims),
+        xticklabelsize = 15, yticklabelsize = 15, zticklabelsize = 15,
+        xlabelsize = 20, ylabelsize = 20, zlabelsize = 20,
+        xlabeloffset = 20, ylabeloffset = 20, zlabeloffset = 25,
+        limits = (nothing, nothing, relims),
+        azimuth = .275π,
+        elevation = .15π,
     )
     ax2 = Axis3(fig[1,2],
-        title = "Second Sheet",
-        titlesize = 15,
-        zlabelsize = 12,
+        title = "Imaginary Part",
+        titlesize = 25,
         xlabel = L"\mathrm{Re}(z)", ylabel = L"\mathrm{Im}(z)", zlabel = L"\text{abs}($f$)",
-        xticklabelsize = 10, yticklabelsize = 10, zticklabelsize = 10,
-        xlabeloffset = 20, ylabeloffset = 20, zlabeloffset = 32,
-        limits = (nothing, nothing, zlims),
+        xticklabelsize = 15, yticklabelsize = 15, zticklabelsize = 15,
+        xlabelsize = 20, ylabelsize = 20, zlabelsize = 20,
+        xlabeloffset = 20, ylabeloffset = 20, zlabeloffset = 25,
+        limits = (nothing, nothing, imlims),
+        azimuth = .275π,
+        elevation = .15π,
     )
 
-    complexsurface!(ax1, z, f1)
-    complexsurface!(ax2, z, f2)
+    surface!(ax1, reim(z[:,1:150])..., real(f1[:,1:150]), alpha = .9, colormap = :blues, colorrange = relims, label = "Principle Sheet")
+    surface!(ax1, reim(z[:,151:end])..., real(f1[:,151:end]), alpha = .9, colormap = :blues, colorrange = relims)
+    surface!(ax1, reim(z[:,1:150])..., real(f2[:,1:150]), alpha = .9, colormap = :reds, colorrange = relims, label = "Second Sheet")
+    surface!(ax1, reim(z[:,151:end])..., real(f2[:,151:end]), alpha = .9, colormap = :reds, colorrange = relims)
+    surface!(ax2, reim(z[:,1:150])..., imag(f1[:,1:150]), alpha = .9, colormap = :blues, colorrange = imlims)
+    surface!(ax2, reim(z[:,151:end])..., imag(f1[:,151:end]), alpha = .9, colormap = :blues, colorrange = imlims)
+    surface!(ax2, reim(z[:,1:150])..., imag(f2[:,1:150]), alpha = .9, colormap = :reds, colorrange = imlims)
+    surface!(ax2, reim(z[:,151:end])..., imag(f2[:,151:end]), alpha = .9, colormap = :reds, colorrange = imlims)
 
-    lines!(ax1, reim(z[:,150])..., abs.(f1[:,150]), color = :black)
-    lines!(ax2, reim(z[:,150])..., abs.(f2[:,150]), color = :black)
+    lines!(ax1, reim(z[:,150])..., real(f1[:,150]), color = :black, linewidth = 3)
+    lines!(ax1, reim(z[:,150])..., real(f2[:,150]), color = :black, linewidth = 3)
+    lines!(ax1, reim(z[:,151])..., real(f2[:,151]), color = :black, linewidth = 3)
+    #
+    lines!(ax2, reim(z[:,150])..., imag(f1[:,150]), color = :black, linewidth = 3)
+    lines!(ax2, reim(z[:,150])..., imag(f2[:,150]), color = :black, linewidth = 3)
+    lines!(ax2, reim(z[:,151])..., imag(f2[:,151]), color = :black, linewidth = 3)
 
-    axiscolorwheel(ax1, width = Relative(.15), height = Relative(.15),)
-    axiscolorwheel(ax2, width = Relative(.15), height = Relative(.15),)
+    axislegend(ax2, ax1, position = :rt, labelsize = 20)
+
     rowsize!(fig.layout, 1, Aspect(1,1))
 
     resize_to_layout!(fig)
