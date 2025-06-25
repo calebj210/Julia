@@ -1,6 +1,12 @@
-# Hypergeometric Project Notes
-## General Notes
-- Using the Taylor method on $e^{-a z}$ where $a = 1000$ leads to very similar issues with convergence that we see for $\,_2F_1$ for all negative parameters.
-    - However, decreasing the step size does allow for convergence but not necessarily to full precision.
-    - Do we really not see the same convergence patterns for $\,_2F_1$?
+# Notes on the Taylor Method for ${_2}F_1$
+## TODOs
+- [ ] Remove tail errors.
+- [ ] Improve branch cut graphics.
+    - [ ] Pin down branch cuts.
+    - [ ] Seamlessly stitch sheets.
 
+## Questions
+- Are there any common trends in the lower accuracy tests (not just failed tests)?
+- Are straight stepping paths more than enough?
+- Does the Wronskian indicate a preferred direction of travel?
+- Can we remove the 1-2 digits of accuracy loss present in the transformed initializations?
