@@ -2,7 +2,7 @@
 #   Functions for generating graphics in the paper
 #
 # Author: Caleb Jacobs
-# DLM: June 23, 2025
+# DLM: June 27, 2025
 =#
 
 using CairoMakie, ComplexVisuals, LaTeXStrings
@@ -156,7 +156,7 @@ function random_test(;N = 10000, arng = 25, brng = 25, crng = 25, zrng = 2, seed
     print("Getting tests: ")
     tru = Vector{ComplexF64}()
     for (a,b,c,z) ∈ zip(as, bs, cs, zs)
-        val = arb_2f1(ArbComplex.((a,b,c,z), bits = 512)...)
+        val = johansson_2f1(a,b,c,z; bits = 512)
         if isnan(val) || isinf(val)
             continue
         end

@@ -1,0 +1,537 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 14.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     18199,        529]
+NotebookOptionsPosition[     17021,        500]
+NotebookOutlinePosition[     17452,        517]
+CellTagsIndexPosition[     17409,        514]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+   RowBox[{"f21", "[", 
+    RowBox[{"{", 
+     RowBox[{"a_", ",", "b_", ",", "c_", ",", "z_"}], "}"}], "]"}], ":=", 
+   RowBox[{"Hypergeometric2F1", "[", 
+    RowBox[{"a", ",", "b", ",", "c", ",", "z"}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"runtest", "[", 
+    RowBox[{"{", 
+     RowBox[{"a_", ",", "b_", ",", "c_", ",", "z_"}], "}"}], "]"}], ":=", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"NumberForm", "[", 
+      RowBox[{
+       RowBox[{"Hypergeometric2F1", "[", 
+        RowBox[{"a", ",", "b", ",", "c", ",", "z"}], "]"}], ",", "16"}], 
+      "]"}], ",", "\[IndentingNewLine]", 
+     RowBox[{"UnitConvert", "[", 
+      RowBox[{
+       RowBox[{"Quantity", "[", 
+        RowBox[{
+         RowBox[{
+          RowBox[{"RepeatedTiming", "[", 
+           RowBox[{"Hypergeometric2F1", "[", 
+            RowBox[{"a", ",", "b", ",", "c", ",", "z"}], "]"}], "]"}], "[", 
+          RowBox[{"[", "1", "]"}], "]"}], ",", "\[IndentingNewLine]", 
+         "\"\<Seconds\>\""}], "]"}], ",", "\[IndentingNewLine]", 
+       "\"\<Microseconds\>\""}], "]"}]}], "}"}]}], ";"}]}], "Input",
+ InitializationCell->True,
+ CellChangeTimes->{{3.934033455862916*^9, 3.934033461758985*^9}, {
+  3.934033496282509*^9, 3.934033593248203*^9}, {3.934033843469071*^9, 
+  3.934033855136674*^9}, {3.934539958483474*^9, 3.934539960947043*^9}, {
+  3.934540267857648*^9, 3.934540268049076*^9}},
+ CellLabel->"In[12]:=",ExpressionUUID->"fa0e43f6-25d9-4a62-8979-09182ac7ea45"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"tests", "=", "\[IndentingNewLine]", 
+   RowBox[{"{", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"0.9", ",", "1.11", ",", "1.2", ",", 
+       RowBox[{"1.5", "+", 
+        RowBox[{"0.5", "\[ImaginaryI]"}]}]}], "}"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{"0.9", ",", "1.11", ",", "1.2", ",", 
+       RowBox[{"3", 
+        RowBox[{"Exp", "[", 
+         RowBox[{
+          RowBox[{"-", "\[ImaginaryI]"}], " ", 
+          RowBox[{"Pi", "/", "4"}]}], "]"}]}]}], "}"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{"0.9", ",", "1.11", ",", "1.2", ",", 
+       RowBox[{
+        RowBox[{"Exp", "[", 
+         RowBox[{"\[ImaginaryI]", " ", 
+          RowBox[{"Pi", "/", "3"}]}], "]"}], "-", "0.1"}]}], "}"}], ",", 
+     "\[IndentingNewLine]", "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.9"}], ",", "1.11", ",", "1.2", ",", 
+       RowBox[{"1.5", "+", 
+        RowBox[{"0.5", "\[ImaginaryI]"}]}]}], "}"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.9"}], ",", "1.11", ",", "1.2", ",", 
+       RowBox[{"3", 
+        RowBox[{"Exp", "[", 
+         RowBox[{
+          RowBox[{"-", "\[ImaginaryI]"}], " ", 
+          RowBox[{"Pi", "/", "4"}]}], "]"}]}]}], "}"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.9"}], ",", "1.11", ",", "1.2", ",", 
+       RowBox[{
+        RowBox[{"Exp", "[", 
+         RowBox[{"\[ImaginaryI]", " ", 
+          RowBox[{"Pi", "/", "3"}]}], "]"}], "-", "0.1"}]}], "}"}], ",", 
+     "\[IndentingNewLine]", "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.9"}], ",", 
+       RowBox[{"5", "-", 
+        RowBox[{"20", "\[ImaginaryI]"}]}], ",", "1.2", ",", 
+       RowBox[{"1.5", "-", 
+        RowBox[{"0.5", "\[ImaginaryI]"}]}]}], "}"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.9"}], ",", 
+       RowBox[{"5", "-", 
+        RowBox[{"20", "\[ImaginaryI]"}]}], ",", "1.2", ",", 
+       RowBox[{"3", 
+        RowBox[{"Exp", "[", 
+         RowBox[{
+          RowBox[{"-", "\[ImaginaryI]"}], " ", 
+          RowBox[{"Pi", "/", "4"}]}], "]"}]}]}], "}"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.9"}], ",", 
+       RowBox[{"5", "-", 
+        RowBox[{"20", "\[ImaginaryI]"}]}], ",", "1.2", ",", 
+       RowBox[{
+        RowBox[{"Exp", "[", 
+         RowBox[{"\[ImaginaryI]", " ", 
+          RowBox[{"Pi", "/", "3"}]}], "]"}], "-", "0.1"}]}], "}"}], ",", 
+     "\[IndentingNewLine]", "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.9"}], ",", "1.11", ",", 
+       RowBox[{"50", "\[ImaginaryI]"}], ",", 
+       RowBox[{"1.5", "-", 
+        RowBox[{"0.5", "\[ImaginaryI]"}]}]}], "}"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.9"}], ",", "1.11", ",", 
+       RowBox[{"50", "\[ImaginaryI]"}], ",", 
+       RowBox[{"3", 
+        RowBox[{"Exp", "[", 
+         RowBox[{
+          RowBox[{"-", "\[ImaginaryI]"}], " ", 
+          RowBox[{"Pi", "/", "4"}]}], "]"}]}]}], "}"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"-", "0.9"}], ",", "1.11", ",", 
+       RowBox[{"50", "\[ImaginaryI]"}], ",", 
+       RowBox[{
+        RowBox[{"Exp", "[", 
+         RowBox[{"\[ImaginaryI]", " ", 
+          RowBox[{"Pi", "/", "3"}]}], "]"}], "-", "0.1"}]}], "}"}]}], 
+    "\[IndentingNewLine]", "}"}]}], ";"}]], "Input",
+ CellChangeTimes->{{3.9340333663681507`*^9, 3.934033434975338*^9}, 
+   3.934034002949111*^9, {3.934452650443514*^9, 3.934452748431733*^9}, {
+   3.9344616145255203`*^9, 3.934461630179846*^9}, {3.934461671351902*^9, 
+   3.934461753318158*^9}, {3.934462361170166*^9, 3.934462389220532*^9}, {
+   3.9344624434608793`*^9, 3.934462447149629*^9}},
+ CellLabel->"In[6]:=",ExpressionUUID->"dd3410a7-ab0f-4c44-91ec-0544583cbc5c"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"runtest", "/@", "tests"}], "//", "MatrixForm"}]], "Input",
+ CellChangeTimes->{{3.934039946745924*^9, 3.9340399772263527`*^9}, {
+   3.9340401837136383`*^9, 3.934040213158247*^9}, 3.934040290462262*^9, {
+   3.9344521458724337`*^9, 3.934452171160327*^9}, {3.934452243809931*^9, 
+   3.934452251671685*^9}, {3.934452763139123*^9, 3.93445277067621*^9}, {
+   3.934452803928863*^9, 3.9344528073159103`*^9}, {3.9344529538795023`*^9, 
+   3.934452954596588*^9}},
+ CellLabel->"In[18]:=",ExpressionUUID->"8437cc14-dce2-4027-9eac-66a50d85b27c"],
+
+Cell[BoxData[
+ TagBox[
+  RowBox[{"(", "\[NoBreak]", GridBox[{
+     {
+      TagBox[
+       RowBox[{
+        InterpretationBox[
+         StyleBox["\<\"-0.5063965984825309\"\>",
+          ShowStringCharacters->False],
+         -0.5063965984825309,
+         AutoDelete->True], "+", 
+        RowBox[{
+         InterpretationBox[
+          StyleBox["\<\"1.267628787593694\"\>",
+           ShowStringCharacters->False],
+          1.267628787593694,
+          AutoDelete->True], " ", "\[ImaginaryI]"}]}],
+       NumberForm[#, 16]& ], 
+      TemplateBox[{
+       "48.9354248046875`", "\"\[Mu]s\"", "microseconds", "\"Microseconds\""},
+       
+       "Quantity"]},
+     {
+      TagBox[
+       RowBox[{
+        InterpretationBox[
+         StyleBox["\<\"-0.07685162083187658\"\>",
+          ShowStringCharacters->False],
+         -0.07685162083187658,
+         AutoDelete->True], "-", 
+        RowBox[{
+         InterpretationBox[
+          StyleBox["\<\"0.4848868438656235\"\>",
+           ShowStringCharacters->False],
+          0.48488684386562353`,
+          AutoDelete->True], " ", "\[ImaginaryI]"}]}],
+       NumberForm[#, 16]& ], 
+      TemplateBox[{
+       "33.42340087890625`", "\"\[Mu]s\"", "microseconds", "\"Microseconds\""},
+       "Quantity"]},
+     {
+      TagBox[
+       RowBox[{
+        InterpretationBox[
+         StyleBox["\<\"0.6673467742056206\"\>",
+          ShowStringCharacters->False],
+         0.66734677420562060756736855182680301368`15.946577512260296,
+         AutoDelete->True], "+", 
+        RowBox[{
+         InterpretationBox[
+          StyleBox["\<\"0.6919758481141497\"\>",
+           ShowStringCharacters->False],
+          0.69197584811414969419018916596542112529`15.962316883360296,
+          AutoDelete->True], " ", "\[ImaginaryI]"}]}],
+       NumberForm[#, 16]& ], 
+      TemplateBox[{
+       "72.4852294921875`", "\"\[Mu]s\"", "microseconds", "\"Microseconds\""},
+       
+       "Quantity"]},
+     {
+      TagBox[
+       RowBox[{
+        InterpretationBox[
+         StyleBox["\<\"-0.2818271605887704\"\>",
+          ShowStringCharacters->False],
+         -0.2818271605887704,
+         AutoDelete->True], "-", 
+        RowBox[{
+         InterpretationBox[
+          StyleBox["\<\"0.5697387755966728\"\>",
+           ShowStringCharacters->False],
+          0.5697387755966729,
+          AutoDelete->True], " ", "\[ImaginaryI]"}]}],
+       NumberForm[#, 16]& ], 
+      TemplateBox[{
+       "39.747314453125`", "\"\[Mu]s\"", "microseconds", "\"Microseconds\""},
+       "Quantity"]},
+     {
+      TagBox[
+       RowBox[{
+        InterpretationBox[
+         StyleBox["\<\"-0.4995967301744785\"\>",
+          ShowStringCharacters->False],
+         -0.4995967301744785,
+         AutoDelete->True], "+", 
+        RowBox[{
+         InterpretationBox[
+          StyleBox["\<\"1.953759862407653\"\>",
+           ShowStringCharacters->False],
+          1.9537598624076526`,
+          AutoDelete->True], " ", "\[ImaginaryI]"}]}],
+       NumberForm[#, 16]& ], 
+      TemplateBox[{
+       "39.013916015625`", "\"\[Mu]s\"", "microseconds", "\"Microseconds\""},
+       "Quantity"]},
+     {
+      TagBox[
+       RowBox[{
+        InterpretationBox[
+         StyleBox["\<\"0.6997642986564611\"\>",
+          ShowStringCharacters->False],
+         0.69976429865646105898946416346007026732`15.94224157769935,
+         AutoDelete->True], "-", 
+        RowBox[{
+         InterpretationBox[
+          StyleBox["\<\"0.7395773485694164\"\>",
+           ShowStringCharacters->False],
+          0.73957734856941637069382977642817422748`15.966273397621821,
+          AutoDelete->True], " ", "\[ImaginaryI]"}]}],
+       NumberForm[#, 16]& ], 
+      TemplateBox[{
+       "60.27691650390625`", "\"\[Mu]s\"", "microseconds", "\"Microseconds\""},
+       "Quantity"]},
+     {
+      TagBox[
+       RowBox[{
+        InterpretationBox[
+         StyleBox["\<\"5.172489225752309\"\>",
+          ShowStringCharacters->False],
+         5.172489225752309,
+         AutoDelete->True], "+", 
+        RowBox[{
+         InterpretationBox[
+          StyleBox["\<\"19.56140882749026\"\>",
+           ShowStringCharacters->False],
+          19.561408827490265`,
+          AutoDelete->True], " ", "\[ImaginaryI]"}]}],
+       NumberForm[#, 16]& ], 
+      TemplateBox[{
+       "55.96630859375`", "\"\[Mu]s\"", "microseconds", "\"Microseconds\""},
+       "Quantity"]},
+     {
+      TagBox[
+       RowBox[{
+        InterpretationBox[
+         StyleBox["\<\"22.17395513051982\"\>",
+          ShowStringCharacters->False],
+         22.173955130519815`,
+         AutoDelete->True], "+", 
+        RowBox[{
+         InterpretationBox[
+          StyleBox["\<\"28.62063231116096\"\>",
+           ShowStringCharacters->False],
+          28.62063231116096,
+          AutoDelete->True], " ", "\[ImaginaryI]"}]}],
+       NumberForm[#, 16]& ], 
+      TemplateBox[{
+       "51.0625`", "\"\[Mu]s\"", "microseconds", "\"Microseconds\""},
+       "Quantity"]},
+     {
+      TagBox[
+       RowBox[{
+        InterpretationBox[
+         StyleBox["\<\"20063.96699445097\"\>",
+          ShowStringCharacters->False],
+         20063.9669944509732886217534542083740234375`15.775489012295012,
+         AutoDelete->True], "+", 
+        RowBox[{
+         InterpretationBox[
+          StyleBox["\<\"37871.50610742850\"\>",
+           ShowStringCharacters->False],
+          37871.5061074284967617131769657135009765625`16.05138478443516,
+          AutoDelete->True], " ", "\[ImaginaryI]"}]}],
+       NumberForm[#, 16]& ], 
+      TemplateBox[{
+       "124.05712890625`", "\"\[Mu]s\"", "microseconds", "\"Microseconds\""},
+       "Quantity"]},
+     {
+      TagBox[
+       RowBox[{
+        InterpretationBox[
+         StyleBox["\<\"1.010072482810626\"\>",
+          ShowStringCharacters->False],
+         1.0100724828106258`,
+         AutoDelete->True], "+", 
+        RowBox[{
+         InterpretationBox[
+          StyleBox["\<\"0.02990636864027668\"\>",
+           ShowStringCharacters->False],
+          0.02990636864027668,
+          AutoDelete->True], " ", "\[ImaginaryI]"}]}],
+       NumberForm[#, 16]& ], 
+      TemplateBox[{
+       "78.037109375`", "\"\[Mu]s\"", "microseconds", "\"Microseconds\""},
+       "Quantity"]},
+     {
+      TagBox[
+       RowBox[{
+        InterpretationBox[
+         StyleBox["\<\"1.042375123610659\"\>",
+          ShowStringCharacters->False],
+         1.0423751236106589`,
+         AutoDelete->True], "+", 
+        RowBox[{
+         InterpretationBox[
+          StyleBox["\<\"0.04202191920432579\"\>",
+           ShowStringCharacters->False],
+          0.04202191920432579,
+          AutoDelete->True], " ", "\[ImaginaryI]"}]}],
+       NumberForm[#, 16]& ], 
+      TemplateBox[{
+       "3990.9921875000005`", "\"\[Mu]s\"", "microseconds", 
+        "\"Microseconds\""},
+       "Quantity"]},
+     {
+      TagBox[
+       RowBox[{
+        InterpretationBox[
+         StyleBox["\<\"0.9826710953181358\"\>",
+          ShowStringCharacters->False],
+         0.98267109531813578993109103976166807115`16.10509029906782,
+         AutoDelete->True], "+", 
+        RowBox[{
+         InterpretationBox[
+          StyleBox["\<\"0.0080215232012396\"\>",
+           ShowStringCharacters->False],
+          0.00802152320123963522013887939010601258`14.016938961320193,
+          AutoDelete->True], " ", "\[ImaginaryI]"}]}],
+       NumberForm[#, 16]& ], 
+      TemplateBox[{
+       "41.9127197265625`", "\"\[Mu]s\"", "microseconds", "\"Microseconds\""},
+       
+       "Quantity"]}
+    },
+    GridBoxAlignment->{"Columns" -> {{Center}}, "Rows" -> {{Baseline}}},
+    GridBoxSpacings->{"Columns" -> {
+        Offset[0.27999999999999997`], {
+         Offset[0.7]}, 
+        Offset[0.27999999999999997`]}, "Rows" -> {
+        Offset[0.2], {
+         Offset[0.4]}, 
+        Offset[0.2]}}], "\[NoBreak]", ")"}],
+  Function[BoxForm`e$, 
+   MatrixForm[BoxForm`e$]]]], "Output",
+ CellChangeTimes->{3.934547361645611*^9},
+ CellLabel->
+  "Out[18]//MatrixForm=",ExpressionUUID->"fbd99ff5-0a99-4379-9858-\
+1519f1a1f91d"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"val", "=", 
+   RowBox[{"OutputForm", "[", 
+    RowBox[{"NumberForm", "[", 
+     RowBox[{
+      RowBox[{"Hypergeometric2F1", "[", 
+       RowBox[{
+        RowBox[{
+         RowBox[{"-", "0.9"}], "+", 
+         RowBox[{"0.0", "I"}]}], ",", 
+        RowBox[{"1.11", "+", 
+         RowBox[{"0.0", "I"}]}], ",", 
+        RowBox[{"1.2", "+", 
+         RowBox[{"0.0", "I"}]}], ",", 
+        RowBox[{"1.5", "+", 
+         RowBox[{"0.5", "I"}]}]}], "]"}], ",", "20"}], "]"}], "]"}]}], 
+  ";"}], "\n", 
+ RowBox[{"Print", "[", "val", "]"}]}], "Input",
+ CellChangeTimes->{{3.934547659633646*^9, 3.93454767609648*^9}},
+ CellLabel->"In[21]:=",ExpressionUUID->"60ef6de9-de56-49c3-b587-d20cc39b9fed"],
+
+Cell[BoxData[
+ InterpretationBox[
+  PaneBox["\<\"-0.2818271605887418 - 0.5697387755966461 I\"\>",
+   BaselinePosition->Baseline],
+  OutputForm[
+   NumberForm[
+    Complex[-0.2818271605887418, -0.5697387755966461], 20]],
+  Editable->False]], "Print",
+ CellChangeTimes->{{3.9345476660625134`*^9, 3.93454767635952*^9}},
+ CellLabel->
+  "During evaluation of \
+In[21]:=",ExpressionUUID->"678902d2-6ed5-4960-b84d-a2e9cf05a419"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"NumberForm", "[", 
+  RowBox[{
+   RowBox[{"Hypergeometric2F1", "[", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"-", "0.9"}], "+", 
+      RowBox[{"0.0", "I"}]}], ",", 
+     RowBox[{"1.11", "+", 
+      RowBox[{"0.0", "I"}]}], ",", 
+     RowBox[{"1.2", "+", 
+      RowBox[{"0.0", "I"}]}], ",", 
+     RowBox[{"1.5", "+", 
+      RowBox[{"0.5", "I"}]}]}], "]"}], ",", "16"}], "]"}]], "Input",
+ CellChangeTimes->{{3.934547685955433*^9, 3.934547748351245*^9}},
+ CellLabel->"In[31]:=",ExpressionUUID->"6332c97c-1f98-4f2c-ad48-59126bd1f809"],
+
+Cell[BoxData[
+ TagBox[
+  RowBox[{
+   InterpretationBox[
+    StyleBox["\<\"-0.2818271605887418\"\>",
+     ShowStringCharacters->False],
+    -0.2818271605887418,
+    AutoDelete->True], "-", 
+   RowBox[{
+    InterpretationBox[
+     StyleBox["\<\"0.5697387755966461\"\>",
+      ShowStringCharacters->False],
+     0.5697387755966461,
+     AutoDelete->True], " ", "\[ImaginaryI]"}]}],
+  NumberForm[#, 16]& ]], "Output",
+ CellChangeTimes->{{3.934547683563854*^9, 3.9345477486565313`*^9}},
+ CellLabel->
+  "Out[31]//NumberForm=",ExpressionUUID->"6e0aaebf-b348-4b33-bbf7-\
+d59ed8cd603d"]
+}, Open  ]]
+},
+WindowSize->{1416, 876},
+WindowMargins->{{Automatic, -1428.75}, {Automatic, 11.25}},
+Magnification:>0.75 Inherited,
+FrontEndVersion->"14.1 for Linux x86 (64-bit) (July 16, 2024)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"91feba26-1497-4703-93cf-ed3345b1c455"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 1513, 37, 158, "Input",ExpressionUUID->"fa0e43f6-25d9-4a62-8979-09182ac7ea45",
+ InitializationCell->True],
+Cell[2074, 59, 4023, 108, 471, "Input",ExpressionUUID->"dd3410a7-ab0f-4c44-91ec-0544583cbc5c"],
+Cell[CellGroupData[{
+Cell[6122, 171, 565, 9, 33, "Input",ExpressionUUID->"8437cc14-dce2-4027-9eac-66a50d85b27c"],
+Cell[6690, 182, 7964, 237, 991, "Output",ExpressionUUID->"fbd99ff5-0a99-4379-9858-1519f1a1f91d"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[14691, 424, 720, 20, 61, "Input",ExpressionUUID->"60ef6de9-de56-49c3-b587-d20cc39b9fed"],
+Cell[15414, 446, 421, 11, 25, "Print",ExpressionUUID->"678902d2-6ed5-4960-b84d-a2e9cf05a419"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[15872, 462, 553, 15, 35, "Input",ExpressionUUID->"6332c97c-1f98-4f2c-ad48-59126bd1f809"],
+Cell[16428, 479, 577, 18, 53, "Output",ExpressionUUID->"6e0aaebf-b348-4b33-bbf7-d59ed8cd603d"]
+}, Open  ]]
+}
+]
+*)
+

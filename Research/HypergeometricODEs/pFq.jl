@@ -2,11 +2,12 @@
 # ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: June 10, 2025
+# DLM: July 6, 2025
 =#
 
 using MathLink
 using ArbNumerics: gamma, hypergeometric_2F1 as arb_2f1, ArbComplex, ArbFloat
+using HypergeometricFunctions: pFqweniger as weniger_pfq
 import SpecialFunctions.gamma
 
 include("Initialization.jl")
@@ -32,32 +33,24 @@ mathematica_pfq(a, b, z) =
 
 johansson_2f1(a, b, c, z; bits = 512)::ComplexF64 = arb_2f1(ArbComplex.((a, b, c, z), bits = bits)...)
 
+"Levin-type factorial"
+function weniger_2f1(a, b, c, z::Number) 
+    (a,b,c,z) = convert.(ComplexF64, (a,b,c,z))
+    return weniger_pfq((a,b), (c,), z)   
+end
 
 function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .5)
-    # init_max = min(3abs(c / (a * b)), init_max)
-    # if abs(z) <= init_max
-    #     return maclaurin_2f1(a, b, c, z, N)[1]
-    # end
-    #
-    # z0 = init_max * sign(z)
-    #
-    # fn = maclaurin_2f1(a, b, c, z0, N)
-
-    # z0, fn = get_initialization(a, b, c, z)
-
     z0, fn = initialize(a, b, c, z, init_max)
 
     if z0 == z
         return fn[1]
     end
 
-    # branch = true
     for _ ∈ 1:N
         h_0 = abs(z0) * exp(-2)
         h_1 = abs(z0 - 1) * exp(-2)
         h_f = abs(z0 - z)
 
-        # dir, branch = get_direction(z0, z, fn..., branch)
         dir = sign(z - z0)
         step_size = min(h_1, h_f, h_0, step_max)
 
