@@ -2,7 +2,7 @@
 
 julia_version = "1.11.5"
 manifest_format = "2.0"
-project_hash = "6d00d7da2590e47a3c216933aa564381cf2a7414"
+project_hash = "7ea93bbf12d949c2b58005c5e7733c183ff6753d"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -208,6 +208,12 @@ weakdeps = ["Dates", "LinearAlgebra"]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 version = "1.1.1+0"
+
+[[deps.ComplexVisuals]]
+deps = ["Makie"]
+path = "/home/merlin/Documents/Julia/Research/ComplexVisuals"
+uuid = "a4eac8e2-b850-4e34-bd58-e2db9627dab1"
+version = "0.1.0"
 
 [[deps.ComputePipeline]]
 deps = ["Observables", "Preferences"]

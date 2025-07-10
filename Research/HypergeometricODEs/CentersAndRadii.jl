@@ -46,7 +46,7 @@ function oneminusoneoverz_rc(a, b, c, maxr)
         maxr
     )
 
-    return (; r = 1 / (1 - R^2), c = 1 / (1 - R^2), d = 1)
+    return (; r = R / (1 - R^2), c = 1 / (1 - R^2), d = 1)
 end
 
 function oneoverz_rc(a, b, c, maxr)

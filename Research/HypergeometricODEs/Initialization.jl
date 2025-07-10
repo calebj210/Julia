@@ -2,7 +2,7 @@
 #   Routines for initializing the Taylor method for 2F1
 #
 # Author: Caleb Jacobs
-# DLM: July 6, 2025
+# DLM: July 7, 2025
 =#
 
 include("Transformations.jl")
@@ -16,7 +16,12 @@ function intersectionpoint(z, rc)
     else
         proj = rc.c * real(z) / conj(z)
         if rc.d == -1 || abs2(proj - c) < r^2
-            return proj + sqrt(abs2(z) * r^2 - (imag(z) * c)^2) / conj(z)
+            shift = sqrt(abs2(z) * r^2 - (imag(z) * c)^2) / conj(z)
+            if  abs2(proj + shift - z) < abs2(proj - shift - z)
+                return proj + shift
+            else
+                return proj - shift
+            end
         else
             return Inf + Inf * im
         end
@@ -34,22 +39,36 @@ function init(a, b, c, z, trans, rc)
 end
 
 function inward_init(a, b, c, z, rc)
-    trans = (:oneoverz, :oneoveroneminusz)
+    if 0 < real(z) && real(z) < 1
+        trans = (:oneoverz, :oneoveroneminusz, :oneminusoneoverz, :oneminusz)
+    else
+        trans = (:oneoverz, :oneoveroneminusz)
+    end
 
     return init(a, b, c, z, trans, rc)
 end
 
 function outward_init(a, b, c, z, rc)
-    trans = (
-        :z,
-        :zalt,
+    if real(z) > 1
+        trans = (
+            :z,
+            :zalt,
 
-        :zoverzminus1a,
-        :zoverzminus1b,
+            :zoverzminus1a,
+            :zoverzminus1b,
 
-        :oneminusz,
-        :oneminusoneoverz,
-    )
+            :oneminusz,
+            :oneminusoneoverz,
+        )
+    else
+        trans = (
+            :z,
+            :zalt,
+
+            :zoverzminus1a,
+            :zoverzminus1b,
+        )
+    end
 
     return init(a, b, c, z, trans, rc)
 end
@@ -63,19 +82,12 @@ function initialize(a, b, c, z, maxr = 0.5)
         return (z, fn)
     end
 
-    if sign(real(a)) == sign(real(b))
-        if real(a) < 0
-            (z0, fn) = inward_init(a, b, c, z, rcs)
-        else
-            if real(c) > 0
-                (z0, fn) = outward_init(a, b, c, z, rcs)
-            else
-                (z0, fn) = inward_init(a, b, c, z, rcs)
-            end
-        end
-    else
-        (z0, fn) = outward_init(a, b, c, z, rcs)
-    end
+    (z0, fn) = outward_init(a, b, c, z, rcs)
+    # if sign(real(a)) == sign(real(b)) && (real(a) < 0 || real(c) < 0)
+    #     (z0, fn) = inward_init(a, b, c, z, rcs)
+    # else
+    #     (z0, fn) = outward_init(a, b, c, z, rcs)
+    # end
 
     return (z0, fn)
 end

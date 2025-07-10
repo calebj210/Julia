@@ -2,18 +2,17 @@
 #   Functions for generating graphics in the paper
 #
 # Author: Caleb Jacobs
-# DLM: June 27, 2025
+# DLM: July 6, 2025
 =#
 
 using CairoMakie, ComplexVisuals, LaTeXStrings
 using Random, BenchmarkTools
 include("pFq.jl")
-include("PaperTests/Slevinsky2F1.jl")
 
 # 2F1 methods and names
-const funcs = (taylor_2f1, weniger_2f1, (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1)
-const names = ("Taylor", "Levin-Type", "Johansson", "Mathematica")
-const indices = ((1,1), (1,2), (2,1), (2,2))
+# const funcs = (taylor_2f1, weniger_2f1, (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1)
+# const names = ("Taylor", "Levin-Type", "Johansson", "Mathematica")
+# const indices = ((1,1), (1,2), (2,1), (2,2))
 
 # Helper functions
 function clean_error(f,t)

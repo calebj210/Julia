@@ -133,6 +133,39 @@ function maclaurin_2f1(a, b, c, z, N = 1000; tol = eps() / 2)
     return [S, dS]
 end
 
+function zalt_2f1(a, b, c, z)
+    f, df = maclaurin_2f1(c - a, c - b, c, z)
+
+    g = (1 - z)^(c - a - b)
+
+    return [
+        g * f,
+        g * ((a + b - c) * f / (1 - z) + df)
+    ]
+end
+
+function zoverzminus1a_2f1(a, b, c, z)
+    f, df = maclaurin_2f1(a, c - b, c, z / (z - 1))
+
+    g = (1 - z)^(-a)
+
+    return [
+        g * f,
+        g * (a * f - df / (1 - z)) / (1 - z)
+    ]
+end
+
+function zoverzminus1b_2f1(a, b, c, z)
+    f, df = maclaurin_2f1(c - a, b, c, z / (z - 1))
+
+    g = (1 - z)^(-b)
+
+    return [
+        g * f,
+        g * (b * f - df / (1 - z)) / (1 - z)
+    ]
+end
+
 function oneminusoneoverz_2f1(a, b, c, z)
     f1, df1 = maclaurin_2f1(a, a - c + 1, a + b - c + 1, 1 - 1 / z)
     f2, df2 = maclaurin_2f1(c - a, 1 - a, c - a - b + 1, 1 - 1 / z)
@@ -186,39 +219,6 @@ function oneoveroneminusz_2f1(a, b, c, z)
         g1 * f1 + g2 * f2,
         (g1 * (a * f1 + df1 / (1 - z)) +
          g2 * (b * f2 + df2 / (1 - z))) / (1 - z)
-    ]
-end
-
-function zoverzminus1a_2f1(a, b, c, z)
-    f, df = maclaurin_2f1(a, c - b, c, z / (z - 1))
-
-    g = (1 - z)^(-a)
-
-    return [
-        g * f,
-        g * (a * f - df / (1 - z)) / (1 - z)
-    ]
-end
-
-function zoverzminus1b_2f1(a, b, c, z)
-    f, df = maclaurin_2f1(c - a, b, c, z / (z - 1))
-
-    g = (1 - z)^(-b)
-
-    return [
-        g * f,
-        g * (b * f - df / (1 - z)) / (1 - z)
-    ]
-end
-
-function zalt_2f1(a, b, c, z)
-    f, df = maclaurin_2f1(c - a, c - b, c, z)
-
-    g = (1 - z)^(c - a - b)
-
-    return [
-        g * f,
-        g * ((a + b - c) * f / (1 - z) + df)
     ]
 end
 
