@@ -2,7 +2,7 @@
 #   Routines for initializing the Taylor method for 2F1
 #
 # Author: Caleb Jacobs
-# DLM: July 7, 2025
+# DLM: July 23, 2025
 =#
 
 include("Transformations.jl")
@@ -40,7 +40,8 @@ end
 
 function inward_init(a, b, c, z, rc)
     if 0 < real(z) && real(z) < 1
-        trans = (:oneoverz, :oneoveroneminusz, :oneminusoneoverz, :oneminusz)
+        trans = (:oneoverz, :oneminusoneoverz, :oneminusz)
+        # trans = (:oneoverz, :oneoveroneminusz, :oneminusoneoverz, :oneminusz)
     else
         trans = (:oneoverz, :oneoveroneminusz)
     end
@@ -82,12 +83,11 @@ function initialize(a, b, c, z, maxr = 0.5)
         return (z, fn)
     end
 
-    (z0, fn) = outward_init(a, b, c, z, rcs)
-    # if sign(real(a)) == sign(real(b)) && (real(a) < 0 || real(c) < 0)
-    #     (z0, fn) = inward_init(a, b, c, z, rcs)
-    # else
-    #     (z0, fn) = outward_init(a, b, c, z, rcs)
-    # end
+    if sign(real(a)) == sign(real(b)) && (real(a) < 0 || real(c) < 0)
+        (z0, fn) = inward_init(a, b, c, z, rcs)
+    else
+        (z0, fn) = outward_init(a, b, c, z, rcs)
+    end
 
     return (z0, fn)
 end

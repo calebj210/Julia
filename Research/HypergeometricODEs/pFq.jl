@@ -2,7 +2,7 @@
 # ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: July 6, 2025
+# DLM: July 23, 2025
 =#
 
 using MathLink
@@ -40,7 +40,23 @@ function weniger_2f1(a, b, c, z::Number)
 end
 
 function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .5)
-    z0, fn = initialize(a, b, c, z, init_max)
+    # Loop path
+    rng = 4
+    if real(z) > -rng
+        z0, fn = initialize(a, b, c, -rng + 0im, init_max)
+    else
+        z0, fn = initialize(a, b, c, z, init_max)
+    end
+
+    # z > 1 branch wall errors
+    # if real(z) > 1 && abs(angle(z)) <= π / 4
+    #     z0, fn = initialize(a, b, c, 1 + sgn(imag(z)) * im, init_max)
+    # else
+    #     z0, fn = initialize(a, b, c, z, init_max)
+    # end
+
+    # Default
+    # z0, fn = initialize(a, b, c, z, init_max)
 
     if z0 == z
         return fn[1]
@@ -51,7 +67,7 @@ function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, 
         h_1 = abs(z0 - 1) * exp(-2)
         h_f = abs(z0 - z)
 
-        dir = sign(z - z0)
+        dir = get_direction(z0, z)
         step_size = min(h_1, h_f, h_0, step_max)
 
         if step_size != h_f

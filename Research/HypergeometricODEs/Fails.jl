@@ -2,7 +2,7 @@
 # Tests for inspected lower accuracy random tests
 #
 # Author: Caleb Jacobs
-# DLM: July 10, 2025
+# DLM: July 21, 2025
 =#
 
 using ComplexVisuals, CairoMakie, LaTeXStrings
@@ -13,7 +13,7 @@ plog(z) = sign(z) * log10(abs(z) + 1)
 
 function grid_errors(test)
     a, b, c = test[1:3]
-    z = complex_square_grid(4,300)
+    z = complex_square_grid(3,300)
 
     println("Getting true solution")
     tru = johansson_2f1.(a, b, c, z, bits = 512)
@@ -135,7 +135,7 @@ function sort_errors(tests, errs, bins)
 end
 
 function clean_error(f,t)
-    err = abs.((f - t) ./ t)
+    err = abs(f - t) / (abs(t) + eps())
 
     if err > 1 || isnan(err) || isinf(err)
         err = 1
@@ -188,17 +188,15 @@ function conditioning(a, b, c)
 
     α, β, γ = (a, b, c) .+ eps.((a, b, c))
 
-    f = taylor_2f1.(a, b, c, z)
-    ϕ = taylor_2f1.(α, β, γ, z)
-    tru = johansson_2f1.(a, b, c, z, bits = 512)
+    f = johansson_2f1.(a, b, c, z, bits = 512)
+    ϕ = johansson_2f1.(α, β, γ, z, bits = 512)
 
-    err = clean_error.(f, tru)
     dif = clean_error.(ϕ, f)
 
     fig = Figure()
     axl = Axis3(fig[1,1],
-        title = "Relative Error",
-        zlabel = L"\log_{10}|\text{Error}|",
+        title = "Phase Portrait",
+        zlabel = L"pseudolog$_{10}$(F)",
         zlabeloffset = 40,
         viewmode = :fit
     )
@@ -209,8 +207,10 @@ function conditioning(a, b, c)
         viewmode = :fit
     )
 
-    surface!(axl, reim(z)..., log10.(err))
+    complexsurface!(axl, z, plog.(f))
     surface!(axr, reim(z)..., log10.(dif))
+
+    axiscolorwheel(axl, position = :rt)
 
     rowsize!(fig.layout, 1, Aspect(1, 1))
     resize_to_layout!(fig)
