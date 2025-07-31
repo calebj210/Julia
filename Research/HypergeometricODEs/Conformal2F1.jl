@@ -2,11 +2,14 @@
 # Compute 2F1 via transformations and a conformal mapping
 #
 # Author: Caleb Jacobs
-# DLM: July 29, 2025
+# DLM: July 31, 2025
 =#
 
 using DSP
 using LinearAlgebra
+using ComplexVisuals, CairoMakie, LaTeXStrings
+
+include("pFq.jl")
 
 # Generate series weights for z -> 1 - (1 - ζ)^4
 function conformalweights(ord)
@@ -20,7 +23,7 @@ function conformalweights(ord)
     return LowerTriangular(A)
 end
 
-function conformal_maclaurin_2f1(a, b, c, z; rtol = eps(), mord = 1000)
+function conformal_2f1(a, b, c, z; rtol = eps(), mord = 1000, raw = false)
     old = zeros(5)
     old[1] = 1
     for n ∈ 1:4
@@ -29,11 +32,13 @@ function conformal_maclaurin_2f1(a, b, c, z; rtol = eps(), mord = 1000)
 
     α = conformalweights(5) * old
 
-    z = 1 - (1 - z)^.25
-
-    if abs2(z) >= 1
-        return NaN + im * NaN
+    if !raw
+        z = 1 - (1 - z)^.25
     end
+
+    # if abs2(z) >= 1
+    #     return NaN + im * NaN
+    # end
 
     zn = z^4
     S = dot(conj(z .^ (0:4)), α)
@@ -91,4 +96,71 @@ function convolutional_maclaurin_2f1(a, b, c, z; max_ord = 25, rtol = 1e-15)
     end
 
     return dot(conj(z .^ (0:length(coeffs) - 1)), conformalweights(length(coeffs)), coeffs)
+end
+
+function boundarytest()
+    test1 = (1.1,1.2,1.3)
+    z1 = ComplexGrid(range(-17, 9, 300), range(-13, 13, 300))
+    f1 = conformal_2f1.(test1..., z1)
+    tru1 = johansson_2f1.(test1..., z1, bits = 106)
+    err1 = cleanerror.(f1, tru1)
+
+    test2 = (1,-9/2,-9/4)
+    z2 = ComplexGrid(range(-27, 15, 300), range(-21, 21, 300))
+    f2 = conformal_2f1.(test2..., z2)
+    tru2 = johansson_2f1.(test2..., z2, bits = 106)
+    err2 = cleanerror.(f2, tru2)
+
+    fig1 = Figure()
+    ax1 = Axis3(fig1[1,1],
+       title = L"{_2}F_1(1.1,1.2;1.3;z)",
+        titlesize = 20,
+        xlabel = L"\mathrm{Re}(z)",
+        ylabel = L"\mathrm{Im}(z)",
+        zlabel = L"\log_{10}(\text{Error})",
+        elevation = .25π,
+    )
+    fig2 = Figure()
+    ax2 = Axis3(fig2[1,1],
+        title = L"{_2}F_1(1,-9/2;-9/4;z)",
+        titlesize = 20,
+        xlabel = L"\mathrm{Re}(z)",
+        ylabel = L"\mathrm{Im}(z)",
+        zlabel = L"\log_{10}(\text{Error})",
+        elevation = .25π,
+    )
+
+    p1 = surface!(ax1, reim(z1)..., log10.(err1))
+    p2 = surface!(ax2, reim(z2)..., log10.(err2))
+
+    Colorbar(fig1[1,2], p1)
+    Colorbar(fig2[1,2], p2)
+    resize_to_layout!(fig1)
+    resize_to_layout!(fig2)
+
+    return (fig1, fig2)
+end
+
+function multiple_sheets()
+    ζ = complex_square_grid(sqrt(2) + .1, 100)
+    f = conformal_2f1.(1,-9/2,-9/4,ζ; raw = true)
+
+    fig = Figure()
+    ax = Axis3(fig[1,1])
+    complexsurface!(ax, ζ, sign.(f) .* log10.(abs.(f) .+ 1))
+
+    resize_to_layout!(fig)
+
+    return fig
+end
+
+function cleanerror(f, g)
+    err = abs(f - g) / (abs(g) + eps())
+    if isinf(err) || isnan(err) || err > 1
+        err = 1
+    elseif err < 1e-16
+        err = 1e-16
+    end
+
+    return err
 end
