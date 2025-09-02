@@ -133,8 +133,12 @@ function maclaurin_2f1(a, b, c, z, N = 1000; tol = eps() / 2)
     return [S, dS]
 end
 
-function zalt_2f1(a, b, c, z)
-    f, df = maclaurin_2f1(c - a, c - b, c, z)
+function z_2f1(a, b, c, z, f0 = maclaurin_2f1)
+    return f0(a, b, c, z)
+end
+
+function zalt_2f1(a, b, c, z, f0 = maclaurin_2f1)
+    f, df = f0(c - a, c - b, c, z)
 
     g = (1 - z)^(c - a - b)
 
@@ -144,8 +148,8 @@ function zalt_2f1(a, b, c, z)
     ]
 end
 
-function zoverzminus1a_2f1(a, b, c, z)
-    f, df = maclaurin_2f1(a, c - b, c, z / (z - 1))
+function zoverzminus1a_2f1(a, b, c, z, f0 = maclaurin_2f1)
+    f, df = f0(a, c - b, c, z / (z - 1))
 
     g = (1 - z)^(-a)
 
@@ -155,8 +159,8 @@ function zoverzminus1a_2f1(a, b, c, z)
     ]
 end
 
-function zoverzminus1b_2f1(a, b, c, z)
-    f, df = maclaurin_2f1(c - a, b, c, z / (z - 1))
+function zoverzminus1b_2f1(a, b, c, z, f0 = maclaurin_2f1)
+    f, df = f0(c - a, b, c, z / (z - 1))
 
     g = (1 - z)^(-b)
 
@@ -166,9 +170,9 @@ function zoverzminus1b_2f1(a, b, c, z)
     ]
 end
 
-function oneminusoneoverz_2f1(a, b, c, z)
-    f1, df1 = maclaurin_2f1(a, a - c + 1, a + b - c + 1, 1 - 1 / z)
-    f2, df2 = maclaurin_2f1(c - a, 1 - a, c - a - b + 1, 1 - 1 / z)
+function oneminusoneoverz_2f1(a, b, c, z, f0 = maclaurin_2f1)
+    f1, df1 = f0(a, a - c + 1, a + b - c + 1, 1 - 1 / z)
+    f2, df2 = f0(c - a, 1 - a, c - a - b + 1, 1 - 1 / z)
 
     g1 = gamma(c - a - b) * gamma(c) / gamma(c - a) / gamma(c - b) * z^(-a)
     g2 = gamma(a + b - c) * gamma(c) / gamma(a) / gamma(b) * (1 - z)^(c - a - b) * z^(a - c)
@@ -180,9 +184,9 @@ function oneminusoneoverz_2f1(a, b, c, z)
     ]
 end
 
-function oneminusz_2f1(a, b, c, z)
-    f1, df1 = maclaurin_2f1(a, b,         a + b - c + 1, 1 - z)
-    f2, df2 = maclaurin_2f1(c - a, c - b, c - a - b + 1, 1 - z)
+function oneminusz_2f1(a, b, c, z, f0 = maclaurin_2f1)
+    f1, df1 = f0(a, b,         a + b - c + 1, 1 - z)
+    f2, df2 = f0(c - a, c - b, c - a - b + 1, 1 - z)
     
     g1 = gamma(c - a - b) * gamma(c) / gamma(c - a) / gamma(c - b)
     g2 = gamma(a + b - c) * gamma(c) / gamma(a) / gamma(b) * (1 - z)^(c - a - b)
@@ -194,9 +198,9 @@ function oneminusz_2f1(a, b, c, z)
     ]
 end
 
-function oneoverz_2f1(a, b, c, z)
-    f1, df1 = maclaurin_2f1(a, a - c + 1, a - b + 1, 1 / z)
-    f2, df2 = maclaurin_2f1(b, b - c + 1, b - a + 1, 1 / z)
+function oneoverz_2f1(a, b, c, z, f0 = maclaurin_2f1)
+    f1, df1 = f0(a, a - c + 1, a - b + 1, 1 / z)
+    f2, df2 = f0(b, b - c + 1, b - a + 1, 1 / z)
 
     g1 = gamma(b - a) / gamma(b) * gamma(c) / gamma(c - a) * (-z)^(-a)
     g2 = gamma(a - b) / gamma(a) * gamma(c) / gamma(c - b) * (-z)^(-b)
@@ -208,9 +212,9 @@ function oneoverz_2f1(a, b, c, z)
     ]
 end
 
-function oneoveroneminusz_2f1(a, b, c, z)
-    f1, df1 = maclaurin_2f1(a, c - b, a - b + 1, 1 / (1 - z))
-    f2, df2 = maclaurin_2f1(b, c - a, b - a + 1, 1 / (1 - z))
+function oneoveroneminusz_2f1(a, b, c, z, f0 = maclaurin_2f1)
+    f1, df1 = f0(a, c - b, a - b + 1, 1 / (1 - z))
+    f2, df2 = f0(b, c - a, b - a + 1, 1 / (1 - z))
 
     g1 = gamma(b - a) * gamma(c) / gamma(b) / gamma(c - a) * (1 - z)^(-a)
     g2 = gamma(a - b) * gamma(c) / gamma(a) / gamma(c - b) * (1 - z)^(-b)
@@ -223,7 +227,7 @@ function oneoveroneminusz_2f1(a, b, c, z)
 end
 
 const transformations = (;
-    z = maclaurin_2f1,
+    z = z_2f1,
     zalt = zalt_2f1,
 
     zoverzminus1a = zoverzminus1a_2f1,

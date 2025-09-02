@@ -2,12 +2,13 @@
 # Tests for inspected lower accuracy random tests
 #
 # Author: Caleb Jacobs
-# DLM: July 21, 2025
+# DLM: August 8, 2025
 =#
 
 using ComplexVisuals, CairoMakie, LaTeXStrings
 using Random
 include("pFq.jl")
+include("Conformal2F1.jl")
 
 plog(z) = sign(z) * log10(abs(z) + 1)
 
@@ -16,11 +17,20 @@ function grid_errors(test)
     z = complex_square_grid(3,300)
 
     println("Getting true solution")
-    tru = johansson_2f1.(a, b, c, z, bits = 512)
-    println("Getting Taylor solution")
-    val = taylor_2f1.(a, b, c, z)
-
+    tru = johansson_2f1.(a, b, c, z, bits = 256)
+    # println("Getting Taylor solution")
+    # val = taylor_2f1.(a, b, c, z)
+    println("Getting conformal solution")
+    # val1 = conformal_transformation_2f1.(a, b, c, z)
+    # val = [maclaurin_2f1(a, b, c, z)[1] for z ∈ z]
+    val = [conformal_2f1(a, b, c, z)[1] for z ∈ z]
+    # val = [conformal_5_2f1(a, b, c, z) for z ∈ z]
     err = clean_error.(val, tru)
+
+    # err1 = clean_error.(val1, tru)
+    # err2 = clean_error.(val2, tru)
+
+    # err = min.(err1, err2)
 
     set_theme!(complex_theme)
     fig = Figure()
@@ -135,7 +145,7 @@ function sort_errors(tests, errs, bins)
 end
 
 function clean_error(f,t)
-    err = abs(f - t) / (abs(t) + eps())
+    err = abs(f - t) / (abs(t) + eps(abs(t)))
 
     if err > 1 || isnan(err) || isinf(err)
         err = 1
