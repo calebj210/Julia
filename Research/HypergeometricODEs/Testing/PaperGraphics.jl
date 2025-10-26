@@ -30,7 +30,7 @@ end
 function average_time(a, b, c, z, f, N = 5; microseconds = true)
     time = 0.0
 
-    for n ∈ 1 : N
+    for _ ∈ 1 : N
         time += @elapsed f(a, b, c, z)
     end
 
