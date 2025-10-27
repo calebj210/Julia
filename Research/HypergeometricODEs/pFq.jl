@@ -2,7 +2,7 @@
 # ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: July 23, 2025
+# DLM: October 27, 2025
 =#
 
 using MathLink
@@ -10,8 +10,8 @@ using ArbNumerics: gamma, hypergeometric_2F1 as arb_2f1, ArbComplex, ArbFloat
 using HypergeometricFunctions: pFqweniger as weniger_pfq
 import SpecialFunctions.gamma
 
-include("Initialization.jl")
-include("Taylor.jl")
+# include("Initialization.jl")
+# include("Taylor.jl")
 
 function sgn(x)
     iszero(x) ? -one(x) : sign(x)
@@ -39,49 +39,49 @@ function weniger_2f1(a, b, c, z::Number)
     return weniger_pfq((a,b), (c,), z)   
 end
 
-function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .5)
-    # Loop path
-    rng = 4
-    if real(z) > -rng
-        z0, fn = initialize(a, b, c, -rng + 0im, init_max)
-    else
-        z0, fn = initialize(a, b, c, z, init_max)
-    end
-
-    # z > 1 branch wall errors
-    # if real(z) > 1 && abs(angle(z)) <= π / 4
-    #     z0, fn = initialize(a, b, c, 1 + sgn(imag(z)) * im, init_max)
-    # else
-    #     z0, fn = initialize(a, b, c, z, init_max)
-    # end
-
-    # Default
-    # z0, fn = initialize(a, b, c, z, init_max)
-
-    if z0 == z
-        return fn[1]
-    end
-
-    for _ ∈ 1:N
-        h_0 = abs(z0) * exp(-2)
-        h_1 = abs(z0 - 1) * exp(-2)
-        h_f = abs(z0 - z)
-
-        dir = get_direction(z0, z)
-        step_size = min(h_1, h_f, h_0, step_max)
-
-        if step_size != h_f
-            h = dir * step_size
-            fn = recursive_2f1(a, b, c, z0, fn, h, order)
-            z0 += h
-        else
-            h = z - z0
-            return recursive_2f1(a, b, c, z0, fn, h, order)[1]
-        end
-    end
-
-    return fn[1]
-end
+# function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .5)
+#     # Loop path
+#     rng = 4
+#     if real(z) > -rng
+#         z0, fn = initialize(a, b, c, -rng + 0im, init_max)
+#     else
+#         z0, fn = initialize(a, b, c, z, init_max)
+#     end
+#
+#     # z > 1 branch wall errors
+#     # if real(z) > 1 && abs(angle(z)) <= π / 4
+#     #     z0, fn = initialize(a, b, c, 1 + sgn(imag(z)) * im, init_max)
+#     # else
+#     #     z0, fn = initialize(a, b, c, z, init_max)
+#     # end
+#
+#     # Default
+#     # z0, fn = initialize(a, b, c, z, init_max)
+#
+#     if z0 == z
+#         return fn[1]
+#     end
+#
+#     for _ ∈ 1:N
+#         h_0 = abs(z0) * exp(-2)
+#         h_1 = abs(z0 - 1) * exp(-2)
+#         h_f = abs(z0 - z)
+#
+#         dir = get_direction(z0, z)
+#         step_size = min(h_1, h_f, h_0, step_max)
+#
+#         if step_size != h_f
+#             h = dir * step_size
+#             fn = recursive_2f1(a, b, c, z0, fn, h, order)
+#             z0 += h
+#         else
+#             h = z - z0
+#             return recursive_2f1(a, b, c, z0, fn, h, order)[1]
+#         end
+#     end
+#
+#     return fn[1]
+# end
 
 # function _2f1(a, b, c, z::Number; step_max = Inf, N = 1000, order = 1000)
 #     if real(z) >= 0.5 && abs(1 - z) <= 1

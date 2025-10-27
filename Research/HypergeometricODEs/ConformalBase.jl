@@ -2,7 +2,7 @@
 #   Conformal mapping base functions
 #
 # Author: Caleb Jacobs
-# DLM: October 26, 2025
+# DLM: October 27, 2025
 =#
 
 function recurrence_relations(a, b, c, ord)
