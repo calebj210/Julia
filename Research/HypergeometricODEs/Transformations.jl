@@ -2,11 +2,10 @@
 #   Transformations for 2F1
 #
 # Author: Caleb Jacobs
-# DLM: October 26, 2025
+# DLM: October 30, 2025
 =#
 
 using SpecialFunctions
-# include("Base2F1.jl")
 include("ConformalBase.jl")
 
 function z_2f1(a, b, c, z, ord)

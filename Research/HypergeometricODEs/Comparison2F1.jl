@@ -2,25 +2,31 @@
 #   Routine for computing 2F1 by comparing multiple evaluations
 #
 # Author: Caleb Jacobs
-# DLM: October 27, 2025
+# DLM: October 30, 2025
 =#
 
 include("Transformations.jl")
 
-function comparison_2f1(a, b, c, z; rtol = 1e-13, ord = 4)
-    if real(z) <= 0.5
-        if abs2(z) < 1
+function comparison_2f1(a, b, c, z; rtol = 1e-14, ord = 2)
+    if abs2(z) < 1 && abs2(1 - z) < 1
+        if real(z) <= 0.5
             trans = [:z, :zoverzminusone]
         else
-            trans = [:zoverzminusone, :oneoverz, :oneoveroneminusz]
+            trans = [:oneminusz, :oneminusoneoverz]
         end
     else
-        if abs2(1 - z) < 1
-            trans = [:oneminusz, :oneminusoneoverz]
+        if real(z) <= 0.5
+            trans = [:oneoverz, :oneoveroneminusz, :zoverzminusone, :z, :oneminusz]
         else
-            trans = [:oneminusoneoverz, :oneoverz, :oneoveroneminusz]
+            trans = [:oneoverz, :oneoveroneminusz, :oneminusoneoverz, :z, :oneminusz]
         end
     end
+
+    # if abs2(z) < 1
+    #     trans = [:z, :zoverzminusone, :oneminusz, :oneminusoneoverz]
+    # else
+        # trans = [:z, :oneminusz, :zoverzminusone, :oneminusoneoverz, :oneoverz, :oneoveroneminusz]
+    # end
 
     val = compare(a, b, c, z, trans; rtol = rtol, ord = ord)
     return val
@@ -33,14 +39,16 @@ function compare(a, b, c, z, trans; ord = 4, kwargs...)
     N = length(trans)
     vals = zeros(ComplexF64, ord*N)
     for n ∈ 1:ord*N - 1
-        ordn = ord - ((n - 1) ÷ N)
+        ordn = ((n - 1) ÷ N) + 1
+        trann = trans[((n - 1) % N) + 1]
         if iszero(vals[n])
-            vals[n] = transformations[((n - 1) % N) + 1](a, b, c, z, ordn)
+            vals[n] = transformations[trann](a, b, c, z, ordn)
         end
         for k ∈ (n+1):ord*N
-            ordk = ord - ((k - 1) ÷ N)
+            ordk = ((k - 1) ÷ N) + 1
+            trank = trans[((k - 1) % N) + 1]
             if iszero(vals[k])
-                vals[k] = transformations[((k - 1) % N) + 1](a, b, c, z, ordk)
+                vals[k] = transformations[trank](a, b, c, z, ordk)
             end
 
             if isapprox(vals[n], vals[k]; kwargs...)
@@ -52,7 +60,7 @@ function compare(a, b, c, z, trans; ord = 4, kwargs...)
         end
     end
 
-    @warn "Tolerance not met, answer within a relative tolerance of $(abs(dif / vals[first(idx)]))."
+    # @warn "Tolerance not met, answer within a relative tolerance of $(abs(dif / vals[first(idx)]))."
 
     return vals[first(idx)]
 end

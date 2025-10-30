@@ -62,7 +62,7 @@ function initChain(chain)::Chain
     return C
 end
 
-# Get carteseian direction based on index
+# Get Cartesian direction based on index
 function getCartIndex(C::Chain, dir::Int)
     predir = 0          # Previous direction
     if C.idx != 1

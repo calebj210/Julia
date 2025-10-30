@@ -2,17 +2,19 @@
 #   Functions for generating graphics in the paper
 #
 # Author: Caleb Jacobs
-# DLM: July 6, 2025
+# DLM: October 30, 2025
 =#
 
 using CairoMakie, ComplexVisuals, LaTeXStrings
 using Random, BenchmarkTools
-include("pFq.jl")
+
+include("../Comparison2F1.jl")
+include("../pFq.jl")
 
 # 2F1 methods and names
-# const funcs = (taylor_2f1, weniger_2f1, (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1)
-# const names = ("Taylor", "Levin-Type", "Johansson", "Mathematica")
-# const indices = ((1,1), (1,2), (2,1), (2,2))
+funcs = (comparison_2f1, weniger_2f1, (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1)
+names = ("Conformal", "Levin-Type", "Johansson", "Mathematica")
+indices = ((1,1), (1,2), (2,1), (2,2))
 
 # Helper functions
 function clean_error(f,t)
@@ -186,7 +188,7 @@ function random_test(;N = 10000, arng = 25, brng = 25, crng = 25, zrng = 2, seed
 
         hist!(ax, err, 
             bins = bin, 
-            color = :values, 
+            color = :black, 
             normalization = :probability
         )
     end
@@ -198,12 +200,12 @@ end
 function alternate_branch(a = 1.1, b = .5, c = 1.2)
     z = ComplexGrid(range(-1,2,301), range(-1.5,1.5,301))
 
-    f1 = taylor_2f1.(a, b, c, z)
+    f1 = comparison_2f1.(a, b, c, z)
     f2 = [π * gamma(c) / sinpi(b - a) * (
         cispi((imag(z) < 0 ? 1 : -1) * a) * z^(-a) / gamma(b) / gamma(c - a) / gamma(a - b + 1) *
-        taylor_2f1(a, a - c + 1, a - b + 1, 1 / z) -
+        comparison_2f1(a, a - c + 1, a - b + 1, 1 / z) -
         cispi((imag(z) < 0 ? 1 : -1) * b) * z^(-b) / gamma(a) / gamma(c - b) / gamma(b - a + 1) *
-        taylor_2f1(b, b - c + 1, b - a + 1, 1 / z)
+        comparison_2f1(b, b - c + 1, b - a + 1, 1 / z)
     ) for z ∈ z]
 
     # f1[isnan.(f1)] .= 0

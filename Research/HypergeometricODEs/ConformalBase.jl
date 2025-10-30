@@ -2,7 +2,7 @@
 #   Conformal mapping base functions
 #
 # Author: Caleb Jacobs
-# DLM: October 27, 2025
+# DLM: October 30, 2025
 =#
 
 function recurrence_relations(a, b, c, ord)
@@ -82,6 +82,10 @@ end
 
 function conformal_2f1(a, b, c, z, ord::Integer = 4; maxord = 100, rtol = eps())
     z = 1 - (1 - z)^(1 / ord)
+    
+    if abs2(z) > 1
+        return NaN * (1 + im)
+    end
 
     α, zn, S, A = initialize_series(a, b, c, ord)
 
