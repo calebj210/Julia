@@ -2,7 +2,7 @@
 #   Functions for generating graphics in the paper
 #
 # Author: Caleb Jacobs
-# DLM: October 30, 2025
+# DLM: November 6, 2025
 =#
 
 using CairoMakie, ComplexVisuals, LaTeXStrings
@@ -12,9 +12,9 @@ include("../Comparison2F1.jl")
 include("../pFq.jl")
 
 # 2F1 methods and names
-funcs = (comparison_2f1, weniger_2f1, (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1)
-names = ("Conformal", "Levin-Type", "Johansson", "Mathematica")
-indices = ((1,1), (1,2), (2,1), (2,2))
+funcs = (comparison_2f1, weniger_2f1, (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1, matlab_2f1)
+names = ("Conformal", "Levin-Type", "Johansson", "Mathematica", "MATLAB")
+indices = ((3,1), (1,1), (1,2), (2,1), (2,2))
 
 # Helper functions
 function clean_error(f,t)
@@ -64,8 +64,8 @@ function slevinsky_grid_test(tru = nothing)
 
     # Generate graphics
     set_theme!(theme_latexfonts())
-    ecrng = (-16,-5)
-    etickrng = -15:3:-6
+    ecrng = (-16,-8)
+    etickrng = -15:3:-9
     eticks = (etickrng, [latexstring("10^{", p, "}") for p ∈ etickrng])
 
     tcrng = (-6,-2)
@@ -156,13 +156,16 @@ function random_test(;N = 10000, arng = 25, brng = 25, crng = 25, zrng = 2, seed
 
     print("Getting tests: ")
     tru = Vector{ComplexF64}()
+    alt = Vector{ComplexF64}()
     for (a,b,c,z) ∈ zip(as, bs, cs, zs)
         val = johansson_2f1(a,b,c,z; bits = 512)
+        valalt = johansson_2f1(perturb.((a,b,c,z))...; bits = 1024)
         if isnan(val) || isinf(val)
             continue
         end
         push!(tests, (a,b,c,z))
         push!(tru, convert(ComplexF64, val))
+        push!(alt, convert(ComplexF64, valalt))
     end
     println("count: $(length(tests))")
 
@@ -192,6 +195,21 @@ function random_test(;N = 10000, arng = 25, brng = 25, crng = 25, zrng = 2, seed
             normalization = :probability
         )
     end
+    ax = Axis(fig[3,2], 
+        limits = (nothing, (0,1)), 
+        xscale = log10, 
+        xlabel = "Relative Difference", 
+        title = "Sensitivity",
+    )
+
+    bin = 10.0 .^ (-16:2:2)
+
+    dif = clean_error.(alt, tru)
+    hist!(ax, dif, 
+        bins = bin, 
+        color = :black, 
+        normalization = :probability
+    )
 
     return fig
 end
@@ -265,6 +283,75 @@ function alternate_branch(a = 1.1, b = .5, c = 1.2)
 
     rowsize!(fig.layout, 1, Aspect(1,1))
 
+    resize_to_layout!(fig)
+
+    return fig
+end
+
+# Sensitivity plot
+perturb(a::Float64) = a + eps(a)
+perturb(a::ComplexF64) = perturb(real(a)) + im * perturb(imag(a))
+function sensitivity(;N = 10000, arng = 25, brng = 25, crng = 25, zrng = 2, seed = 997, complextest = false)
+    Random.seed!(seed)
+
+    # Setup random tests
+    if complextest
+        as = arng * complexrand(N)
+        bs = brng * complexrand(N)
+        cs = crng * complexrand(N)
+    else
+        as = arng * (1 .- 2rand(N))
+        bs = brng * (1 .- 2rand(N))
+        cs = crng * (1 .- 2rand(N))
+    end
+    zs = zrng * complexrand(N)
+
+    print("Getting tests: ")
+    tru = Vector{ComplexF64}()
+    alt = Vector{ComplexF64}()
+    comps = Vector{ComplexF64}()
+    for (a,b,c,z) ∈ zip(as, bs, cs, zs)
+        val = johansson_2f1(a,b,c,z; bits = 1024)
+        valalt = johansson_2f1(perturb.((a,b,c,z))...; bits = 1024)
+        comp = comparison_2f1(a,b,c,z)
+        if isnan(val) || isinf(val)
+            continue
+        end
+        push!(tru, convert(ComplexF64, val))
+        push!(alt, convert(ComplexF64, valalt))
+        push!(comps, comp)
+    end
+
+    # Generate graphics and results
+    set_theme!(theme_latexfonts())
+    fig = Figure()
+    err = clean_error.(alt, tru)
+    myerr = clean_error.(comps, tru)
+    bin = 10.0 .^ (-16:2:2)
+    ax = Axis(fig[1,1], 
+              limits = (nothing, (0,1)), 
+              xscale = log10, 
+              xlabel = "Relative Difference", 
+              title = "Sensitivity",
+    )
+    hist!(ax, err, 
+          bins = bin, 
+          color = :black, 
+          normalization = :probability
+    )
+    ax = Axis(fig[1,2], 
+              limits = (nothing, (0,1)), 
+              xscale = log10, 
+              xlabel = "Relative Error", 
+              title = "Conformal",
+    )
+    hist!(ax, myerr, 
+          bins = bin, 
+          color = :black, 
+          normalization = :probability
+    )
+
+    rowsize!(fig.layout, 1, Aspect(1,1))
     resize_to_layout!(fig)
 
     return fig

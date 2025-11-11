@@ -2,10 +2,11 @@
 # ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: October 27, 2025
+# DLM: November 6, 2025
 =#
 
 using MathLink
+using MATLAB
 using ArbNumerics: gamma, hypergeometric_2F1 as arb_2f1, ArbComplex, ArbFloat
 using HypergeometricFunctions: pFqweniger as weniger_pfq
 import SpecialFunctions.gamma
@@ -30,6 +31,8 @@ mathematica_pfq(a, b, z) =
     catch 
         Real(weval( W`N[HypergeometricPFQ[a,b,z]]`, a = a, b = b, z = z))
     end
+
+matlab_2f1(a, b, c, z) = mat"hypergeom([$a, $b], [$c], $z)"
 
 johansson_2f1(a, b, c, z; bits = 512)::ComplexF64 = arb_2f1(ArbComplex.((a, b, c, z), bits = bits)...)
 
