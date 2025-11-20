@@ -2,7 +2,7 @@
 #   Functions for generating graphics in the paper
 #
 # Author: Caleb Jacobs
-# DLM: November 6, 2025
+# DLM: November 19, 2025
 =#
 
 using CairoMakie, ComplexVisuals, LaTeXStrings
@@ -12,8 +12,8 @@ include("../Comparison2F1.jl")
 include("../pFq.jl")
 
 # 2F1 methods and names
-funcs = (comparison_2f1, weniger_2f1, (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1, matlab_2f1)
-names = ("Conformal", "Levin-Type", "Johansson", "Mathematica", "MATLAB")
+funcs = (comparison_2f1, weniger_2f1, (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1, uf_2f1)#, matlab_2f1)
+names = ("Conformal", "Levin-Type", "Johansson", "Mathematica", "Ultra Spherical")#, "MATLAB")
 indices = ((3,1), (1,1), (1,2), (2,1), (2,2))
 
 # Helper functions
@@ -124,7 +124,6 @@ function slevinsky_grid_test(tru = nothing)
         xlabel = L"\mathrm{Re}(z)",
         ylabel = L"\mathrm{Im}(z)",
         zlabel = L"\text{abs}(f)",
-        title = L"\text{Abs-Arg of } {_2}F_1(1,-9/2;-9/4;z)",
         elevation = 0.2π,
         xticklabelsize = 10, yticklabelsize = 10, zticklabelsize = 10,
         xlabeloffset = 20, ylabeloffset = 20, zlabeloffset = 53,
@@ -152,7 +151,7 @@ function random_test(;N = 10000, arng = 25, brng = 25, crng = 25, zrng = 2, seed
         cs = crng * (1 .- 2rand(N))
         tests = Vector{Tuple{Float64, Float64, Float64, ComplexF64}}()
     end
-    zs = zrng * complexrand(N)
+    zs = real.(zrng * complexrand(N))
 
     print("Getting tests: ")
     tru = Vector{ComplexF64}()

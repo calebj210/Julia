@@ -8,6 +8,10 @@
 include("Transformations.jl")
 
 function comparison_2f1(a, b, c, z; rtol = 1e-14, ord = 2)
+    if isreal(z)
+        z = real(z) - 0im
+    end
+
     if abs2(z) < 1 && abs2(1 - z) < 1
         if real(z) <= 0.5
             trans = [:z, :zoverzminusone]

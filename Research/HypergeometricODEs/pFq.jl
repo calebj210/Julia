@@ -2,7 +2,7 @@
 # ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: November 6, 2025
+# DLM: November 18, 2025
 =#
 
 using MathLink
@@ -18,21 +18,32 @@ function sgn(x)
     iszero(x) ? -one(x) : sign(x)
 end
 
-mathematica_2f1(a, b, c, z) = 
+function mathematica_2f1(a, b, c, z)
+    val = weval( W`N[Hypergeometric2F1[a,b,c,z]]`, a = a, b = b, c = c, z = z)
     try 
-        Complex(weval( W`N[Hypergeometric2F1[a,b,c,z]]`, a = a, b = b, c = c, z = z).args...)
+        out = Complex(val.args...)
+        return out
     catch 
-        Real(weval( W`N[Hypergeometric2F1[a,b,c,z]]`, a = a, b = b, c = c, z = z))
+        out = Real(val)
+        return out
     end
-    
-mathematica_pfq(a, b, z) = 
-    try 
-        Complex(weval( W`N[HypergeometricPFQ[a,b,z]]`, a = a, b = b, z = z).args...)
-    catch 
-        Real(weval( W`N[HypergeometricPFQ[a,b,z]]`, a = a, b = b, z = z))
-    end
+end
 
 matlab_2f1(a, b, c, z) = mat"hypergeom([$a, $b], [$c], $z)"
+
+mat"addpath('/home/merlin/Documents/Papers/Gauss Hypergeometric/Crespo Code/SecondLink/')"
+mat"addpath('/home/merlin/Documents/Papers/Gauss Hypergeometric/Crespo Code/SecondLink/chebfun-master/chebfun-master/')"
+mat"warning('off', 'MATLAB:singularMatrix')"
+mat"warning('off', 'MATLAB:nearlySingularMatrix')"
+function uf_2f1(a, b, c, z)
+    val = mat"hypergeom_real($a, $b, $c, 160, $z)"
+
+    if length(val) == 1
+        return val[1]
+    else
+        return NaN + NaN*im
+    end
+end
 
 johansson_2f1(a, b, c, z; bits = 512)::ComplexF64 = arb_2f1(ArbComplex.((a, b, c, z), bits = bits)...)
 
