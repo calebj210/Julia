@@ -9,6 +9,7 @@ using MathLink
 using MATLAB
 using ArbNumerics: gamma, hypergeometric_2F1 as arb_2f1, ArbComplex, ArbFloat
 using HypergeometricFunctions: pFqweniger as weniger_pfq
+using Suppressor
 import SpecialFunctions.gamma
 
 # include("Initialization.jl")
@@ -50,7 +51,7 @@ johansson_2f1(a, b, c, z; bits = 512)::ComplexF64 = arb_2f1(ArbComplex.((a, b, c
 "Levin-type factorial"
 function weniger_2f1(a, b, c, z::Number) 
     (a,b,c,z) = convert.(ComplexF64, (a,b,c,z))
-    return weniger_pfq((a,b), (c,), z)   
+    @suppress_err return weniger_pfq((a,b), (c,), z)   
 end
 
 # function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .5)

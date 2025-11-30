@@ -2,12 +2,12 @@
 #   Routine for computing 2F1 by comparing multiple evaluations
 #
 # Author: Caleb Jacobs
-# DLM: October 30, 2025
+# DLM: November 30, 2025
 =#
 
 include("Transformations.jl")
 
-function comparison_2f1(a, b, c, z; rtol = 1e-14, ord = 2)
+function comparison_2f1(a, b, c, z; rtol = 1e-14, ord = 2, esterr = false)
     if isreal(z)
         z = real(z) - 0im
     end
@@ -32,11 +32,11 @@ function comparison_2f1(a, b, c, z; rtol = 1e-14, ord = 2)
         # trans = [:z, :oneminusz, :zoverzminusone, :oneminusoneoverz, :oneoverz, :oneoveroneminusz]
     # end
 
-    val = compare(a, b, c, z, trans; rtol = rtol, ord = ord)
+    val = compare(a, b, c, z, trans; rtol, ord, esterr)
     return val
 end
 
-function compare(a, b, c, z, trans; ord = 4, kwargs...)
+function compare(a, b, c, z, trans; ord = 4, esterr = false, kwargs...)
     dif = Inf
     idx = [0,0]
 
@@ -56,7 +56,11 @@ function compare(a, b, c, z, trans; ord = 4, kwargs...)
             end
 
             if isapprox(vals[n], vals[k]; kwargs...)
-                return (vals[n] + vals[k]) / 2
+                if esterr
+                    return ((vals[n] + vals[k]) / 2, abs(vals[n] - vals[k]) / max(abs(vals[n]), abs(vals[k])))
+                else
+                    return (vals[n] + vals[k]) / 2
+                end
             elseif abs(vals[n] - vals[k]) < dif
                 dif = abs(vals[n] - vals[k])
                 idx = [n,k]
@@ -66,5 +70,9 @@ function compare(a, b, c, z, trans; ord = 4, kwargs...)
 
     # @warn "Tolerance not met, answer within a relative tolerance of $(abs(dif / vals[first(idx)]))."
 
-    return vals[first(idx)]
+    if esterr
+        return (sum(vals[idx]) / 2, dif / max(abs.(vals[idx])...))
+    else
+        return sum(vals[idx]) / 2
+    end
 end

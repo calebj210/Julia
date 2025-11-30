@@ -2,7 +2,7 @@
 #   Functions for generating graphics in the paper
 #
 # Author: Caleb Jacobs
-# DLM: November 19, 2025
+# DLM: November 30, 2025
 =#
 
 using CairoMakie, ComplexVisuals, LaTeXStrings
@@ -12,9 +12,15 @@ include("../Comparison2F1.jl")
 include("../pFq.jl")
 
 # 2F1 methods and names
-funcs = (comparison_2f1, weniger_2f1, (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1, uf_2f1)#, matlab_2f1)
-names = ("Conformal", "Levin-Type", "Johansson", "Mathematica", "Ultra Spherical")#, "MATLAB")
-indices = ((3,1), (1,1), (1,2), (2,1), (2,2))
+complex_error_methods = (comparison_2f1, weniger_2f1,  (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1)
+complex_error_names =   ("Conformal",    "Levin-Type", "Johansson",                                       "Mathematica")
+complex_error_fig_indices = ((1,1), (1,2), (2,1), (2,2))
+
+complex_timing_methods = (comparison_2f1, weniger_2f1,  (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1, matlab_2f1)
+complex_timing_names =   ("Conformal",    "Levin-Type", "Johansson",                                       "Mathematica",   "MATLAB")
+
+real_timing_methods = (comparison_2f1, weniger_2f1,  (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1, matlab_2f1, uf_2f1)
+real_timing_names =   ("Conformal",    "Levin-Type", "Johansson",                                       "Mathematica",   "MATLAB",   "Ultraspherical")
 
 # Helper functions
 function clean_error(f,t)
@@ -51,6 +57,17 @@ function complexrand(N)
     return vals
 end
 
+function crand(N)
+    vals = NaN * Vector{ComplexF64}(undef, N)
+    for i ∈ 1:N
+        while isnan(vals[i]) || abs2(vals[i]) > 1
+            vals[i] = 2rand(ComplexF64) - (1 + im)
+        end
+    end
+
+    return vals
+end
+
 ## Tests
 # Slevinsky grid test: 2F1(1,-9/2;-9/4;z)
 function slevinsky_grid_test(tru = nothing)
@@ -72,6 +89,8 @@ function slevinsky_grid_test(tru = nothing)
     ttickrng = -5:-3
     tticks = (ttickrng, [latexstring("10^{", p, "}") for p ∈ ttickrng])
 
+    pticks = ([0,3e5,6e5], [L"0", L"3 \times 10^5", L"6 \times 10^5"])
+
     default_settings = (;
         zticks = eticks,
         zlabelsize = 12,
@@ -87,7 +106,7 @@ function slevinsky_grid_test(tru = nothing)
     timings = Figure()
 
     # Surfaces
-    for (f, name, idx) ∈ zip(funcs, names, indices)
+    for (f, name, idx) ∈ zip(complex_error_methods, complex_error_names, complex_error_fig_indices)
         println("Running ", name)
         println("\t Errors")
         err = clean_error.(f.(test...), tru)
@@ -124,8 +143,10 @@ function slevinsky_grid_test(tru = nothing)
         xlabel = L"\mathrm{Re}(z)",
         ylabel = L"\mathrm{Im}(z)",
         zlabel = L"\text{abs}(f)",
+        zticks = pticks,
+        zlabelsize = 15,
         elevation = 0.2π,
-        xticklabelsize = 10, yticklabelsize = 10, zticklabelsize = 10,
+        xticklabelsize = 10, yticklabelsize = 10, zticklabelsize = 12,
         xlabeloffset = 20, ylabeloffset = 20, zlabeloffset = 53,
 
     )
@@ -141,19 +162,20 @@ function random_test(;N = 10000, arng = 25, brng = 25, crng = 25, zrng = 2, seed
 
     # Setup random tests
     if complextest
-        as = arng * complexrand(N)
-        bs = brng * complexrand(N)
-        cs = crng * complexrand(N)
+        as = arng * crand(N)
+        bs = brng * crand(N)
+        cs = crng * crand(N)
+        zs = zrng * crand(N)
         tests = Vector{NTuple{4, ComplexF64}}()
     else
         as = arng * (1 .- 2rand(N))
         bs = brng * (1 .- 2rand(N))
         cs = crng * (1 .- 2rand(N))
+        zs = zrng * complexrand(N)
         tests = Vector{Tuple{Float64, Float64, Float64, ComplexF64}}()
     end
-    zs = real.(zrng * complexrand(N))
 
-    print("Getting tests: ")
+    print("Getting tests...")
     tru = Vector{ComplexF64}()
     alt = Vector{ComplexF64}()
     for (a,b,c,z) ∈ zip(as, bs, cs, zs)
@@ -166,19 +188,16 @@ function random_test(;N = 10000, arng = 25, brng = 25, crng = 25, zrng = 2, seed
         push!(tru, convert(ComplexF64, val))
         push!(alt, convert(ComplexF64, valalt))
     end
-    println("count: $(length(tests))")
+    println("done\n\tTest count: $(length(tests))")
 
     # Generate graphics and results
     set_theme!(theme_latexfonts())
     fig = Figure()
-    for (f, name, idx) ∈ zip(funcs, names, indices)
-        println("Running ", name)
-        println("\tErrors")
+    println("Errors:")
+    for (f, name, idx) ∈ zip(complex_error_methods, complex_error_names, complex_error_fig_indices)
+        print("\t", name, "...")
         err = clean_error.([f(test...) for test ∈ tests], tru)
-        print("\tTimings: ")
-        time = [average_time(test..., f) for test ∈ tests]
-            println("mean(", round(mean(time)), "), median(", round(median(time)), ")")
-
+        println("done")
         ax = Axis(fig[idx...], 
             limits = (nothing, (0,1)), 
             xscale = log10, 
@@ -194,7 +213,26 @@ function random_test(;N = 10000, arng = 25, brng = 25, crng = 25, zrng = 2, seed
             normalization = :probability
         )
     end
-    ax = Axis(fig[3,2], 
+    println("Done\n")
+
+    println("Complex Timings:")
+    for (f, name) ∈ zip(complex_timing_methods, complex_timing_names)
+        print("\t", name, ":")
+        time = [average_time(test..., f) for test ∈ tests]
+            println("\tmean(", round(mean(time)), "), \tmedian(", round(median(time)), ")")
+    end
+    println("Done")
+
+    println("Real Timings:")
+    for (f, name) ∈ zip(real_timing_methods, real_timing_names)
+        print("\t", name, ":")
+        time = [average_time(a,b,c,real(z), f) for (a,b,c,z) ∈ tests]
+            println("\tmean(", round(mean(time)), "), \tmedian(", round(median(time)), ")")
+    end
+    println("Done")
+
+    # Sensitivity histogram
+    ax = Axis(fig[3,1], 
         limits = (nothing, (0,1)), 
         xscale = log10, 
         xlabel = "Relative Difference", 
@@ -206,7 +244,24 @@ function random_test(;N = 10000, arng = 25, brng = 25, crng = 25, zrng = 2, seed
     dif = clean_error.(alt, tru)
     hist!(ax, dif, 
         bins = bin, 
-        color = :black, 
+        color = :gray, 
+        normalization = :probability
+    )
+
+    # Error estimate histogram
+    ax = Axis(fig[3,2], 
+        limits = (nothing, (0,1)), 
+        xscale = log10, 
+        xlabel = "Relative Error", 
+        title = "Estimated Error",
+    )
+
+    bin = 10.0 .^ (-16:2:2)
+    
+    est_err = [last(comparison_2f1(a, b, c, z; esterr = true)) for (a,b,c,z) ∈ zip(as,bs,cs,zs)]
+    hist!(ax, est_err, 
+        bins = bin, 
+        color = :gray, 
         normalization = :probability
     )
 
