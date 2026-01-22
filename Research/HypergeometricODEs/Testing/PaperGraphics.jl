@@ -2,7 +2,7 @@
 #   Functions for generating graphics in the paper
 #
 # Author: Caleb Jacobs
-# DLM: November 30, 2025
+# DLM: January 22, 2026
 =#
 
 using CairoMakie, ComplexVisuals, LaTeXStrings
@@ -16,11 +16,11 @@ complex_error_methods = (comparison_2f1, weniger_2f1,  (a,b,c,z) -> johansson_2f
 complex_error_names =   ("Conformal",    "Levin-Type", "Johansson",                                       "Mathematica")
 complex_error_fig_indices = ((1,1), (1,2), (2,1), (2,2))
 
-complex_timing_methods = (comparison_2f1, weniger_2f1,  (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1, matlab_2f1)
-complex_timing_names =   ("Conformal",    "Levin-Type", "Johansson",                                       "Mathematica",   "MATLAB")
+complex_timing_methods = (comparison_2f1, weniger_2f1,  (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1)#, matlab_2f1)
+complex_timing_names =   ("Conformal",    "Levin-Type", "Johansson",                                       "Mathematica")#,   "MATLAB")
 
-real_timing_methods = (comparison_2f1, weniger_2f1,  (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1, matlab_2f1, uf_2f1)
-real_timing_names =   ("Conformal",    "Levin-Type", "Johansson",                                       "Mathematica",   "MATLAB",   "Ultraspherical")
+real_timing_methods = (comparison_2f1, weniger_2f1)#,  (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1, matlab_2f1, uf_2f1)
+real_timing_names =   ("Conformal",    "Levin-Type")#, "Johansson",                                       "Mathematica",   "MATLAB",   "Ultraspherical")
 
 # Helper functions
 function clean_error(f,t)
@@ -81,8 +81,8 @@ function slevinsky_grid_test(tru = nothing)
 
     # Generate graphics
     set_theme!(theme_latexfonts())
-    ecrng = (-16,-8)
-    etickrng = -15:3:-9
+    ecrng = (-16,-12)
+    etickrng = -15:-13
     eticks = (etickrng, [latexstring("10^{", p, "}") for p ∈ etickrng])
 
     tcrng = (-6,-2)

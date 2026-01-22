@@ -2,18 +2,14 @@
 # ODE approach for computing hypergeometric functions
 # 
 # Author: Caleb Jacobs
-# DLM: November 18, 2025
+# DLM: January 22, 2026
 =#
 
 using MathLink
 using MATLAB
 using ArbNumerics: gamma, hypergeometric_2F1 as arb_2f1, ArbComplex, ArbFloat
-using HypergeometricFunctions: pFqweniger as weniger_pfq
-using Suppressor
+using HypergeometricFunctions
 import SpecialFunctions.gamma
-
-# include("Initialization.jl")
-# include("Taylor.jl")
 
 function sgn(x)
     iszero(x) ? -one(x) : sign(x)
@@ -30,28 +26,28 @@ function mathematica_2f1(a, b, c, z)
     end
 end
 
-matlab_2f1(a, b, c, z) = mat"hypergeom([$a, $b], [$c], $z)"
-
-mat"addpath('/home/merlin/Documents/Papers/Gauss Hypergeometric/Crespo Code/SecondLink/')"
-mat"addpath('/home/merlin/Documents/Papers/Gauss Hypergeometric/Crespo Code/SecondLink/chebfun-master/chebfun-master/')"
-mat"warning('off', 'MATLAB:singularMatrix')"
-mat"warning('off', 'MATLAB:nearlySingularMatrix')"
-function uf_2f1(a, b, c, z)
-    val = mat"hypergeom_real($a, $b, $c, 160, $z)"
-
-    if length(val) == 1
-        return val[1]
-    else
-        return NaN + NaN*im
-    end
-end
+# matlab_2f1(a, b, c, z) = mat"hypergeom([$a, $b], [$c], $z)"
+#
+# mat"addpath('/home/merlin/Documents/Papers/Gauss Hypergeometric/Crespo Code/SecondLink/')"
+# mat"addpath('/home/merlin/Documents/Papers/Gauss Hypergeometric/Crespo Code/SecondLink/chebfun-master/chebfun-master/')"
+# mat"warning('off', 'MATLAB:singularMatrix')"
+# mat"warning('off', 'MATLAB:nearlySingularMatrix')"
+# function uf_2f1(a, b, c, z)
+#     val = mat"hypergeom_real($a, $b, $c, 160, $z)"
+#
+#     if length(val) == 1
+#         return val[1]
+#     else
+#         return NaN + NaN*im
+#     end
+# end
 
 johansson_2f1(a, b, c, z; bits = 512)::ComplexF64 = arb_2f1(ArbComplex.((a, b, c, z), bits = bits)...)
 
 "Levin-type factorial"
 function weniger_2f1(a, b, c, z::Number) 
     (a,b,c,z) = convert.(ComplexF64, (a,b,c,z))
-    @suppress_err return weniger_pfq((a,b), (c,), z)   
+    return _₂F₁(a, b, c, z)
 end
 
 # function taylor_2f1(a, b, c, z::Number; N = 1000, order = 1000, step_max = Inf, init_max = .5)
