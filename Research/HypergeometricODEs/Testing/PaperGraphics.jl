@@ -16,11 +16,11 @@ complex_error_methods = (comparison_2f1, weniger_2f1,  (a,b,c,z) -> johansson_2f
 complex_error_names =   ("Conformal",    "Levin-Type", "Johansson",                                       "Mathematica")
 complex_error_fig_indices = ((1,1), (1,2), (2,1), (2,2))
 
-complex_timing_methods = (comparison_2f1, weniger_2f1,  (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1)#, matlab_2f1)
-complex_timing_names =   ("Conformal",    "Levin-Type", "Johansson",                                       "Mathematica")#,   "MATLAB")
+complex_timing_methods = (comparison_2f1,)#, weniger_2f1,  (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1)#, matlab_2f1)
+complex_timing_names =   ("Conformal",)#,    "Levin-Type", "Johansson",                                       "Mathematica")#,   "MATLAB")
 
-real_timing_methods = (comparison_2f1, weniger_2f1)#,  (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1, matlab_2f1, uf_2f1)
-real_timing_names =   ("Conformal",    "Levin-Type")#, "Johansson",                                       "Mathematica",   "MATLAB",   "Ultraspherical")
+real_timing_methods = (comparison_2f1,)#, weniger_2f1)#,  (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1, matlab_2f1, uf_2f1)
+real_timing_names =   ("Conformal",)#,    "Levin-Type")#, "Johansson",                                       "Mathematica",   "MATLAB",   "Ultraspherical")
 
 # Helper functions
 function clean_error(f,t)
@@ -264,6 +264,12 @@ function random_test(;N = 10000, arng = 25, brng = 25, crng = 25, zrng = 2, seed
         color = :gray, 
         normalization = :probability
     )
+
+    for i ∈ 1:3
+        rowsize!(fig.layout, i, Aspect(1, 3/8))
+    end
+
+    resize_to_layout!(fig)
 
     return fig
 end
