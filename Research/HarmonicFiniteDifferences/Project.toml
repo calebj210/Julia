@@ -6,6 +6,7 @@ authors = ["Caleb Jacobs <calebjacobs210@gmail.com>"]
 [deps]
 AssociatedLegendrePolynomials = "2119f1ac-fb78-50f5-8cc0-dda848ebdb19"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
@@ -13,6 +14,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 [compat]
 AssociatedLegendrePolynomials = "1.0.2"
 CairoMakie = "0.15.8"
+GLMakie = "0.13.8"
 LaTeXStrings = "1.4.0"
 LinearAlgebra = "1.12.0"
 SparseArrays = "1.12.0"
