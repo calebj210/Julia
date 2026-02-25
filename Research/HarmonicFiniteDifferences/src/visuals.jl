@@ -26,59 +26,88 @@ function sparse_structure(x::Vector, deg)
     return fig
 end
 
-function onesided_2d(;sizes = [(0,17),(1,5),(4,1)], deg = 6)
+function onesided_2d(;sizes = [(0,29), (1,9), (7,1)], deg = 14)
     fig = Figure()
     
-    for i in 1:length(sizes)
-        nodes = onesided_nodes(sizes[i]..., type = BigFloat)
-        A = vand(nodes; deg)
-        b = zeros(BigFloat, size(A)[1])
-        b[3] = 1
+    for (i,sz) in enumerate(sizes)
+        nodes = onesided_nodes(sz..., type = BigFloat)
 
-        # w = pinv(A) * b
-        w = A \ b
+        w = FD_weights(nodes; deg, deriv = (3,1))
 
-        display([w nodes])
-
-        # ax = Axis3(
-        #     fig[1,i],
-        #     aspect = (1/3,1,1/2),
-        #     # yreversed = true,
-        #     limits = ((-5.5,5.5), (-0.5,18.5), (0,1.75)),
-        #     azimuth = 0.6pi,
-        #     elevation = .3,
-        #     title = "$(2sizes[i][1] + 1)x$(sizes[i][2] + 1)"
-        # )
-        #
-        # scatter!(
-        #     ax, first.(nodes), last.(nodes), abs.(w), 
-        #     colorrange = (0, 2), 
-        #     color = abs.(w), 
-        #     colormap = :viridis,
-        # )
-        ax = Axis(
+        ax = Axis3(
             fig[1,i],
-            limits = ((-7.5,7.5), (-0.5,30.5)),
-            title = "$(2sizes[i][1] + 1)x$(sizes[i][2] + 1)",
-            aspect = DataAspect(),
-            xticks = -7:7:7,
-            xlabel = L"x",
+            aspect = (15,30,30),
+            limits = ((-7.5,7.5), (-0.5,30.5), (0,80)),
+            azimuth = 0.6pi,
+            elevation = .3,
+            title = "$(2sz[1] + 1)x$(sz[2] + 1)"
         )
 
-        heatmap!(
+        barplot!(
             ax, first.(nodes), last.(nodes), abs.(w), 
-            colorrange = (1e-3, 200), 
+            colorrange = (1e-2,80),
             colormap = :viridis,
-            colorscale = log10,
         )
     end
 
-    fig.content[1].ylabel = L"y"
-
-    Colorbar(fig[1,4], limits = (1e-3, 200), colormap = :viridis, scale = log10, label = L"|w_k|")
-
+    Colorbar(fig[1,4], colorrange = (1e-2,80), colormap = :viridis, label = L"|w|")
     rowsize!(fig.layout, 1, Aspect(1,2))
     resize_to_layout!(fig)
 
     return fig
+end
+
+function plot_weights(nodes, w; axis = (;), barplot = (;))
+    xrng = round(Int64, abs(-(extrema(first.(nodes))...))) + 1
+    yrng = round(Int64, abs(-(extrema( last.(nodes))...))) + 1
+
+    fig = Figure()
+    
+    ax = Axis3(
+        fig[1,1];
+        aspect = (xrng, yrng, max(xrng, yrng)),
+        axis...
+    )
+
+    plt = barplot!(
+        ax, first.(nodes), last.(nodes), w;
+        colormap = :viridis,
+        barplot...
+    )
+
+    Colorbar(fig[1,4], plt, label = L"|w|")
+    resize_to_layout!(fig)
+
+    return fig
+
+end
+
+function barplot(x, y, z; kwargs...)
+    pos = collect(zip(x, y))
+    sizes = [Vec3d(1, 1, z) for z in z]
+
+    figaxplt = meshscatter(
+        pos;
+        markersize = sizes,
+        marker = Rect3d((-0.5, -0.5, eps()), (1, 1, 1)),
+        color = z,
+        kwargs...
+    )
+
+    return figaxplt
+end
+
+function barplot!(ax, x, y, z; kwargs...)
+    pos = collect(zip(x, y))
+    sizes = [Vec3(1, 1, z) for z in z]
+
+    plt = meshscatter!(
+        ax, pos;
+        markersize = sizes,
+        marker = Rect3((-0.5, -0.5, eps()), (1, 1, 1)),
+        color = z,
+        kwargs...
+    )
+
+    return plt
 end

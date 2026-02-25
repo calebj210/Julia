@@ -13,8 +13,12 @@ export sphericalharmonic,
        onesided_nodes,
        sparse_structure,
        vand,
+       FD_weights,
        cardinalweights,
        cardinalfunction,
-       onesided_2d
+       onesided_2d,
+       plot_weights,
+       barplot,
+       barplot!
 
 end
