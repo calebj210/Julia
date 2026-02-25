@@ -18,7 +18,7 @@ export sphericalharmonic,
        cardinalfunction,
        onesided_2d,
        plot_weights,
-       barplot,
-       barplot!
+       barplot3d,
+       barplot3d!
 
 end

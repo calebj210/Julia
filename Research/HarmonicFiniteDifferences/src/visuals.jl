@@ -40,10 +40,11 @@ function onesided_2d(;sizes = [(0,29), (1,9), (7,1)], deg = 14)
             limits = ((-7.5,7.5), (-0.5,30.5), (0,80)),
             azimuth = 0.6pi,
             elevation = .3,
-            title = "$(2sz[1] + 1)x$(sz[2] + 1)"
+            title = "$(2sz[1] + 1)x$(sz[2] + 1)",
+            zlabel = L"|w|",
         )
 
-        barplot!(
+        barplot3d!(
             ax, first.(nodes), last.(nodes), abs.(w), 
             colorrange = (1e-2,80),
             colormap = :viridis,
@@ -57,7 +58,7 @@ function onesided_2d(;sizes = [(0,29), (1,9), (7,1)], deg = 14)
     return fig
 end
 
-function plot_weights(nodes, w; axis = (;), barplot = (;))
+function plot_weights(nodes, w; axis = (;), barplot3d = (;))
     xrng = round(Int64, abs(-(extrema(first.(nodes))...))) + 1
     yrng = round(Int64, abs(-(extrema( last.(nodes))...))) + 1
 
@@ -69,10 +70,10 @@ function plot_weights(nodes, w; axis = (;), barplot = (;))
         axis...
     )
 
-    plt = barplot!(
+    plt = barplot3d!(
         ax, first.(nodes), last.(nodes), w;
         colormap = :viridis,
-        barplot...
+        barplot3d...
     )
 
     Colorbar(fig[1,4], plt, label = L"|w|")
@@ -82,7 +83,7 @@ function plot_weights(nodes, w; axis = (;), barplot = (;))
 
 end
 
-function barplot(x, y, z; kwargs...)
+function barplot3d(x, y, z; kwargs...)
     pos = collect(zip(x, y))
     sizes = [Vec3d(1, 1, z) for z in z]
 
@@ -97,7 +98,7 @@ function barplot(x, y, z; kwargs...)
     return figaxplt
 end
 
-function barplot!(ax, x, y, z; kwargs...)
+function barplot3d!(ax, x, y, z; kwargs...)
     pos = collect(zip(x, y))
     sizes = [Vec3(1, 1, z) for z in z]
 
