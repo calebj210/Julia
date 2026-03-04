@@ -112,3 +112,53 @@ function barplot3d!(ax, x, y, z; kwargs...)
 
     return plt
 end
+
+function boxplot3d(pos, c; gap = 0.95, kwargs...)
+    sizes = c .* gap ./ maximum(abs,c)
+    nodes = [pos[i] .- 0.5sizes[i] for i in eachindex(pos)]
+
+    figaxplt = meshscatter(
+        nodes;
+        markersize = sizes,
+        marker = Rect3d((0,0,0), (1,1,1)),
+        color = c,
+        kwargs...
+    )
+
+    return figaxplt
+end
+
+boxplot3d(x, y, z, c; kwargs...) = boxplot3d(collect(zip(x,y,z)), c; kwargs...)
+
+function boxplot3d!(ax, pos, c; kwargs...)
+    sizes = Vec3d.(((c,c,c) ./ maximum(abs,c))...)
+
+    figaxplt = meshscatter(
+        ax, pos;
+        markersize = sizes,
+        marker = Rect3d((-0.5,-0.5,-0.5), (0.5,0.5,0.5)),
+        color = c,
+        kwargs...
+    )
+
+    return figaxplt
+end
+boxplot3d!(ax, x, y, z, c; kwargs...) = boxplot3d!(ax, collect(zip(x,y,z)), c; kwargs...)
+
+function decay_rates(nodes, w)
+    dists = norm.(nodes)
+
+    fig = Figure()
+    ax = Axis(
+        fig[1,1],
+        title = "Decay Rates",
+        xlabel = L"distance $r$ to stencil center",
+        ylabel = "abs weight",
+        yscale = log10,
+    )
+
+    plt = scatter!(ax, dists, abs.(w) .+ eps())
+    resize_to_layout!(fig)
+
+    return fig
+end

@@ -19,6 +19,9 @@ export sphericalharmonic,
        onesided_2d,
        plot_weights,
        barplot3d,
-       barplot3d!
+       barplot3d!,
+       boxplot3d,
+       boxplot3d!,
+       decay_rates
 
 end
