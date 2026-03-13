@@ -22,6 +22,7 @@ export sphericalharmonic,
        barplot3d!,
        boxplot3d,
        boxplot3d!,
-       decay_rates
+       decay_rates,
+       decay_rates!
 
 end

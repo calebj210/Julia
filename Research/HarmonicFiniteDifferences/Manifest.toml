@@ -2,7 +2,7 @@
 
 julia_version = "1.12.5"
 manifest_format = "2.0"
-project_hash = "45c8560914be5ba241392737f05e454c692ab420"
+project_hash = "e66e27a93f51a4fb448a907cb21903b46fbba708"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -449,6 +449,12 @@ git-tree-sha1 = "56335175a66c30ca0e503ad717d366cd9e1663b1"
 uuid = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 version = "0.13.8"
 
+[[deps.GenericLinearAlgebra]]
+deps = ["LinearAlgebra", "Printf", "Random", "libblastrampoline_jll"]
+git-tree-sha1 = "fc6236b7fbc40bc283e0dc5a84ead1169a6d7dda"
+uuid = "14197337-ba66-59df-a3e3-ca00e7dcff7a"
+version = "0.3.19"
+
 [[deps.GeometryBasics]]
 deps = ["EarCut_jll", "Extents", "IterTools", "LinearAlgebra", "PrecompileTools", "Random", "StaticArrays"]
 git-tree-sha1 = "1f5a80f4ed9f5a4aada88fc2db456e637676414b"
@@ -509,7 +515,7 @@ uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
 version = "8.5.1+0"
 
 [[deps.HarmonicFiniteDifferences]]
-deps = ["AssociatedLegendrePolynomials", "CairoMakie", "LaTeXStrings", "LinearAlgebra", "SparseArrays"]
+deps = ["AssociatedLegendrePolynomials", "CairoMakie", "GLMakie", "GenericLinearAlgebra", "LaTeXStrings", "LinearAlgebra", "SparseArrays"]
 path = "."
 uuid = "1b69dc62-1c96-41a1-b0ab-f0f50db822f2"
 version = "0.1.0"

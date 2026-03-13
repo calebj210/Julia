@@ -113,8 +113,8 @@ function barplot3d!(ax, x, y, z; kwargs...)
     return plt
 end
 
-function boxplot3d(pos, c; gap = 0.95, kwargs...)
-    sizes = c .* gap ./ maximum(abs,c)
+function boxplot3d(pos, c; scl = cbrt, gap = 0.95, kwargs...)
+    sizes = scl.(c ./ maximum(abs,c)) .* gap
     nodes = [pos[i] .- 0.5sizes[i] for i in eachindex(pos)]
 
     figaxplt = meshscatter(
@@ -128,24 +128,24 @@ function boxplot3d(pos, c; gap = 0.95, kwargs...)
     return figaxplt
 end
 
-boxplot3d(x, y, z, c; kwargs...) = boxplot3d(collect(zip(x,y,z)), c; kwargs...)
+function boxplot3d!(ax, pos, c; scl = cbrt, gap = 0.95, kwargs...)
+    sizes = scl.(c./ maximum(abs,c)) .* gap
+    nodes = [pos[i] .- 0.5sizes[i] for i in eachindex(pos)]
 
-function boxplot3d!(ax, pos, c; kwargs...)
-    sizes = Vec3d.(((c,c,c) ./ maximum(abs,c))...)
-
-    figaxplt = meshscatter(
-        ax, pos;
+    plt = meshscatter!(
+        ax, nodes;
         markersize = sizes,
-        marker = Rect3d((-0.5,-0.5,-0.5), (0.5,0.5,0.5)),
+        marker = Rect3d((0,0,0), (1,1,1)),
         color = c,
         kwargs...
     )
 
-    return figaxplt
+    return plt
 end
-boxplot3d!(ax, x, y, z, c; kwargs...) = boxplot3d!(ax, collect(zip(x,y,z)), c; kwargs...)
+boxplot3d(x, y, z, c; kwargs...) = boxplot3d(collect(zip(x,y,z)), c; kwargs...)
 
-function decay_rates(nodes, w)
+
+function decay_rates(nodes, w; kwargs...)
     dists = norm.(nodes)
 
     fig = Figure()
@@ -157,8 +157,16 @@ function decay_rates(nodes, w)
         yscale = log10,
     )
 
-    plt = scatter!(ax, dists, abs.(w) .+ eps())
+    scatter!(ax, dists, abs.(w) .+ eps(); kwargs...)
     resize_to_layout!(fig)
 
     return fig
+end
+
+function decay_rates!(ax, nodes, w; kwargs...)
+    dists = norm.(nodes)
+
+    plt = scatter!(ax, dists, abs.(w) .+ eps(); kwargs...)
+
+    return plt
 end
