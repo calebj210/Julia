@@ -2,7 +2,7 @@
 #   Functions for generating graphics in the paper
 #
 # Author: Caleb Jacobs
-# DLM: January 22, 2026
+# DLM: April 15, 2026
 =#
 
 using CairoMakie, ComplexVisuals, LaTeXStrings
@@ -16,11 +16,11 @@ complex_error_methods = (comparison_2f1, weniger_2f1,  (a,b,c,z) -> johansson_2f
 complex_error_names =   ("Conformal",    "Levin-Type", "Johansson",                                       "Mathematica")
 complex_error_fig_indices = ((1,1), (1,2), (2,1), (2,2))
 
-complex_timing_methods = (comparison_2f1,)#, weniger_2f1,  (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1)#, matlab_2f1)
-complex_timing_names =   ("Conformal",)#,    "Levin-Type", "Johansson",                                       "Mathematica")#,   "MATLAB")
+complex_timing_methods = (comparison_2f1,)#, weniger_2f1,  (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53))#, mathematica_2f1)#, matlab_2f1)
+complex_timing_names =   ("Conformal",)#,    "Levin-Type", "Johansson")#,                                       "Mathematica")#,   "MATLAB")
 
-real_timing_methods = (comparison_2f1,)#, weniger_2f1)#,  (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53), mathematica_2f1, matlab_2f1, uf_2f1)
-real_timing_names =   ("Conformal",)#,    "Levin-Type")#, "Johansson",                                       "Mathematica",   "MATLAB",   "Ultraspherical")
+real_timing_methods = (comparison_2f1, weniger_2f1)#,  (a,b,c,z) -> johansson_2f1(a, b, c, z, bits = 53))#, mathematica_2f1)#, matlab_2f1, uf_2f1)
+real_timing_names =   ("Conformal",    "Levin-Type")#, "Johansson")#,                                       "Mathematica")#,   "MATLAB",   "Ultraspherical")
 
 # Helper functions
 function clean_error(f,t)
@@ -157,38 +157,47 @@ function slevinsky_grid_test(tru = nothing)
 end
 
 # Random histograms
-function random_test(;N = 10000, arng = 25, brng = 25, crng = 25, zrng = 2, seed = 997, complextest = false)
+function random_test(;N = 10000, arng = 25, brng = 25, crng = 25, zrng = 2, seed = 997, complextest = false, sol = nothing)
     Random.seed!(seed)
 
     # Setup random tests
-    if complextest
-        as = arng * crand(N)
-        bs = brng * crand(N)
-        cs = crng * crand(N)
-        zs = zrng * crand(N)
-        tests = Vector{NTuple{4, ComplexF64}}()
-    else
-        as = arng * (1 .- 2rand(N))
-        bs = brng * (1 .- 2rand(N))
-        cs = crng * (1 .- 2rand(N))
-        zs = zrng * complexrand(N)
-        tests = Vector{Tuple{Float64, Float64, Float64, ComplexF64}}()
-    end
-
-    print("Getting tests...")
-    tru = Vector{ComplexF64}()
-    alt = Vector{ComplexF64}()
-    for (a,b,c,z) ∈ zip(as, bs, cs, zs)
-        val = johansson_2f1(a,b,c,z; bits = 512)
-        valalt = johansson_2f1(perturb.((a,b,c,z))...; bits = 1024)
-        if isnan(val) || isinf(val)
-            continue
+    if isnothing(sol)
+        if complextest
+            as = arng * crand(N)
+            bs = brng * crand(N)
+            cs = crng * crand(N)
+            zs = zrng * crand(N)
+            tests = Vector{NTuple{4, ComplexF64}}()
+        else
+            as = arng * (1 .- 2rand(N))
+            bs = brng * (1 .- 2rand(N))
+            cs = crng * (1 .- 2rand(N))
+            zs = zrng * complexrand(N)
+            tests = Vector{Tuple{Float64, Float64, Float64, ComplexF64}}()
         end
-        push!(tests, (a,b,c,z))
-        push!(tru, convert(ComplexF64, val))
-        push!(alt, convert(ComplexF64, valalt))
+
+        print("Getting tests...")
+        tru = Vector{ComplexF64}()
+        alt = Vector{ComplexF64}()
+        for (a,b,c,z) ∈ zip(as,bs,cs,zs)
+            val = johansson_2f1(a,b,c,z; bits = 512)
+            valalt = johansson_2f1(perturb.((a,b,c,z))...; bits = 1024)
+            if isnan(val) || isinf(val)
+                continue
+            end
+            push!(tests, (a,b,c,z))
+            push!(tru, convert(ComplexF64, val))
+            push!(alt, convert(ComplexF64, valalt))
+        end
+        println("done\n\tTest count: $(length(tests))")
+
+        sol = (; tests, tru, alt)
+    else
+        tests = sol.tests
+        tru = sol.tru
+        alt = sol.alt
+        N = length(tests)
     end
-    println("done\n\tTest count: $(length(tests))")
 
     # Generate graphics and results
     set_theme!(theme_latexfonts())
@@ -258,7 +267,7 @@ function random_test(;N = 10000, arng = 25, brng = 25, crng = 25, zrng = 2, seed
 
     bin = 10.0 .^ (-16:2:2)
     
-    est_err = [last(comparison_2f1(a, b, c, z; esterr = true)) for (a,b,c,z) ∈ zip(as,bs,cs,zs)]
+    est_err = [last(comparison_2f1(test...; esterr = true)) for test ∈ tests]
     hist!(ax, est_err, 
         bins = bin, 
         color = :gray, 
@@ -271,7 +280,7 @@ function random_test(;N = 10000, arng = 25, brng = 25, crng = 25, zrng = 2, seed
 
     resize_to_layout!(fig)
 
-    return fig
+    return (; fig, sol)
 end
 
 # Alternate branch

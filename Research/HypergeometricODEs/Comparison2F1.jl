@@ -26,12 +26,6 @@ function comparison_2f1(a, b, c, z; rtol = 1e-14, ord = 2, esterr = false)
         end
     end
 
-    # if abs2(z) < 1
-    #     trans = [:z, :zoverzminusone, :oneminusz, :oneminusoneoverz]
-    # else
-        # trans = [:z, :oneminusz, :zoverzminusone, :oneminusoneoverz, :oneoverz, :oneoveroneminusz]
-    # end
-
     val = compare(a, b, c, z, trans; rtol, ord, esterr)
     return val
 end
@@ -68,9 +62,15 @@ function compare(a, b, c, z, trans; ord = 4, esterr = false, kwargs...)
         end
     end
 
-    # @warn "Tolerance not met, answer within a relative tolerance of $(abs(dif / vals[first(idx)]))."
+    # @warn "Tolerance not met, evaluations within a relative tolerance of $(abs(dif / vals[first(idx)]))."
 
-    if esterr
+    if idx == [0,0]
+        if esterr
+            return (NaN + NaN * im, NaN)
+        else
+            return NaN + NaN * im
+        end
+    elseif esterr
         return (sum(vals[idx]) / 2, dif / max(abs.(vals[idx])...))
     else
         return sum(vals[idx]) / 2
