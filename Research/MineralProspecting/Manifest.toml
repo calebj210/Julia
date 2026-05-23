@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "28998906975bfdf35983901f82e1c6c3458b23a7"
+project_hash = "cb6260f4228d35b1f46c037dfe5d281575c33701"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -871,7 +871,7 @@ uuid = "7269a6da-0436-5bbc-96c2-40638cbb6118"
 version = "0.5.3"
 
 [[deps.MineralProspecting]]
-deps = ["GLMakie", "LinearAlgebra"]
+deps = ["CairoMakie", "GLMakie", "LinearAlgebra"]
 path = "."
 uuid = "d529b4cb-0da6-4de2-822a-704d500f42d1"
 version = "0.1.0"

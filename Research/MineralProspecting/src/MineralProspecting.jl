@@ -8,11 +8,10 @@ export
 
 include("test.jl")
 export
-    continuation_compare,
     single_step_grad,
-    single_step_two,
-    single_step_grad_convergence_plot,
-    single_step_two_convergence_plot
+    single_step_layr,
+    single_step_convergence_plot,
+    multi_step_convergence_plot
 
 end
 
