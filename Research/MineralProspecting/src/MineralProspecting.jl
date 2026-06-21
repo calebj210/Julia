@@ -13,5 +13,9 @@ export
     single_step_convergence_plot,
     multi_step_convergence_plot
 
+include("stencils.jl")
+export
+    stencil_convergence
+
 end
 
