@@ -96,7 +96,7 @@ function stencil_convergence()
     fig = Figure()
     ax2d = Axis(
         fig[1,1],
-        title = L"2D $\partial / \partial y$",
+        title = L"2-D $\partial / \partial x$",
         xlabel = L"Grid Spacing $h$",
         ylabel = "Relative Error",
         xreversed = true,
@@ -106,7 +106,7 @@ function stencil_convergence()
     )
     ax3d = Axis(
         fig[1,2],
-        title = L"3D $\partial / \partial z$",
+        title = L"3-D $\partial / \partial z$",
         xlabel = L"Grid Spacing $h$",
         ylabel = "Relative Error",
         xreversed = true,
